@@ -1,5 +1,5 @@
 <template>
-  <div>
-    Tasket
+  <div class="page">
+    <NuxtPage />
   </div>
 </template>
