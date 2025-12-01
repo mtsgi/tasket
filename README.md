@@ -1,75 +1,162 @@
-# Nuxt Minimal Starter
+# Tasket
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+**統合ライフマネジメントアプリ（PWA）**
 
-## Setup
+TODO・家計簿・カレンダー機能を統合したオールインワンの生活管理アプリケーション。
 
-Make sure to install dependencies:
+## コンセプト
+
+Tasketは「TODOアイテムに日時や金額を持たせる」というシンプルなアイデアで、タスク管理と家計簿を統一的に扱います。すべてのアイテムがカレンダー上に配置され、予定と実績を一元管理できます。
+
+## 主な機能
+
+- **TODO管理**: タスクの作成・完了・スケジューリング
+- **家計簿**: 収入・支出の記録と管理
+- **カレンダー**: すべてのアイテムを時系列で可視化
+- **PWA対応**: オフライン動作、ホーム画面への追加が可能
+
+## 画面構成
+
+### 日ごとのビュー
+
+特定の日のタスクと収支を時系列で管理する詳細ビューです。
+
+**主な要素:**
+- その日のタスクリストを時間順に表示
+- 前日・翌日に表示を切り替えるナビゲーションボタン
+- 各アイテムの完了状態、金額、種別を一目で確認
+- 日次の収支サマリー（その日の収入合計・支出合計）
+
+**ユースケース:**
+- 今日やることの確認
+- 1日の振り返り
+- 日々の支出記録
+
+### 月ごとのビュー
+
+月全体を俯瞰し、カレンダーと統計情報で予定と実績を把握するビューです。
+
+**主な要素:**
+
+1. **カレンダー表示**
+   - 月間カレンダーで各日のアイテム数や金額を表示
+   - 日付をクリックすると日ごとのビューに遷移
+
+2. **収支推移グラフ**
+   - 折れ線グラフで日ごとの収支の推移を可視化
+   - 収入・支出・残高を別々の線で表示
+
+3. **月次サマリー**
+   - 月の収入合計・支出合計・収支差額
+   - 完了済みタスク数・未完了タスク数
+   
+4. **支出ランキング**
+   - 同じ項目名（`title`）で計上された支出を集計
+   - 支出額が多い順にランキング表示
+   - 各項目の合計金額と出現回数を表示
+
+**ユースケース:**
+- 月の予算管理
+- 支出パターンの分析
+- よく使う項目の把握
+
+## データ構造
+
+### IndexedDB テーブル: `items`
+
+すべてのアイテム（TODO・収入・支出）を統一的に管理します。
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string (UUID) | アイテムの一意識別子 |
+| `title` | string | タスク名または項目名 |
+| `amount` | number | 金額（JPY）。TODOの場合は0 |
+| `type` | 'todo' \| 'expense' \| 'income' | アイテムの種別 |
+| `is_completed` | boolean | 完了状態（TODOの完了、収支の確定） |
+| `scheduled_at` | Date | 予定日時（カレンダーの配置場所） |
+| `executed_at` | Date \| null | 実行日時（実際の完了日・取引日） |
+| `created_at` | Date | 作成日時 |
+
+### データモデルの特徴
+
+- **統一モデル**: TODO・収入・支出すべてを同じテーブルで管理
+- **予定と実績の分離**: `scheduled_at`（予定）と`executed_at`（実績）を別々に記録
+- **柔軟な分類**: `type`フィールドで用途を区別
+- **完了管理**: `is_completed`でタスク完了や取引確定を管理
+
+## ユースケース例
+
+### TODOとして使う
+```javascript
+{
+  title: "プロジェクト資料作成",
+  type: "todo",
+  amount: 0,
+  scheduled_at: "2025-12-05T14:00:00",
+  is_completed: false
+}
+```
+
+### 支出として使う
+```javascript
+{
+  title: "昼食代",
+  type: "expense",
+  amount: 1200,
+  scheduled_at: "2025-12-02T12:00:00",
+  executed_at: "2025-12-02T12:30:00",
+  is_completed: true
+}
+```
+
+### 収入として使う
+```javascript
+{
+  title: "給料",
+  type: "income",
+  amount: 300000,
+  scheduled_at: "2025-12-25T00:00:00",
+  is_completed: false
+}
+```
+
+## 技術スタック
+
+- **フレームワーク**: Nuxt 4
+- **データベース**: IndexedDB（ブラウザローカル）
+- **PWA**: Service Worker、Manifest
+- **UI**: Vue 3 Composition API
+
+## セットアップ
+
+依存関係のインストール:
 
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
+## 開発サーバー
 
-Start the development server on `http://localhost:3000`:
+開発サーバーを `http://localhost:3000` で起動:
 
 ```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+## プロダクションビルド
 
-Build the application for production:
+本番用にアプリケーションをビルド:
 
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
 
-Locally preview production build:
+ビルドしたアプリケーションをローカルでプレビュー:
 
 ```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## ライセンス
+
+MIT
