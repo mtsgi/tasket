@@ -1,3 +1,7 @@
+/**
+ * Piniaストア: アイテム管理
+ * TODO、収入、支出のCRUD操作とフィルタリングを提供します。
+ */
 import { defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item, ItemType } from '~/types/item'
@@ -5,13 +9,24 @@ import { getAllItems, addItem, updateItem, deleteItem } from '~/utils/db'
 import { getStartOfDay, getEndOfDay, getStartOfMonth, getEndOfMonth } from '~/utils/dateHelpers'
 
 export const useItemsStore = defineStore('items', {
+  /**
+   * ストアの状態
+   */
   state: () => ({
-    items: [] as Item[],
-    isLoading: false,
-    error: null as string | null,
+    items: [] as Item[], // すべてのアイテム
+    isLoading: false, // 読み込み中フラグ
+    error: null as string | null, // エラーメッセージ
   }),
 
+  /**
+   * ゲッター（算出プロパティ）
+   */
   getters: {
+    /**
+     * 特定の日のアイテムを取得
+     * @param dateString - 日付文字列（YYYY-MM-DD）
+     * @returns その日のアイテムリスト（時刻順）
+     */
     getItemsByDate: (state) => {
       return (dateString: string) => {
         const startOfDay = getStartOfDay(dateString)
@@ -25,6 +40,11 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
+    /**
+     * 特定の月のアイテムを取得
+     * @param yearMonth - 年月文字列（YYYY-MM）
+     * @returns その月のアイテムリスト（時刻順）
+     */
     getItemsByMonth: (state) => {
       return (yearMonth: string) => {
         const startOfMonth = getStartOfMonth(yearMonth + '-01')
@@ -39,7 +59,13 @@ export const useItemsStore = defineStore('items', {
     },
   },
 
+  /**
+   * アクション（操作メソッド）
+   */
   actions: {
+    /**
+     * データベースからすべてのアイテムを取得
+     */
     async fetchItems() {
       this.isLoading = true
       this.error = null
@@ -47,13 +73,18 @@ export const useItemsStore = defineStore('items', {
         this.items = await getAllItems()
       }
       catch (e) {
-        this.error = e instanceof Error ? e.message : 'Failed to fetch items'
+        this.error = e instanceof Error ? e.message : 'アイテムの取得に失敗しました'
       }
       finally {
         this.isLoading = false
       }
     },
 
+    /**
+     * 新しいアイテムを作成
+     * @param data - アイテムデータ（ID、作成日時は自動生成）
+     * @returns 作成されたアイテム
+     */
     async createItem(data: {
       title: string
       amount: number
@@ -75,6 +106,12 @@ export const useItemsStore = defineStore('items', {
       return newItem
     },
 
+    /**
+     * アイテムを更新
+     * @param id - アイテムID
+     * @param data - 更新するデータ
+     * @returns 更新されたアイテム、または見つからない場合はnull
+     */
     async updateItemById(id: string, data: Partial<Omit<Item, 'id' | 'created_at'>>) {
       const index = this.items.findIndex(item => item.id === id)
       if (index !== -1) {
@@ -86,10 +123,15 @@ export const useItemsStore = defineStore('items', {
       return null
     },
 
+    /**
+     * アイテムの完了状態を切り替え
+     * @param id - アイテムID
+     */
     async toggleComplete(id: string) {
       const item = this.items.find(item => item.id === id)
       if (item) {
         const isCompleted = !item.is_completed
+        // 完了時は実行日時を記録、未完了に戻す場合はnull
         const executedAt = isCompleted ? new Date() : null
         await this.updateItemById(id, {
           is_completed: isCompleted,
@@ -98,6 +140,10 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
+    /**
+     * アイテムを削除
+     * @param id - 削除するアイテムのID
+     */
     async deleteItemById(id: string) {
       await deleteItem(id)
       const index = this.items.findIndex(item => item.id === id)

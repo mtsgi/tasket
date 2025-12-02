@@ -1,16 +1,29 @@
+/**
+ * 統計計算コンポーザブル
+ * 日次・月次のサマリーや支出ランキングの計算を提供します。
+ */
 import type { Item, DailySummary, MonthlySummary, ExpenseRankingItem } from '~/types/item'
 import { formatDate, getDaysInMonth, getStartOfMonth, addDays } from '~/utils/dateHelpers'
 
 export function useStatistics() {
+  /**
+   * 日次サマリーを計算
+   * @param items - 対象のアイテムリスト
+   * @param dateString - 対象日（YYYY-MM-DD）
+   * @returns 日次サマリー
+   */
   function calculateDailySummary(items: Item[], dateString: string): DailySummary {
+    // 収入の合計を計算
     const income = items
       .filter(item => item.type === 'income')
       .reduce((sum, item) => sum + item.amount, 0)
 
+    // 支出の合計を計算
     const expense = items
       .filter(item => item.type === 'expense')
       .reduce((sum, item) => sum + item.amount, 0)
 
+    // 完了・未完了タスク数をカウント
     const completedTasks = items.filter(item => item.is_completed).length
     const pendingTasks = items.filter(item => !item.is_completed).length
 
@@ -24,15 +37,24 @@ export function useStatistics() {
     }
   }
 
+  /**
+   * 月次サマリーを計算
+   * @param items - 対象のアイテムリスト
+   * @param yearMonth - 対象年月（YYYY-MM）
+   * @returns 月次サマリー
+   */
   function calculateMonthlySummary(items: Item[], yearMonth: string): MonthlySummary {
+    // 収入の合計を計算
     const income = items
       .filter(item => item.type === 'income')
       .reduce((sum, item) => sum + item.amount, 0)
 
+    // 支出の合計を計算
     const expense = items
       .filter(item => item.type === 'expense')
       .reduce((sum, item) => sum + item.amount, 0)
 
+    // 完了・未完了タスク数をカウント
     const completedTasks = items.filter(item => item.is_completed).length
     const pendingTasks = items.filter(item => !item.is_completed).length
 
@@ -46,8 +68,17 @@ export function useStatistics() {
     }
   }
 
+  /**
+   * 支出ランキングを計算
+   * 同じタイトルの支出をグループ化し、金額順にソート
+   * @param items - 対象のアイテムリスト
+   * @returns 支出ランキング（金額の多い順）
+   */
   function calculateExpenseRanking(items: Item[]): ExpenseRankingItem[] {
+    // 支出アイテムのみをフィルタリング
     const expenseItems = items.filter(item => item.type === 'expense')
+
+    // タイトルごとにグループ化
     const groupedByTitle = expenseItems.reduce((acc, item) => {
       if (!acc[item.title]) {
         acc[item.title] = { totalAmount: 0, count: 0 }
@@ -57,6 +88,7 @@ export function useStatistics() {
       return acc
     }, {} as Record<string, { totalAmount: number, count: number }>)
 
+    // 金額の多い順にソートして返す
     return Object.entries(groupedByTitle)
       .map(([title, data]) => ({
         title,
@@ -66,6 +98,12 @@ export function useStatistics() {
       .sort((a, b) => b.totalAmount - a.totalAmount)
   }
 
+  /**
+   * 日別の収支合計を計算（グラフ表示用）
+   * @param items - 対象のアイテムリスト
+   * @param yearMonth - 対象年月（YYYY-MM）
+   * @returns 日別の収入・支出・累計残高
+   */
   function calculateDailyTotals(items: Item[], yearMonth: string): {
     dates: string[]
     incomes: number[]
@@ -80,25 +118,30 @@ export function useStatistics() {
     const expenses: number[] = []
     const balances: number[] = []
 
-    let cumulativeBalance = 0
+    let cumulativeBalance = 0 // 累計残高
 
+    // 月の各日について計算
     for (let i = 0; i < daysInMonth; i++) {
       const currentDate = addDays(startOfMonth, i)
       const dateString = formatDate(currentDate)
-      dates.push(String(i + 1))
+      dates.push(String(i + 1)) // グラフのラベル用（日にちのみ）
 
+      // その日のアイテムをフィルタリング
       const dayItems = items.filter((item) => {
         return formatDate(item.scheduled_at) === dateString
       })
 
+      // 日別の収入を計算
       const dayIncome = dayItems
         .filter(item => item.type === 'income')
         .reduce((sum, item) => sum + item.amount, 0)
 
+      // 日別の支出を計算
       const dayExpense = dayItems
         .filter(item => item.type === 'expense')
         .reduce((sum, item) => sum + item.amount, 0)
 
+      // 累計残高を更新
       cumulativeBalance += dayIncome - dayExpense
 
       incomes.push(dayIncome)
@@ -109,12 +152,19 @@ export function useStatistics() {
     return { dates, incomes, expenses, balances }
   }
 
+  /**
+   * 特定の日のアイテム数と金額を取得（カレンダー表示用）
+   * @param items - 対象のアイテムリスト
+   * @param dateString - 対象日（YYYY-MM-DD）
+   * @returns アイテム数と収支
+   */
   function getItemCountByDate(items: Item[], dateString: string): {
     total: number
     completed: number
     income: number
     expense: number
   } {
+    // その日のアイテムをフィルタリング
     const dayItems = items.filter((item) => {
       return formatDate(item.scheduled_at) === dateString
     })
