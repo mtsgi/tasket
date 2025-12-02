@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 月ごとのビューページ
+ * 月間カレンダー、収支サマリー、支出チャート、支出ランキングを表示します。
+ */
 import { useItemsStore } from '~/stores/items'
 import { useStatistics } from '~/composables/useStatistics'
 import { formatDisplayYearMonth, formatYearMonth, addMonths, formatDate } from '~/utils/dateHelpers'
@@ -40,6 +44,10 @@ function goToToday() {
   router.push(`/day/${formatDate(today)}`)
 }
 
+function goToMenu() {
+  router.push('/menu')
+}
+
 function getItemCountForDate(dateString: string) {
   return getItemCountByDate(items.value, dateString)
 }
@@ -51,6 +59,16 @@ onMounted(() => {
 
 <template>
   <div class="container">
+    <div class="header-top">
+      <button
+        class="btn btn-secondary btn-icon"
+        aria-label="メニュー"
+        @click="goToMenu"
+      >
+        <Icon name="mdi:menu" />
+      </button>
+    </div>
+
     <header class="monthly-header">
       <button
         class="btn btn-secondary btn-icon"
@@ -94,6 +112,12 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.header-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
 .monthly-header {
   display: flex;
   align-items: center;

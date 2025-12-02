@@ -11,11 +11,21 @@ const emit = defineEmits<{
   previous: []
   next: []
   goToMonth: []
+  goToMenu: []
 }>()
 </script>
 
 <template>
   <header class="daily-header">
+    <div class="header-top">
+      <button
+        class="btn btn-secondary btn-icon menu-btn"
+        aria-label="メニュー"
+        @click="emit('goToMenu')"
+      >
+        <Icon name="mdi:menu" />
+      </button>
+    </div>
     <div class="nav-row">
       <button
         class="btn btn-secondary btn-icon"
@@ -49,6 +59,13 @@ const emit = defineEmits<{
   flex-direction: column;
   align-items: center;
   margin-bottom: 24px;
+}
+
+.header-top {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 .nav-row {
