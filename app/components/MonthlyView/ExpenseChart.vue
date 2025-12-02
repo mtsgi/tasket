@@ -122,7 +122,10 @@ const chartOptions = {
 
 <template>
   <section class="expense-chart card">
-    <h2>収支推移</h2>
+    <h2>
+      <Icon name="mdi:chart-line" />
+      収支推移
+    </h2>
     <div class="chart-container">
       <Line
         :data="chartData"
@@ -139,6 +142,9 @@ const chartOptions = {
     font-weight: 600;
     margin-bottom: 16px;
     color: #666;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 }
 

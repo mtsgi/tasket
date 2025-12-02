@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 日次ビューのヘッダーコンポーネント
+ * 日付の表示と前後日へのナビゲーション、月表示へのリンクを提供
+ */
 defineProps<{
   displayDate: string
 }>()
@@ -15,22 +19,25 @@ const emit = defineEmits<{
     <div class="nav-row">
       <button
         class="btn btn-secondary btn-icon"
+        aria-label="前日へ"
         @click="emit('previous')"
       >
-        ‹
+        <Icon name="mdi:chevron-left" />
       </button>
       <h1>{{ displayDate }}</h1>
       <button
         class="btn btn-secondary btn-icon"
+        aria-label="翌日へ"
         @click="emit('next')"
       >
-        ›
+        <Icon name="mdi:chevron-right" />
       </button>
     </div>
     <button
       class="btn btn-secondary month-link"
       @click="emit('goToMonth')"
     >
+      <Icon name="mdi:calendar-month" />
       月表示へ
     </button>
   </header>

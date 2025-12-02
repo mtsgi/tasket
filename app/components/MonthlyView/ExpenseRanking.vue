@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 支出ランキングコンポーネント
+ * 月間の支出をカテゴリ別にランキング表示
+ */
 import type { ExpenseRankingItem } from '~/types/item'
 import { formatCurrency } from '~/utils/formatters'
 
@@ -9,11 +13,18 @@ defineProps<{
 
 <template>
   <section class="expense-ranking card">
-    <h2>支出ランキング</h2>
+    <h2>
+      <Icon name="mdi:podium" />
+      支出ランキング
+    </h2>
     <div
       v-if="ranking.length === 0"
       class="empty-state"
     >
+      <Icon
+        name="mdi:chart-timeline-variant-shimmer"
+        class="empty-icon"
+      />
       <p>支出データがありません</p>
     </div>
     <ol
@@ -43,6 +54,9 @@ defineProps<{
     font-weight: 600;
     margin-bottom: 16px;
     color: #666;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 }
 
@@ -116,6 +130,14 @@ defineProps<{
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.empty-state {
+  .empty-icon {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 8px;
+  }
 }
 
 @media (max-width: 600px) {

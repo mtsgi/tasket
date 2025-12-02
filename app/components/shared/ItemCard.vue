@@ -44,9 +44,13 @@ const typeLabel = computed(() => {
       <button
         class="complete-btn"
         :class="{ checked: item.is_completed }"
+        aria-label="完了状態を切り替え"
         @click="handleToggleComplete"
       >
-        <span v-if="item.is_completed">✓</span>
+        <Icon
+          v-if="item.is_completed"
+          name="mdi:check"
+        />
       </button>
       <div class="item-info">
         <span class="time">{{ formatTime(item.scheduled_at) }}</span>
@@ -71,9 +75,10 @@ const typeLabel = computed(() => {
     <div class="item-actions">
       <button
         class="btn btn-secondary btn-icon"
+        aria-label="編集"
         @click="handleEdit"
       >
-        ✎
+        <Icon name="mdi:pencil" />
       </button>
     </div>
 

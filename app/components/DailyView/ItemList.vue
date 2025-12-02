@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * アイテム一覧コンポーネント
+ * 指定された日のアイテムをリスト表示
+ */
 import type { Item } from '~/types/item'
 import ItemCard from '~/components/shared/ItemCard.vue'
 
@@ -9,11 +13,18 @@ defineProps<{
 
 <template>
   <section class="item-list">
-    <h2>アイテム一覧</h2>
+    <h2>
+      <Icon name="mdi:format-list-bulleted" />
+      アイテム一覧
+    </h2>
     <div
       v-if="items.length === 0"
       class="empty-state"
     >
+      <Icon
+        name="mdi:inbox-outline"
+        class="empty-icon"
+      />
       <p>この日のアイテムはありません</p>
     </div>
     <div
@@ -38,6 +49,9 @@ defineProps<{
     font-weight: 600;
     margin-bottom: 12px;
     color: #666;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 }
 
@@ -45,5 +59,13 @@ defineProps<{
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.empty-state {
+  .empty-icon {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 8px;
+  }
 }
 </style>

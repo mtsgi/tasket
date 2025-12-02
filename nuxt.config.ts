@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@pinia/nuxt', '@vite-pwa/nuxt'],
+  modules: ['@nuxt/eslint', '@pinia/nuxt', '@vite-pwa/nuxt', '@nuxt/icon'],
   devtools: { enabled: true },
   future: {
     compatibilityVersion: 5,

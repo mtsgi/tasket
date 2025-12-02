@@ -54,16 +54,18 @@ onMounted(() => {
     <header class="monthly-header">
       <button
         class="btn btn-secondary btn-icon"
+        aria-label="前月へ"
         @click="goToPreviousMonth"
       >
-        ‹
+        <Icon name="mdi:chevron-left" />
       </button>
       <h1>{{ displayYearMonth }}</h1>
       <button
         class="btn btn-secondary btn-icon"
+        aria-label="翌月へ"
         @click="goToNextMonth"
       >
-        ›
+        <Icon name="mdi:chevron-right" />
       </button>
     </header>
 
@@ -72,6 +74,7 @@ onMounted(() => {
         class="btn btn-primary"
         @click="goToToday"
       >
+        <Icon name="mdi:calendar-today" />
         今日
       </button>
     </div>

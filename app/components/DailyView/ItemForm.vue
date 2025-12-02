@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * アイテム追加フォームコンポーネント
+ * 新規アイテム（TODO、支出、収入）を作成するためのフォームを提供
+ */
 import { useItemsStore } from '~/stores/items'
 import type { ItemType } from '~/types/item'
 
@@ -8,6 +12,7 @@ const props = defineProps<{
 
 const itemsStore = useItemsStore()
 
+// フォームの状態
 const title = ref('')
 const amount = ref(0)
 const type = ref<ItemType>('todo')
@@ -15,6 +20,10 @@ const time = ref('12:00')
 
 const isSubmitting = ref(false)
 
+/**
+ * フォーム送信処理
+ * 入力データからアイテムを作成し、ストアに追加
+ */
 async function handleSubmit() {
   if (!title.value.trim()) return
 
@@ -31,7 +40,7 @@ async function handleSubmit() {
       scheduled_at: scheduledAt,
     })
 
-    // Reset form
+    // フォームをリセット
     title.value = ''
     amount.value = 0
     type.value = 'todo'
@@ -45,7 +54,10 @@ async function handleSubmit() {
 
 <template>
   <section class="item-form card">
-    <h2>新規アイテム</h2>
+    <h2>
+      <Icon name="mdi:plus-circle-outline" />
+      新規アイテム
+    </h2>
     <form @submit.prevent="handleSubmit">
       <div class="form-row">
         <div class="form-group">
@@ -109,6 +121,7 @@ async function handleSubmit() {
         class="btn btn-primary btn-block"
         :disabled="isSubmitting || !title.trim()"
       >
+        <Icon name="mdi:plus" />
         追加
       </button>
     </form>

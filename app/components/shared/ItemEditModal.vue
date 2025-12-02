@@ -70,9 +70,10 @@ function handleOverlayClick(event: MouseEvent) {
         <h2>アイテムを編集</h2>
         <button
           class="btn btn-secondary btn-icon"
+          aria-label="閉じる"
           @click="emit('close')"
         >
-          ✕
+          <Icon name="mdi:close" />
         </button>
       </header>
 
@@ -154,6 +155,7 @@ function handleOverlayClick(event: MouseEvent) {
           class="btn btn-danger"
           @click="handleDelete"
         >
+          <Icon name="mdi:delete" />
           削除
         </button>
         <div class="spacer" />
@@ -170,6 +172,7 @@ function handleOverlayClick(event: MouseEvent) {
           :disabled="isSubmitting || !title.trim()"
           @click="handleSubmit"
         >
+          <Icon name="mdi:content-save" />
           保存
         </button>
       </footer>

@@ -107,7 +107,7 @@ function handleDayClick(dateString: string) {
         aria-label="前の週"
         @click="goToPreviousWeek"
       >
-        ‹
+        <Icon name="mdi:chevron-left" />
       </button>
       <span class="week-label">{{ weekLabel }}</span>
       <button
@@ -115,7 +115,7 @@ function handleDayClick(dateString: string) {
         aria-label="次の週"
         @click="goToNextWeek"
       >
-        ›
+        <Icon name="mdi:chevron-right" />
       </button>
     </div>
 
