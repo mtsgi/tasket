@@ -122,6 +122,11 @@ async function handleSubmit() {
     font-weight: 600;
     margin-bottom: 16px;
     color: #666;
+
+    @media (max-width: 600px) {
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
   }
 }
 </style>

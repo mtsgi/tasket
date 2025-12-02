@@ -186,5 +186,24 @@ function handleOverlayClick(event: MouseEvent) {
   .spacer {
     flex: 1;
   }
+
+  @media (max-width: 600px) {
+    flex-wrap: wrap;
+
+    .spacer {
+      display: none;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: calc(50% - 4px);
+
+      &:first-child {
+        order: 3;
+        min-width: 100%;
+        margin-top: 8px;
+      }
+    }
+  }
 }
 </style>

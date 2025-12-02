@@ -119,11 +119,12 @@ const typeLabel = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .complete-btn {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: 2px solid #ccc;
   border-radius: 50%;
   background: transparent;
@@ -153,7 +154,7 @@ const typeLabel = computed(() => {
   gap: 2px;
 
   .time {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
     font-weight: 500;
   }
@@ -164,19 +165,60 @@ const typeLabel = computed(() => {
   min-width: 0;
 
   .title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 500;
     margin-bottom: 2px;
     word-break: break-word;
+    line-height: 1.3;
   }
 }
 
 .amount-display {
   margin-top: 4px;
+
+  .amount {
+    font-size: 14px;
+  }
 }
 
 .item-actions {
   display: flex;
   gap: 4px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .item-card {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .complete-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .item-content .title {
+    font-size: 14px;
+  }
+
+  .amount-display .amount {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 380px) {
+  .item-card {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .item-info .time {
+    font-size: 10px;
+  }
+
+  .item-content .title {
+    font-size: 13px;
+  }
 }
 </style>

@@ -48,18 +48,42 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
 
   h1 {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
-    min-width: 180px;
+    min-width: 160px;
     text-align: center;
+  }
+
+  @media (min-width: 500px) {
+    gap: 16px;
+
+    h1 {
+      font-size: 20px;
+      min-width: 180px;
+    }
   }
 }
 
 .month-link {
   margin-top: 8px;
   font-size: 14px;
+}
+
+@media (max-width: 380px) {
+  .daily-header {
+    margin-bottom: 16px;
+  }
+
+  .nav-row {
+    gap: 8px;
+
+    h1 {
+      font-size: 16px;
+      min-width: 140px;
+    }
+  }
 }
 </style>

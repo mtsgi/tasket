@@ -95,14 +95,23 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 16px;
 
   h1 {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 600;
-    min-width: 150px;
+    min-width: 130px;
     text-align: center;
+  }
+
+  @media (min-width: 500px) {
+    gap: 16px;
+
+    h1 {
+      font-size: 24px;
+      min-width: 150px;
+    }
   }
 }
 
@@ -110,5 +119,16 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-bottom: 16px;
+}
+
+@media (max-width: 380px) {
+  .monthly-header {
+    gap: 8px;
+
+    h1 {
+      font-size: 18px;
+      min-width: 110px;
+    }
+  }
 }
 </style>

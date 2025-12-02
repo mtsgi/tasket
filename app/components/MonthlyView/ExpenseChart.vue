@@ -144,5 +144,13 @@ const chartOptions = {
 
 .chart-container {
   height: 250px;
+
+  @media (max-width: 600px) {
+    height: 200px;
+  }
+
+  @media (max-width: 380px) {
+    height: 180px;
+  }
 }
 </style>

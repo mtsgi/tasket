@@ -47,10 +47,11 @@ defineProps<{
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 12px;
 
   @media (min-width: 500px) {
     grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
   }
 }
 
@@ -59,7 +60,7 @@ defineProps<{
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px;
+  padding: 8px 4px;
   background-color: #f5f7fa;
   border-radius: 8px;
 
@@ -72,18 +73,27 @@ defineProps<{
   }
 
   .label {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
+    text-align: center;
   }
 
   .amount {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
+
+    @media (min-width: 500px) {
+      font-size: 20px;
+    }
   }
 
   .value {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 600;
+
+    @media (min-width: 500px) {
+      font-size: 24px;
+    }
 
     &.completed {
       color: #4caf50;
@@ -91,6 +101,28 @@ defineProps<{
 
     &.pending {
       color: #ff9800;
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .summary-grid {
+    gap: 8px;
+  }
+
+  .summary-item {
+    padding: 6px 2px;
+
+    .label {
+      font-size: 10px;
+    }
+
+    .amount {
+      font-size: 14px;
+    }
+
+    .value {
+      font-size: 18px;
     }
   }
 }

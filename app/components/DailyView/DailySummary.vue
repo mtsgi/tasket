@@ -46,11 +46,11 @@ defineProps<{
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 
   @media (min-width: 500px) {
-    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
   }
 }
 
@@ -58,21 +58,37 @@ defineProps<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+
+  @media (min-width: 500px) {
+    gap: 4px;
+  }
 
   .label {
-    font-size: 12px;
+    font-size: 10px;
     color: #666;
+
+    @media (min-width: 500px) {
+      font-size: 12px;
+    }
   }
 
   .amount {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
+
+    @media (min-width: 500px) {
+      font-size: 18px;
+    }
   }
 
   .tasks {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
+
+    @media (min-width: 500px) {
+      font-size: 18px;
+    }
 
     .completed {
       color: #4caf50;
@@ -80,6 +96,23 @@ defineProps<{
 
     .total {
       color: #666;
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .summary-item {
+    .label {
+      font-size: 10px;
+    }
+
+    .amount, .tasks {
+      font-size: 14px;
     }
   }
 }

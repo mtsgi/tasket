@@ -75,6 +75,7 @@ defineProps<{
   font-size: 14px;
   font-weight: 600;
   color: #666;
+  flex-shrink: 0;
 
   .ranking-item:nth-child(1) & {
     background-color: #ffd700;
@@ -100,6 +101,8 @@ defineProps<{
     display: block;
     font-weight: 500;
     word-break: break-word;
+    font-size: 14px;
+    line-height: 1.3;
   }
 
   .count {
@@ -109,8 +112,34 @@ defineProps<{
 }
 
 .amount {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .ranking-item {
+    gap: 10px;
+    padding: 10px 0;
+  }
+
+  .rank {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .item-info .title {
+    font-size: 13px;
+  }
+
+  .item-info .count {
+    font-size: 11px;
+  }
+
+  .amount {
+    font-size: 13px;
+  }
 }
 </style>

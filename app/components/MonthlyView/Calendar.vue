@@ -216,22 +216,58 @@ function handleDayClick(dateString: string | null) {
 }
 
 @media (max-width: 600px) {
+  .weekday {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+
   .calendar-day {
-    min-height: 50px;
+    min-height: 44px;
+    padding: 2px;
+  }
+
+  .day-number {
+    font-size: 12px;
   }
 
   .day-info {
     display: none;
   }
 
-  .has-items::after {
-    content: '';
-    display: block;
-    width: 6px;
-    height: 6px;
-    background-color: #4a90d9;
-    border-radius: 50%;
-    margin-top: 4px;
+  .has-items {
+    position: relative;
+
+    &::after {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      background-color: #4a90d9;
+      border-radius: 50%;
+      margin-top: 2px;
+    }
+  }
+
+  .today .day-number {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 380px) {
+  .calendar-day {
+    min-height: 38px;
+  }
+
+  .day-number {
+    font-size: 11px;
+  }
+
+  .today .day-number {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
   }
 }
 </style>
