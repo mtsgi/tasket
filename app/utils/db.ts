@@ -63,17 +63,17 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           itemsStore.createIndex('by-type', 'type')
           itemsStore.createIndex('by-is-completed', 'is_completed')
         }
-        
+
         // バージョン2の新機能: 日タイトル、日課、日課ログ
         if (oldVersion < 2) {
           // dayTitlesオブジェクトストアを作成
           const dayTitlesStore = db.createObjectStore('dayTitles', { keyPath: 'id' })
           dayTitlesStore.createIndex('by-date', 'date')
-          
+
           // routinesオブジェクトストアを作成
           const routinesStore = db.createObjectStore('routines', { keyPath: 'id' })
           routinesStore.createIndex('by-yearMonth', 'yearMonth')
-          
+
           // routineLogsオブジェクトストアを作成
           const routineLogsStore = db.createObjectStore('routineLogs', { keyPath: 'id' })
           routineLogsStore.createIndex('by-routineId', 'routineId')

@@ -330,6 +330,7 @@ a {
   .card {
     padding: $spacing-sm;
     border-radius: $border-radius-sm;
+    margin-bottom: $spacing-sm;
   }
   
   .form-row {
@@ -391,16 +392,5 @@ a {
   .type-badge {
     font-size: 10px;
     padding: 1px 6px;
-  }
-}
-
-// Extra small devices
-@media (max-width: 380px) {
-  .container {
-    padding: $spacing-xs;
-  }
-  
-  .card {
-    padding: $spacing-xs;
   }
 }

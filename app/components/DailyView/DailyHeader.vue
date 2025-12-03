@@ -19,6 +19,14 @@ const emit = defineEmits<{
   <header class="daily-header">
     <div class="header-top">
       <button
+        class="btn btn-secondary"
+        @click="emit('goToMonth')"
+      >
+        <Icon name="mdi:calendar-month" />
+        月表示へ
+      </button>
+      <hr>
+      <button
         class="btn btn-secondary btn-icon menu-btn"
         aria-label="メニュー"
         @click="emit('goToMenu')"
@@ -43,13 +51,6 @@ const emit = defineEmits<{
         <Icon name="mdi:chevron-right" />
       </button>
     </div>
-    <button
-      class="btn btn-secondary month-link"
-      @click="emit('goToMonth')"
-    >
-      <Icon name="mdi:calendar-month" />
-      月表示へ
-    </button>
   </header>
 </template>
 
@@ -66,6 +67,12 @@ const emit = defineEmits<{
   justify-content: flex-end;
   width: 100%;
   margin-bottom: 8px;
+
+  hr {
+    flex-grow: 1;
+    margin: 0 8px;
+    border: none;
+  }
 }
 
 .nav-row {
@@ -89,11 +96,6 @@ const emit = defineEmits<{
       min-width: 180px;
     }
   }
-}
-
-.month-link {
-  margin-top: 8px;
-  font-size: 14px;
 }
 
 @media (max-width: 380px) {

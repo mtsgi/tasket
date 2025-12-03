@@ -131,7 +131,7 @@ const totalCount = computed(() => routines.value.length)
     }
 
     @media (max-width: 600px) {
-      padding: 10px 6px;
+      padding: 0;
     }
   }
 }

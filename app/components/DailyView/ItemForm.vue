@@ -30,7 +30,7 @@ function selectType(newType: ItemType) {
 /**
  * フォーム送信処理
  * 入力データからアイテムを作成し、ストアに追加
- * 注：作成後、種別はリセットしない（連続入力に便利）
+ * 注：作成後、種別と時刻はリセットしない（連続入力に便利）
  */
 async function handleSubmit() {
   if (!title.value.trim()) return
@@ -48,10 +48,9 @@ async function handleSubmit() {
       scheduled_at: scheduledAt,
     })
 
-    // フォームをリセット（種別はリセットしない）
+    // フォームをリセット（種別と時刻はリセットしない）
     title.value = ''
     amount.value = 0
-    time.value = '12:00'
   }
   finally {
     isSubmitting.value = false
@@ -68,7 +67,6 @@ async function handleSubmit() {
     <form @submit.prevent="handleSubmit">
       <!-- 種別選択ボタン（横並び） -->
       <div class="form-group">
-        <label>種別</label>
         <div class="type-buttons">
           <button
             type="button"
@@ -101,7 +99,6 @@ async function handleSubmit() {
       </div>
 
       <div class="form-group">
-        <label for="time">時刻</label>
         <input
           id="time"
           v-model="time"
@@ -111,7 +108,6 @@ async function handleSubmit() {
       </div>
 
       <div class="form-group">
-        <label for="title">タイトル</label>
         <input
           id="title"
           v-model="title"

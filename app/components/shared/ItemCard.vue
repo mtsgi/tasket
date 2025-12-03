@@ -159,11 +159,11 @@ const executionStatus = computed(() => {
   transition: all 0.2s ease;
 
   &.completed {
-    opacity: 0.6;
+    // opacity: 0.6;
 
-    .title {
-      text-decoration: line-through;
-    }
+    // .title {
+    //   text-decoration: line-through;
+    // }
   }
 
   &.type-todo {
@@ -181,7 +181,6 @@ const executionStatus = computed(() => {
 
 .item-header {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;

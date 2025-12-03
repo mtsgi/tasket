@@ -69,7 +69,7 @@ export const useDayTitlesStore = defineStore('dayTitles', {
      */
     async saveDayTitle(date: string, title: string) {
       const existingTitle = this.dayTitles[date]
-      
+
       const dayTitle: DayTitle = existingTitle
         ? { ...existingTitle, title }
         : {

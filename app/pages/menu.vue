@@ -62,7 +62,7 @@ async function exportData() {
     await itemsStore.fetchItems()
     const routines = await getAllRoutines()
     const routineLogs = await getAllRoutineLogs()
-    
+
     const exportData = {
       version: 2, // バージョン2: 日課データを含む
       exportedAt: new Date().toISOString(),
@@ -130,9 +130,9 @@ async function importData(event: Event) {
     const existingCount = itemsStore.items.length
     if (existingCount > 0) {
       const confirmed = confirm(
-        `現在${existingCount}件のアイテムがあります。\n` +
-        `インポートすると${data.items.length}件のアイテムが追加されます。\n` +
-        `続行しますか？`,
+        `現在${existingCount}件のアイテムがあります。\n`
+        + `インポートすると${data.items.length}件のアイテムが追加されます。\n`
+        + `続行しますか？`,
       )
       if (!confirmed) {
         isImporting.value = false
@@ -188,9 +188,9 @@ async function importData(event: Event) {
  */
 async function clearAllData() {
   const confirmed = confirm(
-    '本当にすべてのデータを削除しますか？\n' +
-    'この操作は取り消せません。\n' +
-    '事前にエクスポートすることをお勧めします。',
+    '本当にすべてのデータを削除しますか？\n'
+    + 'この操作は取り消せません。\n'
+    + '事前にエクスポートすることをお勧めします。',
   )
 
   if (!confirmed) return
@@ -235,32 +235,6 @@ onMounted(() => {
         {{ notification.message }}
       </div>
     </Transition>
-
-    <!-- ナビゲーション -->
-    <section class="menu-section card">
-      <h2>
-        <Icon name="mdi:navigation" />
-        ナビゲーション
-      </h2>
-      <div class="menu-buttons">
-        <UiButton
-          variant="primary"
-          block
-          @click="goToToday"
-        >
-          <Icon name="mdi:calendar-today" />
-          今日の表示
-        </UiButton>
-        <UiButton
-          variant="secondary"
-          block
-          @click="goToMonth"
-        >
-          <Icon name="mdi:calendar-month" />
-          月表示
-        </UiButton>
-      </div>
-    </section>
 
     <!-- 日課管理 -->
     <section class="menu-section card">
@@ -358,10 +332,6 @@ onMounted(() => {
       </h2>
       <div class="credits">
         <div class="credit-item">
-          <h3>開発</h3>
-          <p>Tasket Development Team</p>
-        </div>
-        <div class="credit-item">
           <h3>ライセンス</h3>
           <p>MIT License</p>
         </div>
@@ -374,10 +344,6 @@ onMounted(() => {
             <li>Chart.js</li>
             <li>Material Design Icons</li>
           </ul>
-        </div>
-        <div class="credit-item">
-          <h3>著作権</h3>
-          <p>© 2025 Tasket. All rights reserved.</p>
         </div>
       </div>
     </section>

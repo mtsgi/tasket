@@ -61,6 +61,14 @@ onMounted(() => {
   <div class="container">
     <div class="header-top">
       <button
+        class="btn btn-primary"
+        @click="goToToday"
+      >
+        <Icon name="mdi:calendar-today" />
+        今日
+      </button>
+      <hr>
+      <button
         class="btn btn-secondary btn-icon"
         aria-label="メニュー"
         @click="goToMenu"
@@ -87,18 +95,6 @@ onMounted(() => {
       </button>
     </header>
 
-    <div class="today-button-container">
-      <button
-        class="btn btn-primary"
-        @click="goToToday"
-      >
-        <Icon name="mdi:calendar-today" />
-        今日
-      </button>
-    </div>
-
-    <MonthlySummaryComponent :summary="summary" />
-
     <Calendar
       :year-month="yearMonthParam"
       :get-item-count="getItemCountForDate"
@@ -108,6 +104,8 @@ onMounted(() => {
     <ExpenseChart :daily-totals="dailyTotals" />
 
     <ExpenseRanking :ranking="expenseRanking" />
+
+    <MonthlySummaryComponent :summary="summary" />
   </div>
 </template>
 
@@ -116,6 +114,12 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 8px;
+
+  hr {
+    flex-grow: 1;
+    margin: 0 8px;
+    border: none;
+  }
 }
 
 .monthly-header {
@@ -140,12 +144,6 @@ onMounted(() => {
       min-width: 150px;
     }
   }
-}
-
-.today-button-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
 }
 
 @media (max-width: 380px) {

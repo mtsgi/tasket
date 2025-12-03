@@ -121,7 +121,7 @@ export const useRoutinesStore = defineStore('routines', {
      * @param data - 日課データ
      * @returns 作成された日課
      */
-    async createRoutine(data: { title: string; yearMonth: string }) {
+    async createRoutine(data: { title: string, yearMonth: string }) {
       const newRoutine: Routine = {
         id: uuidv4(),
         title: data.title,
@@ -170,7 +170,7 @@ export const useRoutinesStore = defineStore('routines', {
     async toggleRoutineComplete(routineId: string, date: string) {
       // 既存のログを取得
       let log = await getRoutineLog(routineId, date)
-      
+
       if (log) {
         // 既存のログがある場合は完了状態を切り替え
         log = {
@@ -191,12 +191,12 @@ export const useRoutinesStore = defineStore('routines', {
       }
 
       await saveRoutineLog(log)
-      
+
       // ストアの状態を更新
       if (!this.routineLogs[date]) {
         this.routineLogs[date] = []
       }
-      
+
       const existingIndex = this.routineLogs[date].findIndex(l => l.routineId === routineId)
       if (existingIndex !== -1) {
         this.routineLogs[date][existingIndex] = log

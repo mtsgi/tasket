@@ -75,7 +75,7 @@ function startEdit(routine: Routine) {
  */
 async function saveEdit() {
   if (!editingRoutine.value) return
-  
+
   const title = editTitle.value.trim()
   if (!title) return
 
@@ -107,19 +107,19 @@ async function deleteRoutine(id: string) {
 async function copyFromPreviousMonth() {
   const prevMonth = addMonths(currentYearMonth.value + '-01', -1)
   const prevYearMonth = formatYearMonth(prevMonth)
-  
+
   // 前月の日課を取得
   await routinesStore.fetchRoutines(prevYearMonth)
   const prevRoutines = [...routinesStore.routines]
-  
+
   // 現在の月に戻す
   await routinesStore.fetchRoutines(currentYearMonth.value)
-  
+
   if (prevRoutines.length === 0) {
     alert('前月に日課がありません')
     return
   }
-  
+
   // 前月の日課をコピー
   for (const routine of prevRoutines) {
     await routinesStore.createRoutine({

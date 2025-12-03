@@ -2,14 +2,6 @@
 export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@pinia/nuxt', '@vite-pwa/nuxt', '@nuxt/icon'],
   devtools: { enabled: true },
-  future: {
-    compatibilityVersion: 5,
-  },
-  compatibilityDate: '2025-07-15',
-  eslint: {
-    config: { stylistic: true },
-  },
-  css: ['~/assets/scss/main.scss'],
   app: {
     head: {
       title: 'Tasket',
@@ -22,6 +14,14 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
       ],
     },
+  },
+  css: ['~/assets/scss/main.scss'],
+  future: {
+    compatibilityVersion: 5,
+  },
+  compatibilityDate: '2025-07-15',
+  eslint: {
+    config: { stylistic: true },
   },
   pwa: {
     registerType: 'autoUpdate',

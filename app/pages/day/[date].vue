@@ -100,19 +100,13 @@ onMounted(() => {
     <!-- 日課チェックリスト -->
     <RoutineChecklist :date="dateParam" />
 
-    <!-- 日次収支サマリー -->
-    <DailySummaryComponent :summary="summary" />
+    <!-- アイテム一覧 -->
+    <ItemList :items="items" />
 
     <!-- アイテム追加フォーム -->
     <ItemForm :date="dateParam" />
 
-    <!-- アイテム一覧 -->
-    <ItemList :items="items" />
+    <!-- 日次収支サマリー -->
+    <DailySummaryComponent :summary="summary" />
   </div>
 </template>
-
-<style lang="scss" scoped>
-.container {
-  padding-top: 16px;
-}
-</style>
