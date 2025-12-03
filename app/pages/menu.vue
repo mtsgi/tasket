@@ -1,14 +1,20 @@
 <script setup lang="ts">
 /**
  * メニュー画面
- * アプリ設定、データ管理（エクスポート・インポート）、権利表記を提供します。
+ * アプリ設定、データ管理（エクスポート・インポート）、日課管理、権利表記を提供します。
  */
 import { useItemsStore } from '~/stores/items'
+import { useRoutinesStore } from '~/stores/routines'
+import { useDayTitlesStore } from '~/stores/dayTitles'
 import { formatYearMonth } from '~/utils/dateHelpers'
-import type { Item } from '~/types/item'
+import { getAllRoutines, getAllRoutineLogs } from '~/utils/db'
+import type { Item, Routine, RoutineLog, DayTitle } from '~/types/item'
+import RoutineManager from '~/components/shared/RoutineManager.vue'
 
 const router = useRouter()
 const itemsStore = useItemsStore()
+const routinesStore = useRoutinesStore()
+const dayTitlesStore = useDayTitlesStore()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -49,19 +55,30 @@ function goToMonth() {
 }
 
 /**
- * データをJSON形式でエクスポート
+ * データをJSON形式でエクスポート（日課と日課ログを含む）
  */
 async function exportData() {
   try {
     await itemsStore.fetchItems()
+    const routines = await getAllRoutines()
+    const routineLogs = await getAllRoutineLogs()
+    
     const exportData = {
-      version: 1,
+      version: 2, // バージョン2: 日課データを含む
       exportedAt: new Date().toISOString(),
       items: itemsStore.items.map(item => ({
         ...item,
         scheduled_at: item.scheduled_at.toISOString(),
         executed_at: item.executed_at ? item.executed_at.toISOString() : null,
         created_at: item.created_at.toISOString(),
+      })),
+      routines: routines.map(routine => ({
+        ...routine,
+        created_at: routine.created_at.toISOString(),
+      })),
+      routineLogs: routineLogs.map(log => ({
+        ...log,
+        completed_at: log.completed_at ? log.completed_at.toISOString() : null,
       })),
     }
 
@@ -142,6 +159,16 @@ async function importData(event: Event) {
       })
     }
 
+    // 日課をインポート（バージョン2以降）
+    if (data.version >= 2 && Array.isArray(data.routines)) {
+      for (const routineData of data.routines) {
+        await routinesStore.createRoutine({
+          title: routineData.title,
+          yearMonth: routineData.yearMonth,
+        })
+      }
+    }
+
     showNotification('success', `${data.items.length}件のアイテムをインポートしました`)
     await itemsStore.fetchItems()
   }
@@ -216,21 +243,35 @@ onMounted(() => {
         ナビゲーション
       </h2>
       <div class="menu-buttons">
-        <button
-          class="btn btn-primary btn-block"
+        <UiButton
+          variant="primary"
+          block
           @click="goToToday"
         >
           <Icon name="mdi:calendar-today" />
           今日の表示
-        </button>
-        <button
-          class="btn btn-secondary btn-block"
+        </UiButton>
+        <UiButton
+          variant="secondary"
+          block
           @click="goToMonth"
         >
           <Icon name="mdi:calendar-month" />
           月表示
-        </button>
+        </UiButton>
       </div>
+    </section>
+
+    <!-- 日課管理 -->
+    <section class="menu-section card">
+      <h2>
+        <Icon name="mdi:checkbox-multiple-marked" />
+        日課管理
+      </h2>
+      <p class="section-description">
+        毎日繰り返し行う習慣やタスクを月ごとに設定できます。
+      </p>
+      <RoutineManager />
     </section>
 
     <!-- データ管理 -->
@@ -243,21 +284,23 @@ onMounted(() => {
         アプリのデータをJSONファイルとしてバックアップ・復元できます。
       </p>
       <div class="menu-buttons">
-        <button
-          class="btn btn-secondary btn-block"
+        <UiButton
+          variant="secondary"
+          block
           @click="exportData"
         >
           <Icon name="mdi:export" />
           エクスポート
-        </button>
-        <button
-          class="btn btn-secondary btn-block"
+        </UiButton>
+        <UiButton
+          variant="secondary"
+          block
           :disabled="isImporting"
           @click="openImportDialog"
         >
           <Icon name="mdi:import" />
           {{ isImporting ? 'インポート中...' : 'インポート' }}
-        </button>
+        </UiButton>
         <input
           ref="fileInputRef"
           type="file"
@@ -271,13 +314,14 @@ onMounted(() => {
           <Icon name="mdi:alert" />
           危険な操作
         </h3>
-        <button
-          class="btn btn-danger btn-block"
+        <UiButton
+          variant="danger"
+          block
           @click="clearAllData"
         >
           <Icon name="mdi:delete-forever" />
           すべてのデータを削除
-        </button>
+        </UiButton>
       </div>
     </section>
 

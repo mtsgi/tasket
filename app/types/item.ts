@@ -22,6 +22,41 @@ export interface Item {
 }
 
 /**
+ * 日ごとのタイトル（その日のメインタスク）
+ * 各日に設定できる「今日やること」の見出し
+ */
+export interface DayTitle {
+  id: string // 一意のID（UUID）
+  date: string // 対象日（YYYY-MM-DD形式）
+  title: string // タイトル
+  created_at: Date // 作成日時
+}
+
+/**
+ * 月ごとの日課（ルーティン）
+ * 毎日繰り返し行う習慣やタスクの定義
+ */
+export interface Routine {
+  id: string // 一意のID（UUID）
+  yearMonth: string // 対象年月（YYYY-MM形式）
+  title: string // 日課のタイトル
+  order: number // 表示順序
+  created_at: Date // 作成日時
+}
+
+/**
+ * 日課の達成記録
+ * 特定の日に日課を完了したかどうかを記録
+ */
+export interface RoutineLog {
+  id: string // 一意のID（UUID）
+  routineId: string // 対象の日課ID
+  date: string // 達成日（YYYY-MM-DD形式）
+  is_completed: boolean // 完了状態
+  completed_at: Date | null // 完了日時
+}
+
+/**
  * 日次サマリーのデータ構造
  * 特定の日の収支とタスク完了状況をまとめたもの
  */

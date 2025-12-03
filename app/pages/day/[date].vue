@@ -2,13 +2,15 @@
 /**
  * 日ごとのビューページ
  * 特定の日のタスクと収支を時系列で管理する詳細ビューです。
- * 週表示カレンダー、収支サマリー、アイテム追加フォーム、アイテム一覧を表示します。
+ * 日タイトル、週表示カレンダー、日課チェックリスト、収支サマリー、アイテム追加フォーム、アイテム一覧を表示します。
  */
 import { useItemsStore } from '~/stores/items'
 import { useStatistics } from '~/composables/useStatistics'
 import { formatDate, formatDisplayDate, addDays, formatYearMonth } from '~/utils/dateHelpers'
 import DailyHeader from '~/components/DailyView/DailyHeader.vue'
+import DayTitle from '~/components/DailyView/DayTitle.vue'
 import WeekView from '~/components/DailyView/WeekView.vue'
+import RoutineChecklist from '~/components/DailyView/RoutineChecklist.vue'
 import ItemList from '~/components/DailyView/ItemList.vue'
 import ItemForm from '~/components/DailyView/ItemForm.vue'
 import DailySummaryComponent from '~/components/DailyView/DailySummary.vue'
@@ -91,6 +93,12 @@ onMounted(() => {
       :current-date="dateParam"
       @select-date="handleDateSelect"
     />
+
+    <!-- 日タイトル（今日やること） -->
+    <DayTitle :date="dateParam" />
+
+    <!-- 日課チェックリスト -->
+    <RoutineChecklist :date="dateParam" />
 
     <!-- 日次収支サマリー -->
     <DailySummaryComponent :summary="summary" />
