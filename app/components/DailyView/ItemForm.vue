@@ -21,8 +21,16 @@ const time = ref('12:00')
 const isSubmitting = ref(false)
 
 /**
+ * アイテム種別を選択
+ */
+function selectType(newType: ItemType) {
+  type.value = newType
+}
+
+/**
  * フォーム送信処理
  * 入力データからアイテムを作成し、ストアに追加
+ * 注：作成後、種別はリセットしない（連続入力に便利）
  */
 async function handleSubmit() {
   if (!title.value.trim()) return
@@ -40,10 +48,9 @@ async function handleSubmit() {
       scheduled_at: scheduledAt,
     })
 
-    // フォームをリセット
+    // フォームをリセット（種別はリセットしない）
     title.value = ''
     amount.value = 0
-    type.value = 'todo'
     time.value = '12:00'
   }
   finally {
@@ -59,34 +66,48 @@ async function handleSubmit() {
       新規アイテム
     </h2>
     <form @submit.prevent="handleSubmit">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="type">種別</label>
-          <select
-            id="type"
-            v-model="type"
-            class="form-select"
+      <!-- 種別選択ボタン（横並び） -->
+      <div class="form-group">
+        <label>種別</label>
+        <div class="type-buttons">
+          <button
+            type="button"
+            class="type-btn"
+            :class="{ active: type === 'todo' }"
+            @click="selectType('todo')"
           >
-            <option value="todo">
-              TODO
-            </option>
-            <option value="expense">
-              支出
-            </option>
-            <option value="income">
-              収入
-            </option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="time">時刻</label>
-          <input
-            id="time"
-            v-model="time"
-            type="time"
-            class="form-control"
+            <Icon name="mdi:checkbox-marked-outline" />
+            TODO
+          </button>
+          <button
+            type="button"
+            class="type-btn type-expense"
+            :class="{ active: type === 'expense' }"
+            @click="selectType('expense')"
           >
+            <Icon name="mdi:cart-outline" />
+            支出
+          </button>
+          <button
+            type="button"
+            class="type-btn type-income"
+            :class="{ active: type === 'income' }"
+            @click="selectType('income')"
+          >
+            <Icon name="mdi:wallet-plus-outline" />
+            収入
+          </button>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label for="time">時刻</label>
+        <input
+          id="time"
+          v-model="time"
+          type="time"
+          class="form-control"
+        >
       </div>
 
       <div class="form-group">
@@ -139,6 +160,73 @@ async function handleSubmit() {
     @media (max-width: 600px) {
       font-size: 14px;
       margin-bottom: 12px;
+    }
+  }
+}
+
+/* 種別選択ボタン */
+.type-buttons {
+  display: flex;
+  gap: 8px;
+
+  .type-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #2196f3;
+      color: #2196f3;
+    }
+
+    &.active {
+      border-color: #2196f3;
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    &.type-expense {
+      &:hover {
+        border-color: #f44336;
+        color: #f44336;
+      }
+
+      &.active {
+        border-color: #f44336;
+        background: #ffebee;
+        color: #d32f2f;
+      }
+    }
+
+    &.type-income {
+      &:hover {
+        border-color: #4caf50;
+        color: #4caf50;
+      }
+
+      &.active {
+        border-color: #4caf50;
+        background: #e8f5e9;
+        color: #388e3c;
+      }
+    }
+  }
+
+  @media (max-width: 380px) {
+    .type-btn {
+      padding: 8px;
+      font-size: 12px;
     }
   }
 }

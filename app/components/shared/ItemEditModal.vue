@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * アイテム編集モーダルコンポーネント
+ * 既存アイテムの編集・削除機能を提供
+ */
 import type { Item, ItemType } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
 import { formatDate } from '~/utils/dateHelpers'
@@ -13,6 +17,7 @@ const emit = defineEmits<{
 
 const itemsStore = useItemsStore()
 
+// フォームの状態
 const title = ref(props.item.title)
 const amount = ref(props.item.amount)
 const type = ref<ItemType>(props.item.type)
@@ -21,8 +26,25 @@ const time = ref(
 )
 const date = ref(formatDate(props.item.scheduled_at))
 
+// 実行時刻（任意）
+const executedTime = ref(
+  props.item.executed_at
+    ? props.item.executed_at.toTimeString().slice(0, 5)
+    : '',
+)
+
 const isSubmitting = ref(false)
 
+/**
+ * アイテム種別を選択
+ */
+function selectType(newType: ItemType) {
+  type.value = newType
+}
+
+/**
+ * フォーム送信処理
+ */
 async function handleSubmit() {
   if (!title.value.trim()) return
 
@@ -32,11 +54,20 @@ async function handleSubmit() {
     const scheduledAt = new Date(date.value)
     scheduledAt.setHours(hours, minutes, 0, 0)
 
+    // 実行時刻が設定されている場合のみ変換
+    let executedAt: Date | null = null
+    if (executedTime.value) {
+      const [execHours, execMinutes] = executedTime.value.split(':').map(Number)
+      executedAt = new Date(date.value)
+      executedAt.setHours(execHours, execMinutes, 0, 0)
+    }
+
     await itemsStore.updateItemById(props.item.id, {
       title: title.value.trim(),
       amount: type.value === 'todo' ? 0 : amount.value,
       type: type.value,
       scheduled_at: scheduledAt,
+      executed_at: executedAt,
     })
 
     emit('close')
@@ -46,6 +77,9 @@ async function handleSubmit() {
   }
 }
 
+/**
+ * アイテム削除処理
+ */
 async function handleDelete() {
   if (confirm('このアイテムを削除しますか？')) {
     await itemsStore.deleteItemById(props.item.id)
@@ -53,6 +87,16 @@ async function handleDelete() {
   }
 }
 
+/**
+ * 実行時刻をクリア
+ */
+function clearExecutedTime() {
+  executedTime.value = ''
+}
+
+/**
+ * オーバーレイクリック時にモーダルを閉じる
+ */
 function handleOverlayClick(event: MouseEvent) {
   if (event.target === event.currentTarget) {
     emit('close')
@@ -81,25 +125,41 @@ function handleOverlayClick(event: MouseEvent) {
         class="modal-body"
         @submit.prevent="handleSubmit"
       >
-        <div class="form-row">
-          <div class="form-group">
-            <label for="edit-type">種別</label>
-            <select
-              id="edit-type"
-              v-model="type"
-              class="form-select"
+        <!-- 種別選択ボタン（横並び） -->
+        <div class="form-group">
+          <label>種別</label>
+          <div class="type-buttons">
+            <button
+              type="button"
+              class="type-btn"
+              :class="{ active: type === 'todo' }"
+              @click="selectType('todo')"
             >
-              <option value="todo">
-                TODO
-              </option>
-              <option value="expense">
-                支出
-              </option>
-              <option value="income">
-                収入
-              </option>
-            </select>
+              <Icon name="mdi:checkbox-marked-outline" />
+              TODO
+            </button>
+            <button
+              type="button"
+              class="type-btn type-expense"
+              :class="{ active: type === 'expense' }"
+              @click="selectType('expense')"
+            >
+              <Icon name="mdi:cart-outline" />
+              支出
+            </button>
+            <button
+              type="button"
+              class="type-btn type-income"
+              :class="{ active: type === 'income' }"
+              @click="selectType('income')"
+            >
+              <Icon name="mdi:wallet-plus-outline" />
+              収入
+            </button>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="edit-date">日付</label>
             <input
@@ -109,16 +169,41 @@ function handleOverlayClick(event: MouseEvent) {
               class="form-control"
             >
           </div>
+          <div class="form-group">
+            <label for="edit-time">予定時刻</label>
+            <input
+              id="edit-time"
+              v-model="time"
+              type="time"
+              class="form-control"
+            >
+          </div>
         </div>
 
+        <!-- 実行時刻 -->
         <div class="form-group">
-          <label for="edit-time">時刻</label>
-          <input
-            id="edit-time"
-            v-model="time"
-            type="time"
-            class="form-control"
-          >
+          <label for="edit-executed-time">
+            実行時刻
+            <span class="label-hint">（実際に行った時刻）</span>
+          </label>
+          <div class="time-input-with-clear">
+            <input
+              id="edit-executed-time"
+              v-model="executedTime"
+              type="time"
+              class="form-control"
+              placeholder="未設定"
+            >
+            <button
+              v-if="executedTime"
+              type="button"
+              class="btn-clear"
+              aria-label="クリア"
+              @click="clearExecutedTime"
+            >
+              <Icon name="mdi:close-circle" />
+            </button>
+          </div>
         </div>
 
         <div class="form-group">
@@ -181,6 +266,109 @@ function handleOverlayClick(event: MouseEvent) {
 </template>
 
 <style lang="scss" scoped>
+/* 種別選択ボタン */
+.type-buttons {
+  display: flex;
+  gap: 8px;
+
+  .type-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #2196f3;
+      color: #2196f3;
+    }
+
+    &.active {
+      border-color: #2196f3;
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    &.type-expense {
+      &:hover {
+        border-color: #f44336;
+        color: #f44336;
+      }
+
+      &.active {
+        border-color: #f44336;
+        background: #ffebee;
+        color: #d32f2f;
+      }
+    }
+
+    &.type-income {
+      &:hover {
+        border-color: #4caf50;
+        color: #4caf50;
+      }
+
+      &.active {
+        border-color: #4caf50;
+        background: #e8f5e9;
+        color: #388e3c;
+      }
+    }
+  }
+
+  @media (max-width: 380px) {
+    .type-btn {
+      padding: 8px;
+      font-size: 12px;
+    }
+  }
+}
+
+/* 実行時刻入力 */
+.time-input-with-clear {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .form-control {
+    flex: 1;
+    padding-right: 36px;
+  }
+
+  .btn-clear {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+
+    &:hover {
+      color: #f44336;
+    }
+  }
+}
+
+.label-hint {
+  font-size: 11px;
+  color: #999;
+  font-weight: normal;
+}
+
 .modal-footer {
   display: flex;
   align-items: center;

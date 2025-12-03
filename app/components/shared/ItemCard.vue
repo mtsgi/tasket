@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * アイテムカードコンポーネント
+ * アイテムの情報を表示し、完了状態の切り替えと編集機能を提供
+ */
 import type { Item } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
 import { formatTime } from '~/utils/dateHelpers'
@@ -13,24 +17,61 @@ const itemsStore = useItemsStore()
 
 const showEditModal = ref(false)
 
+/**
+ * 完了状態を切り替える
+ */
 async function handleToggleComplete() {
   await itemsStore.toggleComplete(props.item.id)
 }
 
+/**
+ * 編集モーダルを開く
+ */
 function handleEdit() {
   showEditModal.value = true
 }
 
+/**
+ * 編集モーダルを閉じる
+ */
 function handleCloseModal() {
   showEditModal.value = false
 }
 
+/**
+ * アイテム種別のラベルを取得
+ */
 const typeLabel = computed(() => {
   switch (props.item.type) {
     case 'todo': return 'TODO'
     case 'expense': return '支出'
     case 'income': return '収入'
     default: return ''
+  }
+})
+
+/**
+ * 予定通りに実行されたかどうかを判定
+ * 実行時刻が設定されている場合のみ判定を行う
+ */
+const executionStatus = computed(() => {
+  if (!props.item.executed_at) return null
+
+  const scheduled = new Date(props.item.scheduled_at)
+  const executed = new Date(props.item.executed_at)
+
+  // 同じ時刻（分単位で比較）の場合は「予定通り」
+  const scheduledMinutes = scheduled.getHours() * 60 + scheduled.getMinutes()
+  const executedMinutes = executed.getHours() * 60 + executed.getMinutes()
+
+  if (scheduledMinutes === executedMinutes) {
+    return 'on-time' // 予定通り
+  }
+  else if (executedMinutes < scheduledMinutes) {
+    return 'early' // 早め
+  }
+  else {
+    return 'late' // 遅れ
   }
 })
 </script>
@@ -53,7 +94,26 @@ const typeLabel = computed(() => {
         />
       </button>
       <div class="item-info">
-        <span class="time">{{ formatTime(item.scheduled_at) }}</span>
+        <!-- 予定時刻 -->
+        <span class="time scheduled">
+          <Icon
+            name="mdi:clock-outline"
+            class="time-icon"
+          />
+          {{ formatTime(item.scheduled_at) }}
+        </span>
+        <!-- 実行時刻（完了済みの場合表示） -->
+        <span
+          v-if="item.executed_at"
+          class="time executed"
+          :class="executionStatus"
+        >
+          <Icon
+            name="mdi:check-circle-outline"
+            class="time-icon"
+          />
+          {{ formatTime(item.executed_at) }}
+        </span>
         <span :class="`type-badge type-badge-${item.type}`">{{ typeLabel }}</span>
       </div>
     </div>
@@ -160,8 +220,34 @@ const typeLabel = computed(() => {
 
   .time {
     font-size: 11px;
-    color: #666;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+
+    .time-icon {
+      font-size: 10px;
+    }
+
+    &.scheduled {
+      color: #666;
+    }
+
+    &.executed {
+      font-size: 10px;
+
+      &.on-time {
+        color: #4caf50;
+      }
+
+      &.early {
+        color: #2196f3;
+      }
+
+      &.late {
+        color: #f44336;
+      }
+    }
   }
 }
 
