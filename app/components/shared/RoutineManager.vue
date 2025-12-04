@@ -255,7 +255,7 @@ async function copyFromPreviousMonth() {
     align-items: center;
     justify-content: center;
     gap: 16px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
 
   &__month {
@@ -268,14 +268,14 @@ async function copyFromPreviousMonth() {
   &__list {
     list-style: none;
     padding: 0;
-    margin: 0 0 16px;
+    margin: 0 0 8px;
   }
 
   &__item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px;
+    padding: 8px 0;
     border-bottom: 1px solid #f0f0f0;
 
     &:last-child {
@@ -301,7 +301,8 @@ async function copyFromPreviousMonth() {
   }
 
   &__add {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 8px;
     margin-bottom: 12px;
   }

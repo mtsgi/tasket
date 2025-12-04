@@ -332,6 +332,10 @@ a {
     border-radius: $border-radius-sm;
     margin-bottom: $spacing-sm;
   }
+
+  .form-group {
+    margin-bottom: $spacing-sm;
+  }
   
   .form-row {
     flex-direction: column;
@@ -354,7 +358,7 @@ a {
   }
   
   .modal-overlay {
-    padding: $spacing-sm;
+    padding: 0;
     align-items: flex-end;
   }
   

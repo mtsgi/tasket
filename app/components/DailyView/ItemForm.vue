@@ -72,8 +72,8 @@ async function handleSubmit() {
       <div class="form-group">
         <div class="type-buttons">
           <UiButton
-            :variant="type === 'todo' ? 'primary' : 'secondary'"
-            class="type-btn"
+            variant="secondary"
+            class="type-btn type-todo"
             :class="{ active: type === 'todo' }"
             @click="selectType('todo')"
           >
@@ -81,7 +81,7 @@ async function handleSubmit() {
             TODO
           </UiButton>
           <UiButton
-            :variant="type === 'expense' ? 'danger' : 'secondary'"
+            variant="secondary"
             class="type-btn type-expense"
             :class="{ active: type === 'expense' }"
             @click="selectType('expense')"
@@ -179,18 +179,25 @@ async function handleSubmit() {
 
   .type-btn {
     flex: 1;
+    padding: 8px;
+    font-size: 12px;
+
+    &.type-todo.active {
+      background: #e3f2fd;
+      color: #1976d2;
+      border-color: #2196f3;
+    }
+
+    &.type-expense.active {
+      background: #ffebee;
+      color: #d32f2f;
+      border-color: #f44336;
+    }
 
     &.type-income.active {
       background: #e8f5e9;
       color: #388e3c;
       border-color: #4caf50;
-    }
-  }
-
-  @media (max-width: 380px) {
-    .type-btn {
-      padding: 8px;
-      font-size: 12px;
     }
   }
 }

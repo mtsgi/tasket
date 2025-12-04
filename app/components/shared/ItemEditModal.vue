@@ -130,11 +130,10 @@ function handleOverlayClick(event: MouseEvent) {
       >
         <!-- 種別選択ボタン（横並び） -->
         <div class="form-group">
-          <label>種別</label>
           <div class="type-buttons">
             <UiButton
-              :variant="type === 'todo' ? 'primary' : 'secondary'"
-              class="type-btn"
+              variant="secondary"
+              class="type-btn type-todo"
               :class="{ active: type === 'todo' }"
               @click="selectType('todo')"
             >
@@ -142,7 +141,7 @@ function handleOverlayClick(event: MouseEvent) {
               TODO
             </UiButton>
             <UiButton
-              :variant="type === 'expense' ? 'danger' : 'secondary'"
+              variant="secondary"
               class="type-btn type-expense"
               :class="{ active: type === 'expense' }"
               @click="selectType('expense')"
@@ -230,10 +229,7 @@ function handleOverlayClick(event: MouseEvent) {
           />
         </div>
 
-        <div
-          v-if="type !== 'todo'"
-          class="form-group"
-        >
+        <div class="form-group">
           <label for="edit-amount">金額</label>
           <UiInput
             id="edit-amount"
@@ -241,6 +237,7 @@ function handleOverlayClick(event: MouseEvent) {
             type="number"
             :min="0"
             placeholder="金額を入力"
+            :disabled="type === 'todo'"
           />
         </div>
       </form>
@@ -281,6 +278,18 @@ function handleOverlayClick(event: MouseEvent) {
 
   .type-btn {
     flex: 1;
+
+    &.type-todo.active {
+      background: #e3f2fd;
+      color: #1976d2;
+      border-color: #2196f3;
+    }
+
+    &.type-expense.active {
+      background: #ffebee;
+      color: #d32f2f;
+      border-color: #f44336;
+    }
 
     &.type-income.active {
       background: #e8f5e9;

@@ -114,6 +114,7 @@ const totalCount = computed(() => routines.value.length)
   }
 
   &__item {
+    display: flex;
     padding: 12px 8px;
     border-radius: 8px;
     cursor: pointer;
@@ -131,7 +132,7 @@ const totalCount = computed(() => routines.value.length)
     }
 
     @media (max-width: 600px) {
-      padding: 0;
+      padding: 2px;
     }
   }
 }
