@@ -90,6 +90,7 @@ export const useItemsStore = defineStore('items', {
       amount: number
       type: ItemType
       scheduled_at: Date
+      notes?: string
     }) {
       const newItem: Item = {
         id: uuidv4(),
@@ -100,6 +101,7 @@ export const useItemsStore = defineStore('items', {
         scheduled_at: data.scheduled_at,
         executed_at: null,
         created_at: new Date(),
+        notes: data.notes || '',
       }
       await addItem(newItem)
       this.items.push(newItem)
@@ -125,17 +127,15 @@ export const useItemsStore = defineStore('items', {
 
     /**
      * アイテムの完了状態を切り替え
+     * 注：完了状態の切り替えでは実行日時を更新しない（手動で設定する）
      * @param id - アイテムID
      */
     async toggleComplete(id: string) {
       const item = this.items.find(item => item.id === id)
       if (item) {
         const isCompleted = !item.is_completed
-        // 完了時は実行日時を記録、未完了に戻す場合はnull
-        const executedAt = isCompleted ? new Date() : null
         await this.updateItemById(id, {
           is_completed: isCompleted,
-          executed_at: executedAt,
         })
       }
     },

@@ -19,6 +19,7 @@ export interface Item {
   scheduled_at: Date // 予定日時
   executed_at: Date | null // 実行日時（完了時に設定）
   created_at: Date // 作成日時
+  notes: string // 備考
 }
 
 /**

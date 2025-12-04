@@ -7,8 +7,7 @@ import { useItemsStore } from '~/stores/items'
 import { useRoutinesStore } from '~/stores/routines'
 import { useDayTitlesStore } from '~/stores/dayTitles'
 import { formatYearMonth } from '~/utils/dateHelpers'
-import { getAllRoutines, getAllRoutineLogs } from '~/utils/db'
-import type { Item, Routine, RoutineLog, DayTitle } from '~/types/item'
+import { getAllRoutines, getAllRoutineLogs, getAllDayTitles } from '~/utils/db'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 
 const router = useRouter()
@@ -38,7 +37,7 @@ function showNotification(type: 'success' | 'error', message: string) {
 /**
  * 今日の日付ページに移動
  */
-function goToToday() {
+function _goToToday() {
   const today = new Date()
   const year = today.getFullYear()
   const month = String(today.getMonth() + 1).padStart(2, '0')
@@ -49,22 +48,23 @@ function goToToday() {
 /**
  * 今月の月表示ページに移動
  */
-function goToMonth() {
+function _goToMonth() {
   const today = new Date()
   router.push(`/month/${formatYearMonth(today)}`)
 }
 
 /**
- * データをJSON形式でエクスポート（日課と日課ログを含む）
+ * データをJSON形式でエクスポート（日課、日課ログ、日タイトルを含む）
  */
 async function exportData() {
   try {
     await itemsStore.fetchItems()
     const routines = await getAllRoutines()
     const routineLogs = await getAllRoutineLogs()
+    const dayTitles = await getAllDayTitles()
 
-    const exportData = {
-      version: 2, // バージョン2: 日課データを含む
+    const exportPayload = {
+      version: 3, // バージョン3: 日タイトルデータを含む
       exportedAt: new Date().toISOString(),
       items: itemsStore.items.map(item => ({
         ...item,
@@ -80,9 +80,13 @@ async function exportData() {
         ...log,
         completed_at: log.completed_at ? log.completed_at.toISOString() : null,
       })),
+      dayTitles: dayTitles.map(dt => ({
+        ...dt,
+        created_at: dt.created_at.toISOString(),
+      })),
     }
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -142,20 +146,12 @@ async function importData(event: Event) {
 
     // アイテムをインポート
     for (const itemData of data.items) {
-      const item: Omit<Item, 'id' | 'created_at'> & { id?: string } = {
+      await itemsStore.createItem({
         title: itemData.title,
         amount: itemData.amount,
         type: itemData.type,
-        is_completed: itemData.is_completed,
         scheduled_at: new Date(itemData.scheduled_at),
-        executed_at: itemData.executed_at ? new Date(itemData.executed_at) : null,
-      }
-
-      await itemsStore.createItem({
-        title: item.title,
-        amount: item.amount,
-        type: item.type,
-        scheduled_at: item.scheduled_at,
+        notes: itemData.notes || '',
       })
     }
 
@@ -166,6 +162,13 @@ async function importData(event: Event) {
           title: routineData.title,
           yearMonth: routineData.yearMonth,
         })
+      }
+    }
+
+    // 日タイトルをインポート（バージョン3以降）
+    if (data.version >= 3 && Array.isArray(data.dayTitles)) {
+      for (const dayTitleData of data.dayTitles) {
+        await dayTitlesStore.saveDayTitle(dayTitleData.date, dayTitleData.title)
       }
     }
 

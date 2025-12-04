@@ -102,6 +102,7 @@ export async function getAllItems(): Promise<Item[]> {
     scheduled_at: new Date(item.scheduled_at),
     executed_at: item.executed_at ? new Date(item.executed_at) : null,
     created_at: new Date(item.created_at),
+    notes: item.notes || '', // 既存データの互換性のため
   }))
 }
 
@@ -119,6 +120,7 @@ export async function getItemById(id: string): Promise<Item | undefined> {
       scheduled_at: new Date(item.scheduled_at),
       executed_at: item.executed_at ? new Date(item.executed_at) : null,
       created_at: new Date(item.created_at),
+      notes: item.notes || '', // 既存データの互換性のため
     }
   }
   return undefined
@@ -202,6 +204,19 @@ export async function saveDayTitle(dayTitle: DayTitle): Promise<void> {
 export async function deleteDayTitle(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('dayTitles', id)
+}
+
+/**
+ * すべての日タイトルを取得
+ * @returns すべての日タイトルリスト
+ */
+export async function getAllDayTitles(): Promise<DayTitle[]> {
+  const db = await getDB()
+  const titles = await db.getAll('dayTitles')
+  return titles.map(title => ({
+    ...title,
+    created_at: new Date(title.created_at),
+  }))
 }
 
 // ============================================

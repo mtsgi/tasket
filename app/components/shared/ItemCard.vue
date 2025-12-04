@@ -82,17 +82,11 @@ const executionStatus = computed(() => {
     :class="[`type-${item.type}`, { completed: item.is_completed }]"
   >
     <div class="item-header">
-      <button
-        class="complete-btn"
-        :class="{ checked: item.is_completed }"
+      <UiCheckbox
+        :model-value="item.is_completed"
         aria-label="完了状態を切り替え"
-        @click="handleToggleComplete"
-      >
-        <Icon
-          v-if="item.is_completed"
-          name="mdi:check"
-        />
-      </button>
+        @update:model-value="handleToggleComplete"
+      />
       <div class="item-info">
         <!-- 予定時刻 -->
         <span class="time scheduled">
@@ -102,7 +96,7 @@ const executionStatus = computed(() => {
           />
           {{ formatTime(item.scheduled_at) }}
         </span>
-        <!-- 実行時刻（完了済みの場合表示） -->
+        <!-- 実行時刻（設定されている場合表示） -->
         <span
           v-if="item.executed_at"
           class="time executed"
@@ -122,6 +116,13 @@ const executionStatus = computed(() => {
       <h3 class="title">
         {{ item.title }}
       </h3>
+      <!-- 備考がある場合表示 -->
+      <p
+        v-if="item.notes"
+        class="notes"
+      >
+        {{ item.notes }}
+      </p>
       <div
         v-if="item.amount > 0"
         class="amount-display"
@@ -133,13 +134,14 @@ const executionStatus = computed(() => {
     </div>
 
     <div class="item-actions">
-      <button
-        class="btn btn-secondary btn-icon"
+      <UiButton
+        variant="secondary"
+        icon
         aria-label="編集"
         @click="handleEdit"
       >
         <Icon name="mdi:pencil" />
-      </button>
+      </UiButton>
     </div>
 
     <ItemEditModal
@@ -157,14 +159,6 @@ const executionStatus = computed(() => {
   gap: 12px;
   padding: 12px 16px;
   transition: all 0.2s ease;
-
-  &.completed {
-    // opacity: 0.6;
-
-    // .title {
-    //   text-decoration: line-through;
-    // }
-  }
 
   &.type-todo {
     border-left: 3px solid #2196f3;
@@ -184,31 +178,6 @@ const executionStatus = computed(() => {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-}
-
-.complete-btn {
-  width: 28px;
-  height: 28px;
-  border: 2px solid #ccc;
-  border-radius: 50%;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: #4caf50;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: #4caf50;
-  }
-
-  &.checked {
-    background-color: #4caf50;
-    border-color: #4caf50;
-    color: white;
-  }
 }
 
 .item-info {
@@ -261,6 +230,14 @@ const executionStatus = computed(() => {
     word-break: break-word;
     line-height: 1.3;
   }
+
+  .notes {
+    font-size: 12px;
+    color: #666;
+    margin: 4px 0;
+    word-break: break-word;
+    line-height: 1.4;
+  }
 }
 
 .amount-display {
@@ -281,11 +258,6 @@ const executionStatus = computed(() => {
   .item-card {
     gap: 8px;
     padding: 10px 12px;
-  }
-
-  .complete-btn {
-    width: 32px;
-    height: 32px;
   }
 
   .item-content .title {

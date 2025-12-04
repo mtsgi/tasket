@@ -25,6 +25,7 @@ const time = ref(
   props.item.scheduled_at.toTimeString().slice(0, 5),
 )
 const date = ref(formatDate(props.item.scheduled_at))
+const notes = ref(props.item.notes || '')
 
 // 実行時刻（任意）
 const executedTime = ref(
@@ -68,6 +69,7 @@ async function handleSubmit() {
       type: type.value,
       scheduled_at: scheduledAt,
       executed_at: executedAt,
+      notes: notes.value.trim(),
     })
 
     emit('close')
@@ -112,13 +114,14 @@ function handleOverlayClick(event: MouseEvent) {
     <div class="modal">
       <header class="modal-header">
         <h2>アイテムを編集</h2>
-        <button
-          class="btn btn-secondary btn-icon"
+        <UiButton
+          variant="secondary"
+          icon
           aria-label="閉じる"
           @click="emit('close')"
         >
           <Icon name="mdi:close" />
-        </button>
+        </UiButton>
       </header>
 
       <form
@@ -129,54 +132,52 @@ function handleOverlayClick(event: MouseEvent) {
         <div class="form-group">
           <label>種別</label>
           <div class="type-buttons">
-            <button
-              type="button"
+            <UiButton
+              :variant="type === 'todo' ? 'primary' : 'secondary'"
               class="type-btn"
               :class="{ active: type === 'todo' }"
               @click="selectType('todo')"
             >
               <Icon name="mdi:checkbox-marked-outline" />
               TODO
-            </button>
-            <button
-              type="button"
+            </UiButton>
+            <UiButton
+              :variant="type === 'expense' ? 'danger' : 'secondary'"
               class="type-btn type-expense"
               :class="{ active: type === 'expense' }"
               @click="selectType('expense')"
             >
               <Icon name="mdi:cart-outline" />
               支出
-            </button>
-            <button
-              type="button"
+            </UiButton>
+            <UiButton
+              variant="secondary"
               class="type-btn type-income"
               :class="{ active: type === 'income' }"
               @click="selectType('income')"
             >
               <Icon name="mdi:wallet-plus-outline" />
               収入
-            </button>
+            </UiButton>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label for="edit-date">日付</label>
-            <input
+            <UiInput
               id="edit-date"
               v-model="date"
               type="date"
-              class="form-control"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="edit-time">予定時刻</label>
-            <input
+            <UiInput
               id="edit-time"
               v-model="time"
               type="time"
-              class="form-control"
-            >
+            />
           </div>
         </div>
 
@@ -187,35 +188,46 @@ function handleOverlayClick(event: MouseEvent) {
             <span class="label-hint">（実際に行った時刻）</span>
           </label>
           <div class="time-input-with-clear">
-            <input
+            <UiInput
               id="edit-executed-time"
               v-model="executedTime"
               type="time"
-              class="form-control"
               placeholder="未設定"
-            >
-            <button
+            />
+            <UiButton
               v-if="executedTime"
-              type="button"
+              variant="secondary"
+              icon
               class="btn-clear"
               aria-label="クリア"
               @click="clearExecutedTime"
             >
               <Icon name="mdi:close-circle" />
-            </button>
+            </UiButton>
           </div>
         </div>
 
         <div class="form-group">
           <label for="edit-title">タイトル</label>
-          <input
+          <UiInput
             id="edit-title"
             v-model="title"
             type="text"
-            class="form-control"
             placeholder="アイテム名を入力"
             required
-          >
+          />
+        </div>
+
+        <!-- 備考 -->
+        <div class="form-group">
+          <label for="edit-notes">備考</label>
+          <textarea
+            id="edit-notes"
+            v-model="notes"
+            class="form-control textarea"
+            placeholder="備考を入力"
+            rows="2"
+          />
         </div>
 
         <div
@@ -223,43 +235,39 @@ function handleOverlayClick(event: MouseEvent) {
           class="form-group"
         >
           <label for="edit-amount">金額</label>
-          <input
+          <UiInput
             id="edit-amount"
-            v-model.number="amount"
+            v-model="amount"
             type="number"
-            class="form-control"
-            min="0"
+            :min="0"
             placeholder="金額を入力"
-          >
+          />
         </div>
       </form>
 
       <footer class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-danger"
+        <UiButton
+          variant="danger"
           @click="handleDelete"
         >
           <Icon name="mdi:delete" />
           削除
-        </button>
+        </UiButton>
         <div class="spacer" />
-        <button
-          type="button"
-          class="btn btn-secondary"
+        <UiButton
+          variant="secondary"
           @click="emit('close')"
         >
           キャンセル
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
+        </UiButton>
+        <UiButton
+          variant="primary"
           :disabled="isSubmitting || !title.trim()"
           @click="handleSubmit"
         >
           <Icon name="mdi:content-save" />
           保存
-        </button>
+        </UiButton>
       </footer>
     </div>
   </div>
@@ -273,55 +281,11 @@ function handleOverlayClick(event: MouseEvent) {
 
   .type-btn {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 10px 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    background: white;
-    color: #666;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
 
-    &:hover {
-      border-color: #2196f3;
-      color: #2196f3;
-    }
-
-    &.active {
-      border-color: #2196f3;
-      background: #e3f2fd;
-      color: #1976d2;
-    }
-
-    &.type-expense {
-      &:hover {
-        border-color: #f44336;
-        color: #f44336;
-      }
-
-      &.active {
-        border-color: #f44336;
-        background: #ffebee;
-        color: #d32f2f;
-      }
-    }
-
-    &.type-income {
-      &:hover {
-        border-color: #4caf50;
-        color: #4caf50;
-      }
-
-      &.active {
-        border-color: #4caf50;
-        background: #e8f5e9;
-        color: #388e3c;
-      }
+    &.type-income.active {
+      background: #e8f5e9;
+      color: #388e3c;
+      border-color: #4caf50;
     }
   }
 
@@ -339,27 +303,9 @@ function handleOverlayClick(event: MouseEvent) {
   display: flex;
   align-items: center;
 
-  .form-control {
-    flex: 1;
-    padding-right: 36px;
-  }
-
   .btn-clear {
     position: absolute;
     right: 8px;
-    background: none;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-
-    &:hover {
-      color: #f44336;
-    }
   }
 }
 
@@ -367,6 +313,28 @@ function handleOverlayClick(event: MouseEvent) {
   font-size: 11px;
   color: #999;
   font-weight: normal;
+}
+
+/* 備考テキストエリア */
+.textarea {
+  width: 100%;
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 16px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #4a90d9;
+  }
+
+  @media (max-width: 600px) {
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
 
 .modal-footer {
@@ -385,7 +353,7 @@ function handleOverlayClick(event: MouseEvent) {
       display: none;
     }
 
-    .btn {
+    :deep(.ui-btn) {
       flex: 1;
       min-width: calc(50% - 4px);
 

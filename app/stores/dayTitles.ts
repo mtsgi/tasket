@@ -51,7 +51,8 @@ export const useDayTitlesStore = defineStore('dayTitles', {
         }
         else {
           // 存在しない場合はキャッシュから削除
-          delete this.dayTitles[date]
+          const { [date]: _, ...rest } = this.dayTitles
+          this.dayTitles = rest
         }
       }
       catch (e) {
@@ -91,7 +92,8 @@ export const useDayTitlesStore = defineStore('dayTitles', {
       const existingTitle = this.dayTitles[date]
       if (existingTitle) {
         await deleteDayTitle(existingTitle.id)
-        delete this.dayTitles[date]
+        const { [date]: _, ...rest } = this.dayTitles
+        this.dayTitles = rest
       }
     },
   },
