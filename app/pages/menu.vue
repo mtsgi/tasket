@@ -6,11 +6,9 @@
 import { useItemsStore } from '~/stores/items'
 import { useRoutinesStore } from '~/stores/routines'
 import { useDayTitlesStore } from '~/stores/dayTitles'
-import { formatYearMonth } from '~/utils/dateHelpers'
 import { getAllRoutines, getAllRoutineLogs, getAllDayTitles } from '~/utils/db'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 
-const router = useRouter()
 const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
 const dayTitlesStore = useDayTitlesStore()
@@ -32,25 +30,6 @@ function showNotification(type: 'success' | 'error', message: string) {
   setTimeout(() => {
     notification.value = null
   }, 3000)
-}
-
-/**
- * 今日の日付ページに移動
- */
-function _goToToday() {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  router.push(`/day/${year}-${month}-${day}`)
-}
-
-/**
- * 今月の月表示ページに移動
- */
-function _goToMonth() {
-  const today = new Date()
-  router.push(`/month/${formatYearMonth(today)}`)
 }
 
 /**
