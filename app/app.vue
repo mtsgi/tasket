@@ -70,10 +70,13 @@ const backgroundStyle = computed(() => {
 
     :deep(.section-description),
     :deep(.setting-info p),
-    :deep(.background-label),
+    :deep(.background-label) {
+      color: #b0b0b0;
+    }
+
     :deep(h2),
     :deep(h3) {
-      color: #b0b0b0 !important;
+      color: #b0b0b0;
     }
 
     :deep(.background-preview) {

@@ -10,17 +10,12 @@ const settingsStore = useSettingsStore()
 // 利用可能な背景画像のリスト
 const backgroundImages = [
   { value: 'none', label: 'なし', preview: '' },
-  { value: '/backgrounds/gradient-1.jpg', label: 'グラデーション 1', preview: '/backgrounds/gradient-1.jpg' },
-  { value: '/backgrounds/gradient-2.jpg', label: 'グラデーション 2', preview: '/backgrounds/gradient-2.jpg' },
-  { value: '/backgrounds/gradient-3.jpg', label: 'グラデーション 3', preview: '/backgrounds/gradient-3.jpg' },
-  { value: '/backgrounds/nature-1.jpg', label: '自然 1', preview: '/backgrounds/nature-1.jpg' },
-  { value: '/backgrounds/nature-2.jpg', label: '自然 2', preview: '/backgrounds/nature-2.jpg' },
+  { value: '/backgrounds/gradient-1.svg', label: 'グラデーション 1', preview: '/backgrounds/gradient-1.svg' },
+  { value: '/backgrounds/gradient-2.svg', label: 'グラデーション 2', preview: '/backgrounds/gradient-2.svg' },
+  { value: '/backgrounds/gradient-3.svg', label: 'グラデーション 3', preview: '/backgrounds/gradient-3.svg' },
+  { value: '/backgrounds/nature-1.svg', label: '自然 1', preview: '/backgrounds/nature-1.svg' },
+  { value: '/backgrounds/nature-2.svg', label: '自然 2', preview: '/backgrounds/nature-2.svg' },
 ]
-
-// コンポーネント初期化時に設定を読み込む
-onMounted(() => {
-  settingsStore.loadSettings()
-})
 
 /**
  * 背景画像を選択
