@@ -13,6 +13,9 @@ const lockStore = useLockStore()
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
+// PIN入力コンポーネントのref
+const pinInputRef = ref<InstanceType<typeof PinInput> | null>(null)
+
 // ロック設定のモーダル状態
 const showPinSetupModal = ref(false)
 const pinSetupStep = ref<'initial' | 'confirm'>('initial')
@@ -104,6 +107,20 @@ function openPinSetup() {
 }
 
 /**
+ * PIN設定モーダルを閉じる
+ */
+function closePinSetupModal() {
+  showPinSetupModal.value = false
+  pinSetupStep.value = 'initial'
+  initialPin.value = ''
+  pinError.value = ''
+  // PIN入力をクリア
+  nextTick(() => {
+    pinInputRef.value?.clear()
+  })
+}
+
+/**
  * PIN入力完了（設定時）
  */
 async function handlePinSetup(pin: string) {
@@ -118,6 +135,10 @@ async function handlePinSetup(pin: string) {
     initialPin.value = pin
     pinSetupStep.value = 'confirm'
     pinError.value = ''
+    // 次のステップのためにPIN入力をクリア
+    nextTick(() => {
+      pinInputRef.value?.clear()
+    })
   }
   else {
     // 確認入力
@@ -125,6 +146,7 @@ async function handlePinSetup(pin: string) {
       pinError.value = 'PINコードが一致しません'
       pinSetupStep.value = 'initial'
       initialPin.value = ''
+      // エラー時はPIN入力を自動的にクリア
       return
     }
 
@@ -133,15 +155,21 @@ async function handlePinSetup(pin: string) {
     try {
       await lockStore.setPin(pin)
       lockStore.enableLock()
+      // 成功時にモーダルを閉じてリセット
       showPinSetupModal.value = false
+      pinSetupStep.value = 'initial'
+      initialPin.value = ''
+      pinError.value = ''
+      // 成功メッセージを表示
       alert('PINコードを設定しました')
     }
     catch (e) {
       pinError.value = e instanceof Error ? e.message : 'PIN設定に失敗しました'
+      pinSetupStep.value = 'initial'
+      initialPin.value = ''
     }
     finally {
       isSettingPin.value = false
-      initialPin.value = ''
     }
   }
 }
@@ -161,8 +189,16 @@ function disableLock() {
  * 生体認証の切り替え
  */
 function toggleBiometric() {
-  lockStore.toggleBiometric(!lockStore.biometricEnabled)
+  // チェックボックスの値はすでに更新されているので、そのまま保存
+  lockStore.toggleBiometric(lockStore.biometricEnabled)
 }
+
+// ステップが変わったときにPIN入力をクリア
+watch(pinSetupStep, () => {
+  nextTick(() => {
+    pinInputRef.value?.clear()
+  })
+})
 </script>
 
 <template>
@@ -355,7 +391,7 @@ function toggleBiometric() {
     <UiModal
       :show="showPinSetupModal"
       title="PINコード設定"
-      @close="showPinSetupModal = false"
+      @close="closePinSetupModal"
     >
       <div class="pin-setup-modal">
         <p class="pin-setup-instruction">
@@ -371,6 +407,7 @@ function toggleBiometric() {
         </div>
 
         <PinInput
+          ref="pinInputRef"
           :disabled="isSettingPin"
           :error="!!pinError"
           @complete="handlePinSetup"

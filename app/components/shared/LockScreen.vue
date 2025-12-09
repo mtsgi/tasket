@@ -56,10 +56,14 @@ async function tryBiometric() {
   if (!isBiometricAvailable.value) return
 
   try {
+    // 暗号学的に安全なランダムチャレンジを生成
+    const challenge = new Uint8Array(32)
+    crypto.getRandomValues(challenge)
+
     // Web Authentication APIを使用
     const credential = await navigator.credentials.get({
       publicKey: {
-        challenge: new Uint8Array(32), // ダミーのチャレンジ
+        challenge,
         timeout: 60000,
         userVerification: 'required',
       },
