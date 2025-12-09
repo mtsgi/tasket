@@ -37,7 +37,7 @@ function openCustomImageDialog() {
 /**
  * カスタム背景画像をアップロード
  */
-async function uploadCustomImage(event: Event) {
+function uploadCustomImage(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
 
@@ -55,25 +55,25 @@ async function uploadCustomImage(event: Event) {
     return
   }
 
-  try {
-    // FileReaderで画像をBase64に変換
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string
-      if (base64) {
-        settingsStore.setBackgroundImage(base64)
-      }
+  // FileReaderで画像をBase64に変換
+  const reader = new FileReader()
+  
+  reader.onload = (e) => {
+    const base64 = e.target?.result as string
+    if (base64) {
+      settingsStore.setBackgroundImage(base64)
     }
-    reader.readAsDataURL(file)
   }
-  catch (e) {
-    console.error('画像のアップロードに失敗しました:', e)
-    alert('画像のアップロードに失敗しました')
+  
+  reader.onerror = () => {
+    console.error('画像の読み込みに失敗しました')
+    alert('画像の読み込みに失敗しました')
   }
-  finally {
-    // ファイル入力をリセット
-    if (input) input.value = ''
-  }
+  
+  reader.readAsDataURL(file)
+  
+  // ファイル入力をリセット
+  input.value = ''
 }
 
 /**
