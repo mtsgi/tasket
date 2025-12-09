@@ -96,6 +96,12 @@ function handleChange(event: Event) {
       border-color: #4a90d9;
       box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
     }
+
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #2a2a2a;
+      border-color: #444;
+    }
   }
 
   &__icon {
@@ -106,6 +112,11 @@ function handleChange(event: Event) {
   &__label {
     font-size: 14px;
     color: #333;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #e0e0e0;
+    }
   }
 
   @media (max-width: 600px) {

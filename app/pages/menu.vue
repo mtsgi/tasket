@@ -218,6 +218,26 @@ onMounted(() => {
       </div>
     </Transition>
 
+    <!-- アプリ設定 -->
+    <section class="menu-section card">
+      <h2>
+        <Icon name="mdi:cog" />
+        アプリ設定
+      </h2>
+      <p class="section-description">
+        ダークモード、背景画像などの表示設定を変更できます。
+      </p>
+      <NuxtLink to="/settings">
+        <UiButton
+          variant="secondary"
+          block
+        >
+          <Icon name="mdi:cog" />
+          設定を開く
+        </UiButton>
+      </NuxtLink>
+    </section>
+
     <!-- 日課管理 -->
     <section class="menu-section card">
       <h2>

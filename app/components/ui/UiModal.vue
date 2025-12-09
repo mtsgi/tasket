@@ -89,12 +89,23 @@ function handleOverlayClick(event: MouseEvent) {
   max-height: 90vh;
   overflow-y: auto;
 
+  // ダークモード対応
+  .dark-mode & {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+  }
+
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 16px;
     border-bottom: 1px solid #e0e0e0;
+
+    // ダークモード対応
+    .dark-mode & {
+      border-color: #444;
+    }
 
     h2 {
       font-size: 18px;
@@ -112,6 +123,11 @@ function handleOverlayClick(event: MouseEvent) {
     justify-content: flex-end;
     padding: 16px;
     border-top: 1px solid #e0e0e0;
+
+    // ダークモード対応
+    .dark-mode & {
+      border-color: #444;
+    }
   }
 }
 
