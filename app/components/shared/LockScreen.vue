@@ -63,7 +63,7 @@ async function tryBiometric() {
     // 保存されたクレデンシャルIDを取得
     const allowCredentials = lockStore.biometricCredentialId
       ? [{
-          id: Uint8Array.from(atob(lockStore.biometricCredentialId), c => c.charCodeAt(0)),
+          id: Uint8Array.from(atob(lockStore.biometricCredentialId).split(''), c => c.charCodeAt(0)),
           type: 'public-key' as const,
         }]
       : []

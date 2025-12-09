@@ -254,7 +254,8 @@ async function registerBiometric() {
 
     if (credential && credential.rawId) {
       // クレデンシャルIDをBase64エンコードして保存
-      const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)))
+      const credentialIdArray = new Uint8Array(credential.rawId)
+      const credentialId = btoa(Array.from(credentialIdArray, byte => String.fromCharCode(byte)).join(''))
       lockStore.setBiometricCredential(credentialId)
       lockStore.toggleBiometric(true)
       alert('生体認証を登録しました')
