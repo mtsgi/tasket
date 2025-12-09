@@ -7,6 +7,9 @@ import { useSettingsStore } from '~/stores/settings'
 
 const settingsStore = useSettingsStore()
 
+// ファイル入力用ref
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
 // 利用可能な背景画像のリスト
 const backgroundImages = [
   { value: 'none', label: 'なし', preview: '' },
@@ -23,6 +26,63 @@ const backgroundImages = [
 function selectBackground(value: string) {
   settingsStore.setBackgroundImage(value)
 }
+
+/**
+ * カスタム背景画像のアップロードダイアログを開く
+ */
+function openCustomImageDialog() {
+  fileInputRef.value?.click()
+}
+
+/**
+ * カスタム背景画像をアップロード
+ */
+async function uploadCustomImage(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) return
+
+  // 画像ファイルかチェック
+  if (!file.type.startsWith('image/')) {
+    alert('画像ファイルを選択してください')
+    return
+  }
+
+  // ファイルサイズチェック（5MB以下）
+  if (file.size > 5 * 1024 * 1024) {
+    alert('ファイルサイズは5MB以下にしてください')
+    return
+  }
+
+  try {
+    // FileReaderで画像をBase64に変換
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string
+      if (base64) {
+        settingsStore.setBackgroundImage(base64)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+  catch (e) {
+    console.error('画像のアップロードに失敗しました:', e)
+    alert('画像のアップロードに失敗しました')
+  }
+  finally {
+    // ファイル入力をリセット
+    if (input) input.value = ''
+  }
+}
+
+/**
+ * カスタム背景画像かどうかを判定
+ */
+const isCustomBackground = computed(() => {
+  return settingsStore.backgroundImage.startsWith('data:')
+})
+
 </script>
 
 <template>
@@ -91,7 +151,40 @@ function selectBackground(value: string) {
           </div>
           <span class="background-label">{{ bg.label }}</span>
         </div>
+
+        <!-- カスタム背景画像 -->
+        <div
+          class="background-option"
+          :class="{ active: isCustomBackground }"
+          @click="openCustomImageDialog"
+        >
+          <div
+            class="background-preview"
+            :style="isCustomBackground ? { backgroundImage: `url(${settingsStore.backgroundImage})` } : {}"
+          >
+            <Icon
+              v-if="!isCustomBackground"
+              name="mdi:upload"
+              class="no-background-icon"
+            />
+            <Icon
+              v-if="isCustomBackground"
+              name="mdi:check-circle"
+              class="selected-icon"
+            />
+          </div>
+          <span class="background-label">カスタム画像</span>
+        </div>
       </div>
+
+      <!-- ファイル入力（非表示） -->
+      <input
+        ref="fileInputRef"
+        type="file"
+        accept="image/*"
+        style="display: none"
+        @change="uploadCustomImage"
+      >
     </section>
 
     <!-- 戻るボタン -->

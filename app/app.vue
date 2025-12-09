@@ -62,10 +62,47 @@ const backgroundStyle = computed(() => {
     }
 
     :deep(.form-control),
-    :deep(.ui-select) {
+    :deep(.ui-select),
+    :deep(.ui-input),
+    :deep(input[type="text"]),
+    :deep(input[type="number"]),
+    :deep(input[type="time"]),
+    :deep(input[type="date"]),
+    :deep(textarea) {
       background-color: #2a2a2a;
       color: #e0e0e0;
       border-color: #444;
+
+      &::placeholder {
+        color: #888;
+      }
+    }
+
+    :deep(.ui-checkbox__box) {
+      background-color: #2a2a2a;
+      border-color: #444;
+    }
+
+    :deep(.ui-checkbox__label) {
+      color: #e0e0e0;
+    }
+
+    :deep(.ui-btn--primary) {
+      background-color: #4a90d9;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background-color: #3a7bc8;
+      }
+    }
+
+    :deep(.ui-btn--danger) {
+      background-color: #f44336;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background-color: #d32f2f;
+      }
     }
 
     :deep(.section-description),
@@ -74,8 +111,10 @@ const backgroundStyle = computed(() => {
       color: #b0b0b0;
     }
 
+    :deep(h1),
     :deep(h2),
-    :deep(h3) {
+    :deep(h3),
+    :deep(h4) {
       color: #b0b0b0;
     }
 
@@ -92,6 +131,23 @@ const backgroundStyle = computed(() => {
     :deep(.notification.error) {
       background-color: rgba(244, 67, 54, 0.2);
       border-color: #f44336;
+    }
+
+    :deep(.toggle-switch .slider) {
+      background-color: #555;
+    }
+
+    :deep(.modal) {
+      background-color: #2a2a2a;
+      color: #e0e0e0;
+    }
+
+    :deep(.modal-header) {
+      border-color: #444;
+    }
+
+    :deep(.modal-footer) {
+      border-color: #444;
     }
   }
 }
