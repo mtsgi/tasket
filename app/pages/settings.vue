@@ -188,9 +188,82 @@ function disableLock() {
 /**
  * 生体認証の切り替え
  */
-function toggleBiometric() {
+async function toggleBiometric() {
   // チェックボックスの値はすでに更新されているので、そのまま保存
-  lockStore.toggleBiometric(lockStore.biometricEnabled)
+  const enabled = lockStore.biometricEnabled
+
+  if (enabled) {
+    // 生体認証を有効化する場合はパスキーを登録
+    try {
+      await registerBiometric()
+    }
+    catch (error) {
+      // 登録に失敗した場合はトグルを戻す
+      lockStore.biometricEnabled = false
+      console.error('生体認証の登録に失敗しました:', error)
+      alert('生体認証の登録に失敗しました。デバイスが生体認証に対応しているか確認してください。')
+    }
+  }
+  else {
+    // 無効化する場合はクレデンシャルをクリア
+    lockStore.clearBiometricCredential()
+  }
+}
+
+/**
+ * 生体認証（パスキー）を登録
+ */
+async function registerBiometric() {
+  if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+    throw new Error('このブラウザは生体認証に対応していません')
+  }
+
+  // チャレンジを生成
+  const challenge = new Uint8Array(32)
+  crypto.getRandomValues(challenge)
+
+  // ユーザーIDを生成（アプリ固有のID）
+  const userId = new Uint8Array(16)
+  crypto.getRandomValues(userId)
+
+  try {
+    // パスキーを作成
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: {
+          name: 'Tasket',
+          id: window.location.hostname,
+        },
+        user: {
+          id: userId,
+          name: 'tasket-user',
+          displayName: 'Tasket User',
+        },
+        pubKeyCredParams: [
+          { alg: -7, type: 'public-key' }, // ES256
+          { alg: -257, type: 'public-key' }, // RS256
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+        },
+        timeout: 60000,
+      },
+    }) as PublicKeyCredential
+
+    if (credential && credential.rawId) {
+      // クレデンシャルIDをBase64エンコードして保存
+      const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)))
+      lockStore.setBiometricCredential(credentialId)
+      lockStore.toggleBiometric(true)
+      alert('生体認証を登録しました')
+    }
+  }
+  catch (error) {
+    console.error('パスキーの作成に失敗しました:', error)
+    throw error
+  }
 }
 
 // ステップが変わったときにPIN入力をクリア
@@ -280,7 +353,9 @@ watch(pinSetupStep, () => {
         <div class="setting-item">
           <div class="setting-info">
             <h3>生体認証</h3>
-            <p>指紋認証・顔認証を使用する</p>
+            <p>
+              {{ lockStore.biometricCredentialId ? '登録済み - 指紋認証・顔認証を使用する' : '指紋認証・顔認証を使用する' }}
+            </p>
           </div>
           <label class="toggle-switch">
             <input

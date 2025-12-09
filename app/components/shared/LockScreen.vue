@@ -60,12 +60,21 @@ async function tryBiometric() {
     const challenge = new Uint8Array(32)
     crypto.getRandomValues(challenge)
 
+    // 保存されたクレデンシャルIDを取得
+    const allowCredentials = lockStore.biometricCredentialId
+      ? [{
+          id: Uint8Array.from(atob(lockStore.biometricCredentialId), c => c.charCodeAt(0)),
+          type: 'public-key' as const,
+        }]
+      : []
+
     // Web Authentication APIを使用
     const credential = await navigator.credentials.get({
       publicKey: {
         challenge,
         timeout: 60000,
         userVerification: 'required',
+        allowCredentials,
       },
     })
 

@@ -19,6 +19,7 @@ export interface LockSettings {
   enabled: boolean // ロック機能の有効/無効
   pinHash: string | null // PINコードのハッシュ値
   biometricEnabled: boolean // 生体認証の有効/無効
+  biometricCredentialId: string | null // 生体認証のクレデンシャルID（Base64エンコード）
   maxAttempts: number // 最大試行回数
   lockTimeout: number // ロック解除後の再ロックタイムアウト（ミリ秒、0の場合は無効）
 }
@@ -32,6 +33,7 @@ export const useLockStore = defineStore('lock', {
     enabled: false,
     pinHash: null as string | null,
     biometricEnabled: false,
+    biometricCredentialId: null as string | null,
     maxAttempts: 5,
     lockTimeout: 0, // デフォルトは即座にロック
 
@@ -93,6 +95,7 @@ export const useLockStore = defineStore('lock', {
           this.enabled = settings.enabled ?? false
           this.pinHash = settings.pinHash ?? null
           this.biometricEnabled = settings.biometricEnabled ?? false
+          this.biometricCredentialId = settings.biometricCredentialId ?? null
           this.maxAttempts = settings.maxAttempts ?? 5
           this.lockTimeout = settings.lockTimeout ?? 0
 
@@ -115,6 +118,7 @@ export const useLockStore = defineStore('lock', {
         enabled: this.enabled,
         pinHash: this.pinHash,
         biometricEnabled: this.biometricEnabled,
+        biometricCredentialId: this.biometricCredentialId,
         maxAttempts: this.maxAttempts,
         lockTimeout: this.lockTimeout,
       }
@@ -198,6 +202,23 @@ export const useLockStore = defineStore('lock', {
      */
     toggleBiometric(enabled: boolean) {
       this.biometricEnabled = enabled
+      this.saveSettings()
+    },
+
+    /**
+     * 生体認証のクレデンシャルIDを保存
+     */
+    setBiometricCredential(credentialId: string) {
+      this.biometricCredentialId = credentialId
+      this.saveSettings()
+    },
+
+    /**
+     * 生体認証の登録を解除
+     */
+    clearBiometricCredential() {
+      this.biometricCredentialId = null
+      this.biometricEnabled = false
       this.saveSettings()
     },
 
