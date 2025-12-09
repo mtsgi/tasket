@@ -2,14 +2,28 @@
 /**
  * アプリケーションのルートコンポーネント
  * 設定（ダークモード、背景画像）を全体に適用します
+ * ロック機能を統合し、認証されるまでコンテンツをブロックします
  */
 import { useSettingsStore } from '~/stores/settings'
+import { useLockStore } from '~/stores/lock'
+import LockScreen from '~/components/shared/LockScreen.vue'
 
 const settingsStore = useSettingsStore()
+const lockStore = useLockStore()
 
 // 初期化時に設定を読み込む
 onMounted(() => {
   settingsStore.loadSettings()
+  lockStore.loadSettings()
+
+  // タイムアウトチェック（バックグラウンドから復帰時など）
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        lockStore.checkTimeout()
+      }
+    })
+  }
 })
 
 // 背景画像のスタイルを算出
@@ -24,6 +38,11 @@ const backgroundStyle = computed(() => {
     backgroundAttachment: 'fixed',
   }
 })
+
+// ロック画面を表示するかどうか
+const showLockScreen = computed(() => {
+  return lockStore.isLockConfigured && lockStore.isLocked
+})
 </script>
 
 <template>
@@ -32,7 +51,11 @@ const backgroundStyle = computed(() => {
     :class="{ 'dark-mode': settingsStore.darkMode }"
     :style="backgroundStyle"
   >
-    <NuxtPage />
+    <!-- ロック画面 -->
+    <LockScreen v-if="showLockScreen" />
+
+    <!-- メインコンテンツ -->
+    <NuxtPage v-show="!showLockScreen" />
   </div>
 </template>
 
