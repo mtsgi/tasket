@@ -45,6 +45,7 @@ function handleChange(event: Event) {
   border-radius: 4px;
   font-size: 16px;
   background-color: white;
+  color: #333;
   cursor: pointer;
   transition: border-color 0.15s ease;
 
@@ -56,6 +57,13 @@ function handleChange(event: Event) {
   &:disabled {
     background-color: #f5f5f5;
     cursor: not-allowed;
+  }
+
+  // ダークモード対応
+  .dark-mode & {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #444;
   }
 
   @media (max-width: 600px) {

@@ -78,6 +78,17 @@ const emit = defineEmits<{
     &:hover:not(:disabled) {
       background-color: #f5f7fa;
     }
+
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #2a2a2a;
+      color: #e0e0e0;
+      border-color: #444;
+
+      &:hover:not(:disabled) {
+        background-color: #333;
+      }
+    }
   }
 
   &--danger {
