@@ -437,6 +437,10 @@ a {
     color: #b0b0b0;
   }
 
+  .setting-info h3 {
+    color: #e0e0e0;
+  }
+
   h1, h2, h3, h4 {
     color: #b0b0b0;
   }
@@ -458,5 +462,14 @@ a {
 
   .toggle-switch .slider {
     background-color: #555;
+  }
+
+  // 設定画面のテキスト要素
+  .settings-header h1 {
+    color: #e0e0e0;
+  }
+
+  .settings-section h2 {
+    color: #b0b0b0;
   }
 }

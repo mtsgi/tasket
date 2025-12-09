@@ -213,6 +213,11 @@ const isCustomBackground = computed(() => {
     font-size: 24px;
     font-weight: 600;
     text-align: center;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #e0e0e0;
+    }
   }
 }
 
@@ -225,6 +230,11 @@ const isCustomBackground = computed(() => {
     font-weight: 600;
     color: #666;
     margin-bottom: 12px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -233,6 +243,11 @@ const isCustomBackground = computed(() => {
   color: #666;
   margin-bottom: 16px;
   line-height: 1.5;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+  }
 }
 
 .setting-item {
@@ -248,11 +263,21 @@ const isCustomBackground = computed(() => {
       font-size: 16px;
       font-weight: 500;
       margin-bottom: 4px;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #e0e0e0;
+      }
     }
 
     p {
       font-size: 14px;
       color: #666;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
   }
 }
@@ -361,6 +386,11 @@ const isCustomBackground = computed(() => {
     margin-top: 8px;
     font-size: 14px;
     color: #666;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
