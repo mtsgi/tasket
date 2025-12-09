@@ -398,3 +398,115 @@ a {
     padding: 1px 6px;
   }
 }
+
+// Dark mode styles
+.dark-mode {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+
+  .page {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+  }
+
+  .card {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+  }
+
+  .ui-btn--secondary {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #444;
+
+    &:hover:not(:disabled) {
+      background-color: #333;
+    }
+  }
+
+  .ui-btn--primary {
+    background-color: #4a90d9;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #3a7bc8;
+    }
+  }
+
+  .ui-btn--danger {
+    background-color: #f44336;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #d32f2f;
+    }
+  }
+
+  .form-control,
+  .ui-select,
+  .ui-input,
+  input[type="text"],
+  input[type="number"],
+  input[type="time"],
+  input[type="date"],
+  textarea {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #444;
+
+    &::placeholder {
+      color: #888;
+    }
+  }
+
+  .ui-checkbox__box {
+    background-color: #2a2a2a;
+    border-color: #444;
+  }
+
+  .ui-checkbox__label {
+    color: #e0e0e0;
+  }
+
+  .section-description,
+  .setting-info p,
+  .background-label {
+    color: #b0b0b0;
+  }
+
+  h1, h2, h3, h4 {
+    color: #b0b0b0;
+  }
+
+  .background-preview {
+    border-color: #444;
+    background-color: #333;
+  }
+
+  .notification.success {
+    background-color: rgba(76, 175, 80, 0.2);
+    border-color: #4caf50;
+  }
+
+  .notification.error {
+    background-color: rgba(244, 67, 54, 0.2);
+    border-color: #f44336;
+  }
+
+  .toggle-switch .slider {
+    background-color: #555;
+  }
+
+  .modal {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+  }
+
+  .modal-header {
+    border-color: #444;
+  }
+
+  .modal-footer {
+    border-color: #444;
+  }
+}
