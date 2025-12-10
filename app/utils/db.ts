@@ -4,11 +4,11 @@
  * idb ライブラリを使用してIndexedDBを操作します。
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Item, DayTitle, Routine, RoutineLog } from '~/types/item'
+import type { Item, DayTitle, Routine, RoutineLog, Preset } from '~/types/item'
 
 /**
  * データベーススキーマの型定義
- * itemsストア、dayTitlesストア、routinesストア、routineLogsストアを定義
+ * itemsストア、dayTitlesストア、routinesストア、routineLogsストア、presetsストアを定義
  */
 interface TasketDB extends DBSchema {
   items: {
@@ -42,6 +42,13 @@ interface TasketDB extends DBSchema {
       'by-date': string // 日付でのインデックス
     }
   }
+  presets: {
+    key: string
+    value: Preset
+    indexes: {
+      'by-type': string // 種別でのインデックス
+    }
+  }
 }
 
 // データベース接続のシングルトンインスタンス
@@ -53,7 +60,7 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 2, {
+    dbPromise = openDB<TasketDB>('tasket-db', 3, {
       upgrade(db, oldVersion) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
@@ -78,6 +85,13 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           const routineLogsStore = db.createObjectStore('routineLogs', { keyPath: 'id' })
           routineLogsStore.createIndex('by-routineId', 'routineId')
           routineLogsStore.createIndex('by-date', 'date')
+        }
+
+        // バージョン3の新機能: プリセット
+        if (oldVersion < 3) {
+          // presetsオブジェクトストアを作成
+          const presetsStore = db.createObjectStore('presets', { keyPath: 'id' })
+          presetsStore.createIndex('by-type', 'type')
         }
       },
     })
@@ -341,4 +355,67 @@ export async function getAllRoutineLogs(): Promise<RoutineLog[]> {
     ...log,
     completed_at: log.completed_at ? new Date(log.completed_at) : null,
   }))
+}
+
+// ============================================
+// Presets（プリセット）関連の操作
+// ============================================
+
+/**
+ * すべてのプリセットを取得
+ * @returns すべてのプリセットリスト（作成日時の新しい順）
+ */
+export async function getAllPresets(): Promise<Preset[]> {
+  const db = await getDB()
+  const presets = await db.getAll('presets')
+  return presets
+    .map(preset => ({
+      ...preset,
+      created_at: new Date(preset.created_at),
+    }))
+    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+}
+
+/**
+ * IDでプリセットを取得
+ * @param id - プリセットのID
+ * @returns プリセット、または見つからない場合はundefined
+ */
+export async function getPresetById(id: string): Promise<Preset | undefined> {
+  const db = await getDB()
+  const preset = await db.get('presets', id)
+  if (preset) {
+    return {
+      ...preset,
+      created_at: new Date(preset.created_at),
+    }
+  }
+  return undefined
+}
+
+/**
+ * プリセットを追加
+ * @param preset - 追加するプリセット
+ */
+export async function addPreset(preset: Preset): Promise<void> {
+  const db = await getDB()
+  await db.add('presets', preset)
+}
+
+/**
+ * プリセットを更新
+ * @param preset - 更新するプリセット
+ */
+export async function updatePreset(preset: Preset): Promise<void> {
+  const db = await getDB()
+  await db.put('presets', preset)
+}
+
+/**
+ * プリセットを削除
+ * @param id - 削除するプリセットのID
+ */
+export async function deletePreset(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('presets', id)
 }
