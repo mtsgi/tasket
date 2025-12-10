@@ -1,14 +1,27 @@
 <script setup lang="ts">
 /**
  * 設定画面
- * ダークモードの切り替え、背景画像の選択などのアプリ設定を提供します。
+ * ダークモードの切り替え、背景画像の選択、ロック機能の設定などのアプリ設定を提供します。
  */
 import { useSettingsStore } from '~/stores/settings'
+import { useLockStore } from '~/stores/lock'
+import PinInput from '~/components/shared/PinInput.vue'
 
 const settingsStore = useSettingsStore()
+const lockStore = useLockStore()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+// PIN入力コンポーネントのref
+const pinInputRef = ref<InstanceType<typeof PinInput> | null>(null)
+
+// ロック設定のモーダル状態
+const showPinSetupModal = ref(false)
+const pinSetupStep = ref<'initial' | 'confirm'>('initial')
+const initialPin = ref('')
+const pinError = ref('')
+const isSettingPin = ref(false)
 
 // 利用可能な背景画像のリスト
 const backgroundImages = [
@@ -57,21 +70,21 @@ function uploadCustomImage(event: Event) {
 
   // FileReaderで画像をBase64に変換
   const reader = new FileReader()
-  
+
   reader.onload = (e) => {
     const base64 = e.target?.result as string
     if (base64) {
       settingsStore.setBackgroundImage(base64)
     }
   }
-  
+
   reader.onerror = () => {
     console.error('画像の読み込みに失敗しました')
     alert('画像の読み込みに失敗しました')
   }
-  
+
   reader.readAsDataURL(file)
-  
+
   // ファイル入力をリセット
   input.value = ''
 }
@@ -83,6 +96,183 @@ const isCustomBackground = computed(() => {
   return settingsStore.backgroundImage.startsWith('data:')
 })
 
+/**
+ * PIN設定モーダルを開く
+ */
+function openPinSetup() {
+  pinSetupStep.value = 'initial'
+  initialPin.value = ''
+  pinError.value = ''
+  showPinSetupModal.value = true
+}
+
+/**
+ * PIN設定モーダルを閉じる
+ */
+function closePinSetupModal() {
+  showPinSetupModal.value = false
+  pinSetupStep.value = 'initial'
+  initialPin.value = ''
+  pinError.value = ''
+  // PIN入力をクリア
+  nextTick(() => {
+    pinInputRef.value?.clear()
+  })
+}
+
+/**
+ * PIN入力完了（設定時）
+ */
+async function handlePinSetup(pin: string) {
+  if (isSettingPin.value) return
+
+  if (pinSetupStep.value === 'initial') {
+    // 初回入力
+    if (pin.length < 4) {
+      pinError.value = 'PINコードは4桁以上で入力してください'
+      return
+    }
+    initialPin.value = pin
+    pinSetupStep.value = 'confirm'
+    pinError.value = ''
+    // 次のステップのためにPIN入力をクリア
+    nextTick(() => {
+      pinInputRef.value?.clear()
+    })
+  }
+  else {
+    // 確認入力
+    if (pin !== initialPin.value) {
+      pinError.value = 'PINコードが一致しません'
+      pinSetupStep.value = 'initial'
+      initialPin.value = ''
+      // エラー時はPIN入力を自動的にクリア
+      return
+    }
+
+    // PIN設定
+    isSettingPin.value = true
+    try {
+      await lockStore.setPin(pin)
+      lockStore.enableLock()
+      // 成功時にモーダルを閉じてリセット
+      showPinSetupModal.value = false
+      pinSetupStep.value = 'initial'
+      initialPin.value = ''
+      pinError.value = ''
+      // 成功メッセージを表示
+      alert('PINコードを設定しました')
+    }
+    catch (e) {
+      pinError.value = e instanceof Error ? e.message : 'PIN設定に失敗しました'
+      pinSetupStep.value = 'initial'
+      initialPin.value = ''
+    }
+    finally {
+      isSettingPin.value = false
+    }
+  }
+}
+
+/**
+ * ロック機能を無効化
+ */
+function disableLock() {
+  const confirmed = confirm('ロック機能を無効化しますか？\nPINコードもリセットされます。')
+  if (confirmed) {
+    lockStore.resetPin()
+    alert('ロック機能を無効化しました')
+  }
+}
+
+/**
+ * 生体認証の切り替え
+ */
+async function toggleBiometric() {
+  // チェックボックスの値はすでに更新されているので、そのまま保存
+  const enabled = lockStore.biometricEnabled
+
+  if (enabled) {
+    // 生体認証を有効化する場合はパスキーを登録
+    try {
+      await registerBiometric()
+    }
+    catch (error) {
+      // 登録に失敗した場合はトグルを戻す
+      lockStore.biometricEnabled = false
+      console.error('生体認証の登録に失敗しました:', error)
+      alert('生体認証の登録に失敗しました。デバイスが生体認証に対応しているか確認してください。')
+    }
+  }
+  else {
+    // 無効化する場合はクレデンシャルをクリア
+    lockStore.clearBiometricCredential()
+  }
+}
+
+/**
+ * 生体認証（パスキー）を登録
+ */
+async function registerBiometric() {
+  if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+    throw new Error('このブラウザは生体認証に対応していません')
+  }
+
+  // チャレンジを生成
+  const challenge = new Uint8Array(32)
+  crypto.getRandomValues(challenge)
+
+  // ユーザーIDを生成（アプリ固有のID）
+  const userId = new Uint8Array(16)
+  crypto.getRandomValues(userId)
+
+  try {
+    // パスキーを作成
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: {
+          name: 'Tasket',
+          id: window.location.hostname,
+        },
+        user: {
+          id: userId,
+          name: 'tasket-user',
+          displayName: 'Tasket User',
+        },
+        pubKeyCredParams: [
+          { alg: -7, type: 'public-key' }, // ES256
+          { alg: -257, type: 'public-key' }, // RS256
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+        },
+        timeout: 60000,
+      },
+    }) as PublicKeyCredential
+
+    if (credential && credential.rawId) {
+      // クレデンシャルIDをBase64エンコードして保存
+      const credentialIdArray = new Uint8Array(credential.rawId)
+      const credentialId = btoa(Array.from(credentialIdArray, byte => String.fromCharCode(byte)).join(''))
+      lockStore.setBiometricCredential(credentialId)
+      lockStore.toggleBiometric(true)
+      alert('生体認証を登録しました')
+    }
+  }
+  catch (error) {
+    console.error('パスキーの作成に失敗しました:', error)
+    throw error
+  }
+}
+
+// ステップが変わったときにPIN入力をクリア
+watch(pinSetupStep, () => {
+  nextTick(() => {
+    pinInputRef.value?.clear()
+  })
+})
 </script>
 
 <template>
@@ -114,6 +304,80 @@ const isCustomBackground = computed(() => {
           >
           <span class="slider" />
         </label>
+      </div>
+    </section>
+
+    <!-- ロック設定 -->
+    <section class="settings-section card">
+      <h2>
+        <Icon name="mdi:lock" />
+        セキュリティ
+      </h2>
+      <p class="section-description">
+        PINコードまたは生体認証でアプリをロックできます
+      </p>
+
+      <!-- ロック機能が未設定の場合 -->
+      <div
+        v-if="!lockStore.isLockConfigured"
+        class="lock-setup"
+      >
+        <p class="lock-info">
+          ロック機能を有効にすると、アプリ起動時にPINコードの入力が必要になります。
+        </p>
+        <UiButton
+          variant="primary"
+          block
+          @click="openPinSetup"
+        >
+          <Icon name="mdi:lock-plus" />
+          PINコードを設定
+        </UiButton>
+      </div>
+
+      <!-- ロック機能が設定済みの場合 -->
+      <div
+        v-else
+        class="lock-settings"
+      >
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>ロック機能</h3>
+            <p>有効</p>
+          </div>
+          <Icon
+            name="mdi:check-circle"
+            class="status-icon enabled"
+          />
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>生体認証</h3>
+            <p>
+              {{ lockStore.biometricCredentialId ? '登録済み - 指紋認証・顔認証を使用する' : '指紋認証・顔認証を使用する' }}
+            </p>
+          </div>
+          <label class="toggle-switch">
+            <input
+              v-model="lockStore.biometricEnabled"
+              type="checkbox"
+              @change="toggleBiometric"
+            >
+            <span class="slider" />
+          </label>
+        </div>
+
+        <div class="lock-actions">
+          <UiButton
+            variant="danger"
+            block
+            @click="disableLock"
+          >
+            <Icon name="mdi:lock-off" />
+            ロック機能を無効化
+          </UiButton>
+        </div>
       </div>
     </section>
 
@@ -198,6 +462,34 @@ const isCustomBackground = computed(() => {
         戻る
       </UiButton>
     </div>
+
+    <!-- PIN設定モーダル -->
+    <UiModal
+      :show="showPinSetupModal"
+      title="PINコード設定"
+      @close="closePinSetupModal"
+    >
+      <div class="pin-setup-modal">
+        <p class="pin-setup-instruction">
+          {{ pinSetupStep === 'initial' ? 'PINコードを入力してください（4桁以上）' : 'もう一度PINコードを入力してください' }}
+        </p>
+
+        <div
+          v-if="pinError"
+          class="pin-setup-error"
+        >
+          <Icon name="mdi:alert-circle" />
+          {{ pinError }}
+        </div>
+
+        <PinInput
+          ref="pinInputRef"
+          :disabled="isSettingPin"
+          :error="!!pinError"
+          @complete="handlePinSetup"
+        />
+      </div>
+    </UiModal>
   </div>
 </template>
 
@@ -396,6 +688,70 @@ const isCustomBackground = computed(() => {
 
 .back-button {
   margin-top: 24px;
+}
+
+// ロック設定
+.lock-setup,
+.lock-settings {
+  .lock-info {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 16px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
+  }
+}
+
+.lock-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+
+  // ダークモード対応
+  .dark-mode & {
+    border-color: #444;
+  }
+}
+
+.status-icon {
+  font-size: 24px;
+
+  &.enabled {
+    color: #4caf50;
+  }
+}
+
+// PIN設定モーダル
+.pin-setup-modal {
+  .pin-setup-instruction {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 24px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
+  }
+
+  .pin-setup-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    border: 1px solid #f44336;
+  }
 }
 
 @media (max-width: 600px) {
