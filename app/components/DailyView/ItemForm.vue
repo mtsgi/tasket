@@ -85,12 +85,11 @@ async function handleSubmit() {
     // 日付変更線より前の時刻の場合、翌日の日付を使用
     // 例: 日付変更線が4時で、2時のアイテムを作成する場合
     // 12月12日のビューで作成すると、実際には12月13日の2時として保存される
-    const targetDate = new Date(props.date)
+    // （12月12日の実効範囲は12日4:00〜13日3:59なので、2時は13日分）
+    const scheduledAt = new Date(props.date)
     if (hours < dateChangeLine) {
-      targetDate.setDate(targetDate.getDate() + 1)
+      scheduledAt.setDate(scheduledAt.getDate() + 1)
     }
-
-    const scheduledAt = new Date(targetDate)
     scheduledAt.setHours(hours, minutes, 0, 0)
 
     await itemsStore.createItem({
