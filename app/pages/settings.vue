@@ -315,14 +315,14 @@ watch(pinSetupStep, () => {
         日付変更線
       </h2>
       <p class="section-description">
-        日付変更線を設定すると、指定した時刻より前のアイテムを前日分として扱います。深夜作業が多い場合に便利です。
+        日付変更線を設定すると、指定した時刻から翌日同時刻の直前までを1日として扱います。深夜作業が多い場合に便利です。
       </p>
       <div class="setting-item">
         <div class="setting-info">
           <h3>日付変更線の時刻</h3>
           <p>
             {{ settingsStore.dateChangeLine }}時
-            {{ settingsStore.dateChangeLine > 0 ? `（${settingsStore.dateChangeLine - 1}時台までは前日扱い）` : '（通常の日付変更）' }}
+            {{ settingsStore.dateChangeLine > 0 ? `（当日${settingsStore.dateChangeLine}時〜翌日${settingsStore.dateChangeLine - 1}時台）` : '（通常の日付変更）' }}
           </p>
         </div>
         <div class="date-line-input">
@@ -339,7 +339,7 @@ watch(pinSetupStep, () => {
       <div class="date-line-example">
         <Icon name="mdi:information-outline" />
         <span>
-          例: 4時に設定した場合、3時59分のアイテムは前日分として表示されます
+          例: 4時に設定した場合、12月12日は当日4:00から翌日3:59までを指します
         </span>
       </div>
     </section>

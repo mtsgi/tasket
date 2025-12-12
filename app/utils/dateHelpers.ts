@@ -185,6 +185,9 @@ export function getEffectiveDateForTime(dateTime: Date | string, dateChangeLine:
  * @param date - 対象の日付（YYYY-MM-DD形式）
  * @param dateChangeLine - 日付変更線の時刻（0-23時）
  * @returns 実効日付の開始時刻
+ * @example
+ * // 日付変更線が4時の場合
+ * // 2025-12-12の実効日付は、2025-12-12 04:00:00 から開始
  */
 export function getStartOfEffectiveDay(date: Date | string, dateChangeLine: number): Date {
   const targetDate = dayjs(date)
@@ -194,8 +197,8 @@ export function getStartOfEffectiveDay(date: Date | string, dateChangeLine: numb
     return targetDate.startOf('day').toDate()
   }
 
-  // 前日の日付変更線時刻から開始
-  return targetDate.subtract(1, 'day').hour(dateChangeLine).minute(0).second(0).millisecond(0).toDate()
+  // 当日の日付変更線時刻から開始
+  return targetDate.hour(dateChangeLine).minute(0).second(0).millisecond(0).toDate()
 }
 
 /**
@@ -206,7 +209,7 @@ export function getStartOfEffectiveDay(date: Date | string, dateChangeLine: numb
  * @returns 実効日付の終了時刻
  * @example
  * // 日付変更線が4時の場合
- * // 2025-12-12の実効日付は、2025-12-11 04:00:00 から 2025-12-12 03:59:59.999 まで
+ * // 2025-12-12の実効日付は、2025-12-13 03:59:59.999 まで
  */
 export function getEndOfEffectiveDay(date: Date | string, dateChangeLine: number): Date {
   const targetDate = dayjs(date)
@@ -216,7 +219,7 @@ export function getEndOfEffectiveDay(date: Date | string, dateChangeLine: number
     return targetDate.endOf('day').toDate()
   }
 
-  // 当日の日付変更線時刻の直前まで（dateChangeLine時のミリ秒前）
-  // 例: 4時設定の場合、3:59:59.999まで
-  return targetDate.hour(dateChangeLine).minute(0).second(0).millisecond(0).subtract(1, 'millisecond').toDate()
+  // 翌日の日付変更線時刻の直前まで（dateChangeLine時のミリ秒前）
+  // 例: 4時設定の場合、翌日3:59:59.999まで
+  return targetDate.add(1, 'day').hour(dateChangeLine).minute(0).second(0).millisecond(0).subtract(1, 'millisecond').toDate()
 }
