@@ -162,16 +162,21 @@ export function isSameMonth(date1: Date | string, date2: Date | string): boolean
 
 /**
  * 指定時刻から実効日付を取得
- * 日付変更線を考慮して、指定時刻が属する日付を返す
+ * 日付変更線を考慮して、指定時刻が属する実効日付を返す
  * @param dateTime - 対象の日時
  * @param dateChangeLine - 日付変更線の時刻（0-23時）
  * @returns 実効日付（YYYY-MM-DD形式）
+ * @example
+ * // 日付変更線が4時の場合
+ * // 2025-12-13 03:30 → '2025-12-12' (前日の実効日付に含まれる)
+ * // 2025-12-13 04:00 → '2025-12-13' (当日の実効日付に含まれる)
  */
 export function getEffectiveDateForTime(dateTime: Date | string, dateChangeLine: number): string {
   const date = dayjs(dateTime)
   const hour = date.hour()
 
-  // 日付変更線より前の時刻の場合、前日として扱う
+  // 日付変更線より前の時刻の場合、前日の実効日付として扱う
+  // 例: 4時設定で3時台のアイテムは、前日の実効日付に属する
   if (hour < dateChangeLine) {
     return date.subtract(1, 'day').format('YYYY-MM-DD')
   }
