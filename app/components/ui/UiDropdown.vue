@@ -13,24 +13,43 @@ defineProps<{
 const emit = defineEmits<{
   toggle: []
 }>()
+
+/**
+ * キーボードイベントハンドラー
+ * Enterキーとスペースキーでトグル
+ */
+function handleKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    emit('toggle')
+  }
+}
 </script>
 
 <template>
   <div class="ui-dropdown">
     <div
       class="dropdown-trigger"
+      role="button"
+      tabindex="0"
+      :aria-haspopup="true"
+      :aria-expanded="show"
       @click="emit('toggle')"
+      @keydown="handleKeyDown"
     >
       <slot name="trigger" />
     </div>
     <div
       v-if="show"
       class="dropdown-content"
+      role="menu"
+      :aria-hidden="!show"
     >
       <slot name="content">
         <div
           v-if="emptyMessage"
           class="dropdown-empty"
+          role="menuitem"
         >
           {{ emptyMessage }}
         </div>
@@ -45,6 +64,11 @@ const emit = defineEmits<{
 
   .dropdown-trigger {
     cursor: pointer;
+
+    &:focus {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+    }
   }
 
   .dropdown-content {
