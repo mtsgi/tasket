@@ -6,7 +6,8 @@ import { defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item, ItemType } from '~/types/item'
 import { getAllItems, addItem, updateItem, deleteItem } from '~/utils/db'
-import { getStartOfDay, getEndOfDay, getStartOfMonth, getEndOfMonth } from '~/utils/dateHelpers'
+import { getStartOfMonth, getEndOfMonth, getStartOfEffectiveDay, getEndOfEffectiveDay } from '~/utils/dateHelpers'
+import { useSettingsStore } from '~/stores/settings'
 
 export const useItemsStore = defineStore('items', {
   /**
@@ -24,13 +25,19 @@ export const useItemsStore = defineStore('items', {
   getters: {
     /**
      * 特定の日のアイテムを取得
+     * 日付変更線の設定を考慮する
      * @param dateString - 日付文字列（YYYY-MM-DD）
      * @returns その日のアイテムリスト（時刻順）
      */
     getItemsByDate: (state) => {
       return (dateString: string) => {
-        const startOfDay = getStartOfDay(dateString)
-        const endOfDay = getEndOfDay(dateString)
+        const settingsStore = useSettingsStore()
+        const dateChangeLine = settingsStore.dateChangeLine
+
+        // 日付変更線を考慮した開始・終了時刻を取得
+        const startOfDay = getStartOfEffectiveDay(dateString, dateChangeLine)
+        const endOfDay = getEndOfEffectiveDay(dateString, dateChangeLine)
+
         return state.items
           .filter((item) => {
             const scheduledAt = new Date(item.scheduled_at)
