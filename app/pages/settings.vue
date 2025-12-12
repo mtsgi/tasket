@@ -6,6 +6,7 @@
 import { useSettingsStore } from '~/stores/settings'
 import { useLockStore } from '~/stores/lock'
 import PinInput from '~/components/shared/PinInput.vue'
+import PresetManager from '~/components/settings/PresetManager.vue'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
@@ -305,6 +306,11 @@ watch(pinSetupStep, () => {
           <span class="slider" />
         </label>
       </div>
+    </section>
+
+    <!-- プリセット管理 -->
+    <section class="settings-section card">
+      <PresetManager />
     </section>
 
     <!-- ロック設定 -->

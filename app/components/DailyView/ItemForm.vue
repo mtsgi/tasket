@@ -4,6 +4,7 @@
  * 新規アイテム（TODO、支出、収入）を作成するためのフォームを提供
  */
 import { useItemsStore } from '~/stores/items'
+import { usePresetsStore } from '~/stores/presets'
 import type { ItemType } from '~/types/item'
 
 const props = defineProps<{
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>()
 
 const itemsStore = useItemsStore()
+const presetsStore = usePresetsStore()
 
 // フォームの状態
 const title = ref('')
@@ -21,11 +23,47 @@ const notes = ref('')
 
 const isSubmitting = ref(false)
 
+// プリセット選択のドロップダウン表示状態
+const showPresetDropdown = ref(false)
+
+// プリセットをロード
+onMounted(async () => {
+  await presetsStore.fetchPresets()
+})
+
+// 現在の種別に対応するプリセットを取得
+const filteredPresets = computed(() => {
+  return presetsStore.getPresetsByType(type.value)
+})
+
 /**
  * アイテム種別を選択
  */
 function selectType(newType: ItemType) {
   type.value = newType
+  showPresetDropdown.value = false // 種別を変更したらドロップダウンを閉じる
+}
+
+/**
+ * プリセットを選択してフォームに反映
+ */
+function selectPreset(presetId: string) {
+  const preset = presetsStore.presets.find(p => p.id === presetId)
+  if (preset) {
+    title.value = preset.title
+    time.value = preset.time
+    type.value = preset.type
+    amount.value = preset.amount
+    notes.value = preset.notes
+    showPresetDropdown.value = false
+  }
+}
+
+/**
+ * プリセットドロップダウンの表示切り替え
+ */
+function togglePresetDropdown() {
+  showPresetDropdown.value = !showPresetDropdown.value
 }
 
 /**
@@ -68,6 +106,54 @@ async function handleSubmit() {
       新規アイテム
     </h2>
     <form @submit.prevent="handleSubmit">
+      <!-- プリセット選択 -->
+      <div
+        v-if="presetsStore.presets.length > 0"
+        class="form-group"
+      >
+        <UiDropdown
+          :show="showPresetDropdown"
+          :empty-message="type === 'todo' ? 'TODOのプリセットがありません' : type === 'expense' ? '支出のプリセットがありません' : '収入のプリセットがありません'"
+          @toggle="togglePresetDropdown"
+        >
+          <template #trigger>
+            <UiButton
+              variant="secondary"
+              block
+            >
+              <Icon name="mdi:bookmark-outline" />
+              プリセットから選択
+              <Icon
+                :name="showPresetDropdown ? 'mdi:chevron-up' : 'mdi:chevron-down'"
+                class="dropdown-icon"
+              />
+            </UiButton>
+          </template>
+          <template
+            v-if="filteredPresets.length > 0"
+            #content
+          >
+            <div class="preset-list">
+              <button
+                v-for="preset in filteredPresets"
+                :key="preset.id"
+                type="button"
+                class="preset-option"
+                @click="selectPreset(preset.id)"
+              >
+                <div class="preset-time">
+                  <Icon name="mdi:clock-outline" />
+                  {{ preset.time }}
+                </div>
+                <div class="preset-title">
+                  {{ preset.title }}
+                </div>
+              </button>
+            </div>
+          </template>
+        </UiDropdown>
+      </div>
+
       <!-- 種別選択ボタン（横並び） -->
       <div class="form-group">
         <div class="type-buttons">
@@ -172,6 +258,66 @@ async function handleSubmit() {
   }
 }
 
+/* プリセット選択 */
+.dropdown-icon {
+  margin-left: auto;
+}
+
+.preset-list {
+  .preset-option {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    &:hover {
+      background-color: #f5f7fa;
+
+      .dark-mode & {
+        background-color: #333;
+      }
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid #e0e0e0;
+
+      .dark-mode & {
+        border-color: #444;
+      }
+    }
+
+    .preset-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      min-width: 70px;
+
+      .dark-mode & {
+        color: #b0b0b0;
+      }
+    }
+
+    .preset-title {
+      font-size: 14px;
+      color: #333;
+      flex: 1;
+
+      .dark-mode & {
+        color: #e0e0e0;
+      }
+    }
+  }
+}
+
 /* 種別選択ボタン */
 .type-buttons {
   display: flex;
@@ -212,6 +358,13 @@ async function handleSubmit() {
   font-family: inherit;
   resize: vertical;
   transition: border-color 0.15s ease;
+
+  // ダークモード対応
+  .dark-mode & {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+  }
 
   &:focus {
     outline: none;

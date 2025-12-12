@@ -92,3 +92,17 @@ export interface ExpenseRankingItem {
   totalAmount: number // 合計金額
   count: number // 出現回数
 }
+
+/**
+ * プリセットのデータ構造
+ * よく使うタスク設定を保存し、簡単に再利用できるようにする
+ */
+export interface Preset {
+  id: string // 一意のID（UUID）
+  title: string // プリセット名（アイテム名）
+  time: string // 時刻（HH:mm形式）
+  type: ItemType // アイテムの種別
+  amount: number // 金額（TODOの場合は0）
+  notes: string // 備考
+  created_at: Date // 作成日時
+}
