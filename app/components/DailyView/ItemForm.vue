@@ -111,27 +111,29 @@ async function handleSubmit() {
         v-if="presetsStore.presets.length > 0"
         class="form-group"
       >
-        <div class="preset-selector">
-          <UiButton
-            variant="secondary"
-            block
-            @click="togglePresetDropdown"
-          >
-            <Icon name="mdi:bookmark-outline" />
-            プリセットから選択
-            <Icon
-              :name="showPresetDropdown ? 'mdi:chevron-up' : 'mdi:chevron-down'"
-              class="dropdown-icon"
-            />
-          </UiButton>
-          <div
-            v-if="showPresetDropdown"
-            class="preset-dropdown"
-          >
-            <div
-              v-if="filteredPresets.length > 0"
-              class="preset-list"
+        <UiDropdown
+          :show="showPresetDropdown"
+          :empty-message="type === 'todo' ? 'TODOのプリセットがありません' : type === 'expense' ? '支出のプリセットがありません' : '収入のプリセットがありません'"
+          @toggle="togglePresetDropdown"
+        >
+          <template #trigger>
+            <UiButton
+              variant="secondary"
+              block
             >
+              <Icon name="mdi:bookmark-outline" />
+              プリセットから選択
+              <Icon
+                :name="showPresetDropdown ? 'mdi:chevron-up' : 'mdi:chevron-down'"
+                class="dropdown-icon"
+              />
+            </UiButton>
+          </template>
+          <template
+            v-if="filteredPresets.length > 0"
+            #content
+          >
+            <div class="preset-list">
               <button
                 v-for="preset in filteredPresets"
                 :key="preset.id"
@@ -148,14 +150,8 @@ async function handleSubmit() {
                 </div>
               </button>
             </div>
-            <div
-              v-else
-              class="preset-empty"
-            >
-              {{ type === 'todo' ? 'TODOのプリセットがありません' : type === 'expense' ? '支出のプリセットがありません' : '収入のプリセットがありません' }}
-            </div>
-          </div>
-        </div>
+          </template>
+        </UiDropdown>
       </div>
 
       <!-- 種別選択ボタン（横並び） -->
@@ -263,96 +259,60 @@ async function handleSubmit() {
 }
 
 /* プリセット選択 */
-.preset-selector {
-  position: relative;
+.dropdown-icon {
+  margin-left: auto;
+}
 
-  .dropdown-icon {
-    margin-left: auto;
-  }
+.preset-list {
+  .preset-option {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 
-  .preset-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    margin-top: 4px;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 10;
+    &:hover {
+      background-color: #f5f7fa;
 
-    // ダークモード対応
-    .dark-mode & {
-      background-color: #2a2a2a;
-      border-color: #444;
-    }
-
-    .preset-list {
-      .preset-option {
-        width: 100%;
-        padding: 12px 16px;
-        border: none;
-        background: none;
-        text-align: left;
-        cursor: pointer;
-        transition: background-color 0.15s ease;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-
-        &:hover {
-          background-color: #f5f7fa;
-
-          .dark-mode & {
-            background-color: #333;
-          }
-        }
-
-        &:not(:last-child) {
-          border-bottom: 1px solid #e0e0e0;
-
-          .dark-mode & {
-            border-color: #444;
-          }
-        }
-
-        .preset-time {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 14px;
-          font-weight: 500;
-          color: #666;
-          min-width: 70px;
-
-          .dark-mode & {
-            color: #b0b0b0;
-          }
-        }
-
-        .preset-title {
-          font-size: 14px;
-          color: #333;
-          flex: 1;
-
-          .dark-mode & {
-            color: #e0e0e0;
-          }
-        }
+      .dark-mode & {
+        background-color: #333;
       }
     }
 
-    .preset-empty {
-      padding: 16px;
-      text-align: center;
-      color: #999;
-      font-size: 14px;
+    &:not(:last-child) {
+      border-bottom: 1px solid #e0e0e0;
 
       .dark-mode & {
-        color: #888;
+        border-color: #444;
+      }
+    }
+
+    .preset-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      min-width: 70px;
+
+      .dark-mode & {
+        color: #b0b0b0;
+      }
+    }
+
+    .preset-title {
+      font-size: 14px;
+      color: #333;
+      flex: 1;
+
+      .dark-mode & {
+        color: #e0e0e0;
       }
     }
   }
@@ -398,6 +358,13 @@ async function handleSubmit() {
   font-family: inherit;
   resize: vertical;
   transition: border-color 0.15s ease;
+
+  // ダークモード対応
+  .dark-mode & {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+  }
 
   &:focus {
     outline: none;

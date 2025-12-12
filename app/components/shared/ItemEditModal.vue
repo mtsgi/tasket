@@ -322,6 +322,11 @@ function handleOverlayClick(event: MouseEvent) {
   font-size: 11px;
   color: #999;
   font-weight: normal;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #888;
+  }
 }
 
 /* 備考テキストエリア */
@@ -334,6 +339,13 @@ function handleOverlayClick(event: MouseEvent) {
   font-family: inherit;
   resize: vertical;
   transition: border-color 0.15s ease;
+
+  // ダークモード対応
+  .dark-mode & {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+  }
 
   &:focus {
     outline: none;
