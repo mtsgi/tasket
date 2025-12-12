@@ -5,6 +5,7 @@
  */
 import { useItemsStore } from '~/stores/items'
 import { usePresetsStore } from '~/stores/presets'
+import { useSettingsStore } from '~/stores/settings'
 import type { ItemType } from '~/types/item'
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const props = defineProps<{
 
 const itemsStore = useItemsStore()
 const presetsStore = usePresetsStore()
+const settingsStore = useSettingsStore()
 
 // フォームの状態
 const title = ref('')
@@ -70,6 +72,7 @@ function togglePresetDropdown() {
  * フォーム送信処理
  * 入力データからアイテムを作成し、ストアに追加
  * 注：作成後、種別と時刻はリセットしない（連続入力に便利）
+ * 日付変更線を考慮して、0時〜日付変更線までの時刻の場合は翌日の日付を使用
  */
 async function handleSubmit() {
   if (!title.value.trim()) return
@@ -77,7 +80,16 @@ async function handleSubmit() {
   isSubmitting.value = true
   try {
     const [hours, minutes] = time.value.split(':').map(Number)
+    const dateChangeLine = settingsStore.dateChangeLine
+
+    // 日付変更線より前の時刻の場合、翌日の日付を使用
+    // 例: 日付変更線が4時で、2時のアイテムを作成する場合
+    // 12月12日のビューで作成すると、実際には12月13日の2時として保存される
+    // （12月12日の実効範囲は12日4:00〜13日3:59なので、2時は13日分）
     const scheduledAt = new Date(props.date)
+    if (hours < dateChangeLine) {
+      scheduledAt.setDate(scheduledAt.getDate() + 1)
+    }
     scheduledAt.setHours(hours, minutes, 0, 0)
 
     await itemsStore.createItem({

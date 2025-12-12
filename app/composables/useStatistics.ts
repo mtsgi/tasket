@@ -3,7 +3,8 @@
  * 日次・月次のサマリーや支出ランキングの計算を提供します。
  */
 import type { Item, DailySummary, MonthlySummary, ExpenseRankingItem } from '~/types/item'
-import { formatDate, getDaysInMonth, getStartOfMonth, addDays } from '~/utils/dateHelpers'
+import { formatDate, getDaysInMonth, getStartOfMonth, addDays, getStartOfEffectiveDay, getEndOfEffectiveDay } from '~/utils/dateHelpers'
+import { useSettingsStore } from '~/stores/settings'
 
 export function useStatistics() {
   /**
@@ -100,6 +101,7 @@ export function useStatistics() {
 
   /**
    * 日別の収支合計を計算（グラフ表示用）
+   * 日付変更線を考慮してアイテムをグループ化
    * @param items - 対象のアイテムリスト
    * @param yearMonth - 対象年月（YYYY-MM）
    * @returns 日別の収入・支出・累計残高
@@ -110,6 +112,9 @@ export function useStatistics() {
     expenses: number[]
     balances: number[]
   } {
+    const settingsStore = useSettingsStore()
+    const dateChangeLine = settingsStore.dateChangeLine
+
     const startOfMonth = getStartOfMonth(yearMonth + '-01')
     const daysInMonth = getDaysInMonth(yearMonth + '-01')
 
@@ -126,9 +131,14 @@ export function useStatistics() {
       const dateString = formatDate(currentDate)
       dates.push(String(i + 1)) // グラフのラベル用（日にちのみ）
 
-      // その日のアイテムをフィルタリング
+      // 日付変更線を考慮した開始・終了時刻を取得
+      const startOfDay = getStartOfEffectiveDay(dateString, dateChangeLine)
+      const endOfDay = getEndOfEffectiveDay(dateString, dateChangeLine)
+
+      // その日のアイテムをフィルタリング（日付変更線を考慮）
       const dayItems = items.filter((item) => {
-        return formatDate(item.scheduled_at) === dateString
+        const scheduledAt = new Date(item.scheduled_at)
+        return scheduledAt >= startOfDay && scheduledAt <= endOfDay
       })
 
       // 日別の収入を計算
@@ -154,6 +164,7 @@ export function useStatistics() {
 
   /**
    * 特定の日のアイテム数と金額を取得（カレンダー表示用）
+   * 日付変更線を考慮してアイテムをフィルタリング
    * @param items - 対象のアイテムリスト
    * @param dateString - 対象日（YYYY-MM-DD）
    * @returns アイテム数と収支
@@ -164,9 +175,17 @@ export function useStatistics() {
     income: number
     expense: number
   } {
-    // その日のアイテムをフィルタリング
+    const settingsStore = useSettingsStore()
+    const dateChangeLine = settingsStore.dateChangeLine
+
+    // 日付変更線を考慮した開始・終了時刻を取得
+    const startOfDay = getStartOfEffectiveDay(dateString, dateChangeLine)
+    const endOfDay = getEndOfEffectiveDay(dateString, dateChangeLine)
+
+    // その日のアイテムをフィルタリング（日付変更線を考慮）
     const dayItems = items.filter((item) => {
-      return formatDate(item.scheduled_at) === dateString
+      const scheduledAt = new Date(item.scheduled_at)
+      return scheduledAt >= startOfDay && scheduledAt <= endOfDay
     })
 
     return {

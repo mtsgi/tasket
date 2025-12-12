@@ -308,6 +308,42 @@ watch(pinSetupStep, () => {
       </div>
     </section>
 
+    <!-- 日付変更線設定 -->
+    <section class="settings-section card">
+      <h2>
+        <Icon name="mdi:clock-outline" />
+        日付変更線
+      </h2>
+      <p class="section-description">
+        日付変更線を設定すると、指定した時刻から翌日同時刻の直前までを1日として扱います。深夜作業が多い場合に便利です。
+      </p>
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>日付変更線の時刻</h3>
+          <p>
+            {{ settingsStore.dateChangeLine }}時
+            {{ settingsStore.dateChangeLine > 0 ? `（当日${settingsStore.dateChangeLine}時〜翌日${settingsStore.dateChangeLine - 1}時台）` : '（通常の日付変更）' }}
+          </p>
+        </div>
+        <div class="date-line-input">
+          <input
+            v-model.number="settingsStore.dateChangeLine"
+            type="range"
+            min="0"
+            max="23"
+            class="date-line-slider"
+            @change="settingsStore.saveSettings()"
+          >
+        </div>
+      </div>
+      <div class="date-line-example">
+        <Icon name="mdi:information-outline" />
+        <span>
+          例: 4時に設定した場合、12月12日は当日4:00から翌日3:59までを指します
+        </span>
+      </div>
+    </section>
+
     <!-- プリセット管理 -->
     <section class="settings-section card">
       <PresetManager />
@@ -760,6 +796,75 @@ watch(pinSetupStep, () => {
   }
 }
 
+// 日付変更線設定
+.date-line-input {
+  width: 200px;
+  display: flex;
+  align-items: center;
+
+  .date-line-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #e0e0e0;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #4a90d9;
+      cursor: pointer;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: #3a7bc8;
+      }
+    }
+
+    &::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #4a90d9;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: #3a7bc8;
+      }
+    }
+
+    // ダークモード対応
+    .dark-mode & {
+      background: #444;
+    }
+  }
+}
+
+.date-line-example {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: rgba(74, 144, 217, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #555;
+  margin-top: 12px;
+  border: 1px solid rgba(74, 144, 217, 0.3);
+
+  // ダークモード対応
+  .dark-mode & {
+    background-color: rgba(74, 144, 217, 0.15);
+    color: #b0b0b0;
+  }
+}
+
 @media (max-width: 600px) {
   .settings-header {
     margin-bottom: 16px;
@@ -790,6 +895,15 @@ watch(pinSetupStep, () => {
 
   .back-button {
     margin-top: 16px;
+  }
+
+  .date-line-input {
+    width: 150px;
+  }
+
+  .date-line-example {
+    font-size: 12px;
+    padding: 10px;
   }
 }
 </style>

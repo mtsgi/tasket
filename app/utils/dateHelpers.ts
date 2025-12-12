@@ -159,3 +159,72 @@ export function isToday(date: Date | string): boolean {
 export function isSameMonth(date1: Date | string, date2: Date | string): boolean {
   return dayjs(date1).isSame(dayjs(date2), 'month')
 }
+
+/**
+ * 指定時刻から実効日付を取得
+ * 日付変更線を考慮して、指定時刻が属する実効日付を返す
+ * @param dateTime - 対象の日時
+ * @param dateChangeLine - 日付変更線の時刻（0-23時）
+ * @returns 実効日付（YYYY-MM-DD形式）
+ * @example
+ * // 日付変更線が4時の場合
+ * // 2025-12-13 03:30 → '2025-12-12' (前日の実効日付に含まれる)
+ * // 2025-12-13 04:00 → '2025-12-13' (当日の実効日付に含まれる)
+ */
+export function getEffectiveDateForTime(dateTime: Date | string, dateChangeLine: number): string {
+  const date = dayjs(dateTime)
+  const hour = date.hour()
+
+  // 日付変更線より前の時刻の場合、前日の実効日付として扱う
+  // 例: 4時設定で3時台のアイテムは、前日の実効日付に属する
+  if (hour < dateChangeLine) {
+    return date.subtract(1, 'day').format('YYYY-MM-DD')
+  }
+
+  return date.format('YYYY-MM-DD')
+}
+
+/**
+ * 実効日付の開始時刻を取得
+ * 日付変更線を考慮した、その日の開始時刻を返す
+ * @param date - 対象の日付（YYYY-MM-DD形式）
+ * @param dateChangeLine - 日付変更線の時刻（0-23時）
+ * @returns 実効日付の開始時刻
+ * @example
+ * // 日付変更線が4時の場合
+ * // 2025-12-12の実効日付は、2025-12-12 04:00:00 から開始
+ */
+export function getStartOfEffectiveDay(date: Date | string, dateChangeLine: number): Date {
+  const targetDate = dayjs(date)
+
+  // 日付変更線が0時の場合は通常の日の開始
+  if (dateChangeLine === 0) {
+    return targetDate.startOf('day').toDate()
+  }
+
+  // 当日の日付変更線時刻から開始
+  return targetDate.hour(dateChangeLine).minute(0).second(0).millisecond(0).toDate()
+}
+
+/**
+ * 実効日付の終了時刻を取得
+ * 日付変更線を考慮した、その日の終了時刻を返す
+ * @param date - 対象の日付（YYYY-MM-DD形式）
+ * @param dateChangeLine - 日付変更線の時刻（0-23時）
+ * @returns 実効日付の終了時刻
+ * @example
+ * // 日付変更線が4時の場合
+ * // 2025-12-12の実効日付は、2025-12-13 03:59:59.999 まで
+ */
+export function getEndOfEffectiveDay(date: Date | string, dateChangeLine: number): Date {
+  const targetDate = dayjs(date)
+
+  // 日付変更線が0時の場合は通常の日の終了
+  if (dateChangeLine === 0) {
+    return targetDate.endOf('day').toDate()
+  }
+
+  // 翌日の日付変更線時刻の直前まで（dateChangeLine時のミリ秒前）
+  // 例: 4時設定の場合、翌日3:59:59.999まで
+  return targetDate.add(1, 'day').hour(dateChangeLine).minute(0).second(0).millisecond(0).subtract(1, 'millisecond').toDate()
+}
