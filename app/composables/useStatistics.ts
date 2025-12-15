@@ -73,7 +73,7 @@ export function useStatistics() {
    * 支出ランキングを計算
    * 同じタイトルの支出をグループ化し、金額順にソート
    * @param items - 対象のアイテムリスト
-   * @returns 支出ランキング（金額の多い順）
+   * @returns 支出ランキング（金額の多い順、0円の項目は除外）
    */
   function calculateExpenseRanking(items: Item[]): ExpenseRankingItem[] {
     // 支出アイテムのみをフィルタリング
@@ -89,13 +89,14 @@ export function useStatistics() {
       return acc
     }, {} as Record<string, { totalAmount: number, count: number }>)
 
-    // 金額の多い順にソートして返す
+    // 金額の多い順にソートして返す（0円の項目は除外）
     return Object.entries(groupedByTitle)
       .map(([title, data]) => ({
         title,
         totalAmount: data.totalAmount,
         count: data.count,
       }))
+      .filter(item => item.totalAmount > 0)
       .sort((a, b) => b.totalAmount - a.totalAmount)
   }
 
