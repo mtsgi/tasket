@@ -34,7 +34,7 @@ const selectedIndex = ref(-1)
  * パフォーマンス最適化のため、入力値がある場合のみフィルタリング
  */
 const filteredSuggestions = computed(() => {
-  if (!props.modelValue || props.modelValue.length === 0) {
+  if (!props.modelValue || typeof props.modelValue !== 'string' || props.modelValue.length === 0) {
     return []
   }
 
@@ -59,7 +59,7 @@ function handleInput(event: Event) {
  */
 function handleFocus() {
   isFocused.value = true
-  showSuggestions.value = props.modelValue.length > 0
+  showSuggestions.value = !!(props.modelValue && props.modelValue.length > 0)
 }
 
 /**
