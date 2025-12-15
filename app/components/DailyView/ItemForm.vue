@@ -6,6 +6,7 @@
 import { useItemsStore } from '~/stores/items'
 import { usePresetsStore } from '~/stores/presets'
 import { useSettingsStore } from '~/stores/settings'
+import { formatYearMonth } from '~/utils/dateHelpers'
 import type { ItemType } from '~/types/item'
 
 const props = defineProps<{
@@ -36,6 +37,16 @@ onMounted(async () => {
 // 現在の種別に対応するプリセットを取得
 const filteredPresets = computed(() => {
   return presetsStore.getPresetsByType(type.value)
+})
+
+// 現在の月の年月文字列を取得
+const currentYearMonth = computed(() => {
+  return formatYearMonth(props.date)
+})
+
+// オートコンプリート候補を取得（月内の一意のアイテム名）
+const autocompleteSuggestions = computed(() => {
+  return itemsStore.getUniqueItemTitlesByMonth(currentYearMonth.value)
 })
 
 /**
@@ -208,10 +219,10 @@ async function handleSubmit() {
       </div>
 
       <div class="form-group">
-        <UiInput
+        <UiAutocomplete
           id="title"
           v-model="title"
-          type="text"
+          :suggestions="autocompleteSuggestions"
           placeholder="アイテム名を入力"
           required
         />

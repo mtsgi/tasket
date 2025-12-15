@@ -64,6 +64,30 @@ export const useItemsStore = defineStore('items', {
           .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
       }
     },
+
+    /**
+     * 特定の月の一意のアイテム名を取得（オートコンプリート用）
+     * @param yearMonth - 年月文字列（YYYY-MM）
+     * @returns その月の一意のアイテム名リスト
+     */
+    getUniqueItemTitlesByMonth: (state) => {
+      return (yearMonth: string) => {
+        const startOfMonth = getStartOfMonth(yearMonth + '-01')
+        const endOfMonth = getEndOfMonth(yearMonth + '-01')
+
+        // 月内のアイテムをフィルタリングし、タイトルを抽出
+        const titles = state.items
+          .filter((item) => {
+            const scheduledAt = new Date(item.scheduled_at)
+            return scheduledAt >= startOfMonth && scheduledAt <= endOfMonth
+          })
+          .map(item => item.title.trim())
+          .filter(title => title.length > 0)
+
+        // 重複を排除してユニークなタイトルのみを返す
+        return Array.from(new Set(titles))
+      }
+    },
   },
 
   /**
