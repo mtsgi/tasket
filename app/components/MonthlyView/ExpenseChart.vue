@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Line } from 'vue-chartjs'
+import { Line, Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -16,6 +17,7 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -30,30 +32,73 @@ const props = defineProps<{
   }
 }>()
 
+// グラフの表示モードの状態管理
+type DataMode = 'daily' | 'cumulative'
+type ChartType = 'line' | 'bar'
+
+const dataMode = ref<DataMode>('daily')
+const chartType = ref<ChartType>('line')
+
+/**
+ * 累積データを計算
+ * @param data - 元のデータ配列
+ * @returns 累積和の配列
+ */
+function calculateCumulativeData(data: number[]): number[] {
+  const cumulative: number[] = []
+  let sum = 0
+  for (const value of data) {
+    sum += value
+    cumulative.push(sum)
+  }
+  return cumulative
+}
+
+/**
+ * 表示するデータを取得（単日 or 累積）
+ */
+const displayData = computed(() => {
+  if (dataMode.value === 'daily') {
+    return {
+      incomes: props.dailyTotals.incomes,
+      expenses: props.dailyTotals.expenses,
+      balances: props.dailyTotals.balances,
+    }
+  }
+  else {
+    // 累積モード
+    return {
+      incomes: calculateCumulativeData(props.dailyTotals.incomes),
+      expenses: calculateCumulativeData(props.dailyTotals.expenses),
+      balances: props.dailyTotals.balances, // balancesは既に累積
+    }
+  }
+})
+
 const chartData = computed(() => ({
   labels: props.dailyTotals.dates,
   datasets: [
     {
       label: '収入',
-      data: props.dailyTotals.incomes,
+      data: displayData.value.incomes,
       borderColor: '#4caf50',
-      backgroundColor: 'rgba(76, 175, 80, 0.1)',
+      backgroundColor: 'rgba(76, 175, 80, 0.6)',
       tension: 0.3,
       pointRadius: 2,
     },
     {
       label: '支出',
-      data: props.dailyTotals.expenses,
+      data: displayData.value.expenses,
       borderColor: '#f44336',
-      backgroundColor: 'rgba(244, 67, 54, 0.1)',
+      backgroundColor: 'rgba(244, 67, 54, 0.6)',
       tension: 0.3,
       pointRadius: 2,
     },
     {
       label: '残高',
-      data: props.dailyTotals.balances,
+      data: displayData.value.balances,
       borderColor: '#4a90d9',
-      backgroundColor: 'rgba(74, 144, 217, 0.1)',
+      backgroundColor: 'rgba(74, 144, 217, 0.6)',
       tension: 0.3,
       pointRadius: 2,
     },
@@ -122,12 +167,58 @@ const chartOptions = {
 
 <template>
   <section class="expense-chart card">
-    <h2>
-      <Icon name="mdi:chart-line" />
-      収支推移
-    </h2>
+    <div class="header-section">
+      <h2>
+        <Icon name="mdi:chart-line" />
+        収支推移
+      </h2>
+      <div class="chart-controls">
+        <div class="control-group">
+          <button
+            class="control-btn"
+            :class="{ active: dataMode === 'daily' }"
+            aria-label="単日表示"
+            @click="dataMode = 'daily'"
+          >
+            単日
+          </button>
+          <button
+            class="control-btn"
+            :class="{ active: dataMode === 'cumulative' }"
+            aria-label="累積表示"
+            @click="dataMode = 'cumulative'"
+          >
+            累積
+          </button>
+        </div>
+        <div class="control-group">
+          <button
+            class="control-btn"
+            :class="{ active: chartType === 'line' }"
+            aria-label="折れ線グラフ"
+            @click="chartType = 'line'"
+          >
+            <Icon name="mdi:chart-line" />
+          </button>
+          <button
+            class="control-btn"
+            :class="{ active: chartType === 'bar' }"
+            aria-label="棒グラフ"
+            @click="chartType = 'bar'"
+          >
+            <Icon name="mdi:chart-bar" />
+          </button>
+        </div>
+      </div>
+    </div>
     <div class="chart-container">
       <Line
+        v-if="chartType === 'line'"
+        :data="chartData"
+        :options="chartOptions"
+      />
+      <Bar
+        v-else
         :data="chartData"
         :options="chartOptions"
       />
@@ -137,14 +228,81 @@ const chartOptions = {
 
 <style lang="scss" scoped>
 .expense-chart {
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    @media (max-width: 600px) {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+  }
+
   h2 {
     font-size: 16px;
     font-weight: 600;
-    margin-bottom: 16px;
     color: #666;
     display: flex;
     align-items: center;
     gap: 6px;
+    margin: 0;
+  }
+
+  .chart-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    @media (max-width: 600px) {
+      justify-content: flex-start;
+    }
+  }
+
+  .control-group {
+    display: flex;
+    gap: 4px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    padding: 3px;
+  }
+
+  .control-btn {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-size: 13px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    min-width: 44px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+
+    &:hover {
+      background: #e0e0e0;
+    }
+
+    &.active {
+      background: #fff;
+      color: #333;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 380px) {
+      padding: 6px 10px;
+      font-size: 12px;
+      min-width: 40px;
+    }
   }
 }
 
