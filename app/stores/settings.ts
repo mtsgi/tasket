@@ -111,8 +111,13 @@ export const useSettingsStore = defineStore('settings', {
      * @param settings - カレンダー表示設定
      */
     updateCalendarDisplay(settings: Partial<CalendarDisplaySettings>) {
-      this.calendarDisplay = { ...this.calendarDisplay, ...settings }
-      this.saveSettings()
+      try {
+        this.calendarDisplay = { ...this.calendarDisplay, ...settings }
+        this.saveSettings()
+      }
+      catch (e) {
+        console.error('カレンダー表示設定の保存に失敗しました:', e)
+      }
     },
   },
 })

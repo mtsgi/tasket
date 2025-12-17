@@ -87,8 +87,8 @@ onMounted(async () => {
   await fetchMonthDayTitles()
 })
 
-watch(yearMonthParam, () => {
-  fetchMonthDayTitles()
+watch(yearMonthParam, async () => {
+  await fetchMonthDayTitles()
 })
 </script>
 
