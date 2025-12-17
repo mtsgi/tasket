@@ -70,10 +70,14 @@ const displayData = computed(() => {
     return {
       incomes: calculateCumulativeData(props.dailyTotals.incomes),
       expenses: calculateCumulativeData(props.dailyTotals.expenses),
-      balances: props.dailyTotals.balances, // balancesは既に累積
+      // balancesはuseStatisticsのcalculateDailyTotalsで既に累積値として計算されている
+      balances: props.dailyTotals.balances,
     }
   }
 })
+
+// グラフの種類に応じて背景色の透明度を調整
+const backgroundOpacity = computed(() => chartType.value === 'bar' ? 0.6 : 0.1)
 
 const chartData = computed(() => ({
   labels: props.dailyTotals.dates,
@@ -82,7 +86,7 @@ const chartData = computed(() => ({
       label: '収入',
       data: displayData.value.incomes,
       borderColor: '#4caf50',
-      backgroundColor: 'rgba(76, 175, 80, 0.6)',
+      backgroundColor: `rgba(76, 175, 80, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
     },
@@ -90,7 +94,7 @@ const chartData = computed(() => ({
       label: '支出',
       data: displayData.value.expenses,
       borderColor: '#f44336',
-      backgroundColor: 'rgba(244, 67, 54, 0.6)',
+      backgroundColor: `rgba(244, 67, 54, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
     },
@@ -98,7 +102,7 @@ const chartData = computed(() => ({
       label: '残高',
       data: displayData.value.balances,
       borderColor: '#4a90d9',
-      backgroundColor: 'rgba(74, 144, 217, 0.6)',
+      backgroundColor: `rgba(74, 144, 217, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
     },
