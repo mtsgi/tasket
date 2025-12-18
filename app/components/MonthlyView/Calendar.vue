@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { getDaysInMonth, getFirstDayOfWeek, getStartOfMonth, addDays, formatDate, isToday } from '~/utils/dateHelpers'
 import { formatCurrency } from '~/utils/formatters'
+import { useSettingsStore } from '~/stores/settings'
+import { useDayTitlesStore } from '~/stores/dayTitles'
 
 const props = defineProps<{
   yearMonth: string
@@ -16,6 +18,9 @@ const emit = defineEmits<{
   selectDate: [dateString: string]
 }>()
 
+const settingsStore = useSettingsStore()
+const dayTitlesStore = useDayTitlesStore()
+
 const weekDays = ['日', '月', '火', '水', '木', '金', '土']
 
 const calendarDays = computed(() => {
@@ -28,22 +33,25 @@ const calendarDays = computed(() => {
     day: number | null
     isToday: boolean
     itemCount: ReturnType<typeof props.getItemCount> | null
+    dayTitle: string | null
   }> = []
 
   // Add empty cells for days before the first day of the month
   for (let i = 0; i < firstDayOfWeek; i++) {
-    days.push({ date: null, day: null, isToday: false, itemCount: null })
+    days.push({ date: null, day: null, isToday: false, itemCount: null, dayTitle: null })
   }
 
   // Add days of the month
   for (let i = 0; i < daysInMonth; i++) {
     const currentDate = addDays(startOfMonth, i)
     const dateString = formatDate(currentDate)
+    const dayTitle = dayTitlesStore.getDayTitle(dateString)
     days.push({
       date: dateString,
       day: i + 1,
       isToday: isToday(currentDate),
       itemCount: props.getItemCount(dateString),
+      dayTitle: dayTitle?.title ?? null,
     })
   }
 
@@ -86,18 +94,29 @@ function handleDayClick(dateString: string | null) {
         <template v-if="day.date">
           <span class="day-number">{{ day.day }}</span>
           <div
-            v-if="day.itemCount && day.itemCount.total > 0"
+            v-if="day.itemCount || day.dayTitle"
             class="day-info"
           >
-            <span class="item-count">{{ day.itemCount.total }}件</span>
             <span
-              v-if="day.itemCount.income > 0"
+              v-if="settingsStore.calendarDisplay.showMainTask && day.dayTitle"
+              class="main-task"
+            >
+              {{ day.dayTitle }}
+            </span>
+            <span
+              v-if="settingsStore.calendarDisplay.showTaskCount && day.itemCount && day.itemCount.total > 0"
+              class="item-count"
+            >
+              {{ day.itemCount.total }}件
+            </span>
+            <span
+              v-if="settingsStore.calendarDisplay.showIncome && day.itemCount && day.itemCount.income > 0"
               class="income"
             >
               +{{ formatCurrency(day.itemCount.income) }}
             </span>
             <span
-              v-if="day.itemCount.expense > 0"
+              v-if="settingsStore.calendarDisplay.showExpense && day.itemCount && day.itemCount.expense > 0"
               class="expense"
             >
               -{{ formatCurrency(day.itemCount.expense) }}
@@ -198,6 +217,15 @@ function handleDayClick(dateString: string | null) {
   gap: 2px;
 }
 
+.main-task {
+  font-size: 10px;
+  color: #333;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .item-count {
   font-size: 10px;
   color: #666;
@@ -222,7 +250,7 @@ function handleDayClick(dateString: string | null) {
   }
 
   .calendar-day {
-    min-height: 44px;
+    min-height: 50px;
     padding: 2px;
   }
 
@@ -231,21 +259,17 @@ function handleDayClick(dateString: string | null) {
   }
 
   .day-info {
-    display: none;
+    margin-top: 2px;
+    gap: 1px;
+
+    span {
+      font-size: 9px;
+    }
   }
 
-  .has-items {
-    position: relative;
-
-    &::after {
-      content: '';
-      display: block;
-      width: 6px;
-      height: 6px;
-      background-color: #4a90d9;
-      border-radius: 50%;
-      margin-top: 2px;
-    }
+  .main-task {
+    font-size: 9px;
+    max-width: 100%;
   }
 
   .today .day-number {

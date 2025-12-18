@@ -4,9 +4,11 @@
  * 月間カレンダー、収支サマリー、支出チャート、支出ランキングを表示します。
  */
 import { useItemsStore } from '~/stores/items'
+import { useDayTitlesStore } from '~/stores/dayTitles'
 import { useStatistics } from '~/composables/useStatistics'
-import { formatDisplayYearMonth, formatYearMonth, addMonths, formatDate } from '~/utils/dateHelpers'
+import { formatDisplayYearMonth, formatYearMonth, addMonths, formatDate, getDaysInMonth, getStartOfMonth, addDays } from '~/utils/dateHelpers'
 import Calendar from '~/components/MonthlyView/Calendar.vue'
+import CalendarSettings from '~/components/MonthlyView/CalendarSettings.vue'
 import ExpenseChart from '~/components/MonthlyView/ExpenseChart.vue'
 import MonthlySummaryComponent from '~/components/MonthlyView/MonthlySummary.vue'
 import ExpenseRanking from '~/components/MonthlyView/ExpenseRanking.vue'
@@ -14,7 +16,10 @@ import ExpenseRanking from '~/components/MonthlyView/ExpenseRanking.vue'
 const route = useRoute()
 const router = useRouter()
 const itemsStore = useItemsStore()
+const dayTitlesStore = useDayTitlesStore()
 const { calculateMonthlySummary, calculateExpenseRanking, calculateDailyTotals, getItemCountByDate } = useStatistics()
+
+const showCalendarSettings = ref(false)
 
 const yearMonthParam = computed(() => route.params.yearMonth as string)
 
@@ -52,8 +57,38 @@ function getItemCountForDate(dateString: string) {
   return getItemCountByDate(items.value, dateString)
 }
 
-onMounted(() => {
+function openCalendarSettings() {
+  showCalendarSettings.value = true
+}
+
+function closeCalendarSettings() {
+  showCalendarSettings.value = false
+}
+
+/**
+ * 月の全日付のDayTitleを事前に読み込む
+ */
+async function fetchMonthDayTitles() {
+  const startOfMonth = getStartOfMonth(yearMonthParam.value + '-01')
+  const daysInMonth = getDaysInMonth(yearMonthParam.value + '-01')
+
+  const fetchPromises = []
+  for (let i = 0; i < daysInMonth; i++) {
+    const currentDate = addDays(startOfMonth, i)
+    const dateString = formatDate(currentDate)
+    fetchPromises.push(dayTitlesStore.fetchDayTitle(dateString))
+  }
+
+  await Promise.all(fetchPromises)
+}
+
+onMounted(async () => {
   itemsStore.fetchItems()
+  await fetchMonthDayTitles()
+})
+
+watch(yearMonthParam, async () => {
+  await fetchMonthDayTitles()
 })
 </script>
 
@@ -95,10 +130,27 @@ onMounted(() => {
       </button>
     </header>
 
-    <Calendar
-      :year-month="yearMonthParam"
-      :get-item-count="getItemCountForDate"
-      @select-date="goToDay"
+    <div class="calendar-section">
+      <div class="calendar-header-actions">
+        <button
+          class="btn btn-secondary btn-small"
+          @click="openCalendarSettings"
+        >
+          <Icon name="mdi:cog" />
+          表示設定
+        </button>
+      </div>
+
+      <Calendar
+        :year-month="yearMonthParam"
+        :get-item-count="getItemCountForDate"
+        @select-date="goToDay"
+      />
+    </div>
+
+    <CalendarSettings
+      :show="showCalendarSettings"
+      @close="closeCalendarSettings"
     />
 
     <ExpenseChart :daily-totals="dailyTotals" />
@@ -146,6 +198,24 @@ onMounted(() => {
   }
 }
 
+.calendar-section {
+  margin-bottom: 16px;
+}
+
+.calendar-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+
+  .btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
 @media (max-width: 380px) {
   .monthly-header {
     gap: 8px;
@@ -154,6 +224,11 @@ onMounted(() => {
       font-size: 18px;
       min-width: 110px;
     }
+  }
+
+  .calendar-header-actions .btn-small {
+    padding: 5px 10px;
+    font-size: 12px;
   }
 }
 </style>
