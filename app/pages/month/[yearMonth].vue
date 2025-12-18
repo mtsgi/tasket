@@ -149,7 +149,7 @@ watch(yearMonthParam, async () => {
     </div>
 
     <CalendarSettings
-      v-if="showCalendarSettings"
+      :show="showCalendarSettings"
       @close="closeCalendarSettings"
     />
 
