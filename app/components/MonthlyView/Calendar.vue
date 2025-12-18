@@ -250,7 +250,7 @@ function handleDayClick(dateString: string | null) {
   }
 
   .calendar-day {
-    min-height: 44px;
+    min-height: 50px;
     padding: 2px;
   }
 
@@ -259,21 +259,17 @@ function handleDayClick(dateString: string | null) {
   }
 
   .day-info {
-    display: none;
+    margin-top: 2px;
+    gap: 1px;
+
+    span {
+      font-size: 9px;
+    }
   }
 
-  .has-items {
-    position: relative;
-
-    &::after {
-      content: '';
-      display: block;
-      width: 6px;
-      height: 6px;
-      background-color: #4a90d9;
-      border-radius: 50%;
-      margin-top: 2px;
-    }
+  .main-task {
+    font-size: 9px;
+    max-width: 100%;
   }
 
   .today .day-number {
