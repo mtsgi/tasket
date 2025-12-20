@@ -4,8 +4,9 @@
  * アイテムをキーワードや種別で検索できます。
  */
 import { useItemsStore } from '~/stores/items'
+import { formatDate } from '~/utils/dateHelpers'
 import ItemCard from '~/components/shared/ItemCard.vue'
-import type { ItemType } from '~/types/item'
+import type { Item, ItemType } from '~/types/item'
 
 const router = useRouter()
 const itemsStore = useItemsStore()
@@ -16,10 +17,43 @@ const searchKeyword = ref('')
 // フィルタ用の種別
 const selectedType = ref<ItemType | ''>('')
 
+// 日付範囲フィルタ
+const dateRangeStart = ref('')
+const dateRangeEnd = ref('')
+
+// 検索条件が入力されているかどうか
+const hasSearchCriteria = computed(() => {
+  return !!(searchKeyword.value || selectedType.value || dateRangeStart.value || dateRangeEnd.value)
+})
+
 // 検索結果
 const searchResults = computed(() => {
+  // 検索条件が何もない場合は空配列を返す
+  if (!hasSearchCriteria.value) {
+    return []
+  }
+
   const type = selectedType.value === '' ? undefined : selectedType.value
-  return itemsStore.searchItems(searchKeyword.value, type)
+  let results = itemsStore.searchItems(searchKeyword.value, type)
+
+  // 日付範囲フィルタを適用
+  if (dateRangeStart.value || dateRangeEnd.value) {
+    results = results.filter((item) => {
+      const itemDate = formatDate(item.scheduled_at)
+      
+      if (dateRangeStart.value && itemDate < dateRangeStart.value) {
+        return false
+      }
+      
+      if (dateRangeEnd.value && itemDate > dateRangeEnd.value) {
+        return false
+      }
+      
+      return true
+    })
+  }
+
+  return results
 })
 
 // 検索結果の件数
@@ -37,6 +71,14 @@ function goBack() {
  */
 function resetTypeFilter() {
   selectedType.value = ''
+}
+
+/**
+ * アイテムの日のページに移動
+ */
+function goToItemDay(item: Item) {
+  const dateString = formatDate(item.scheduled_at)
+  router.push(`/day/${dateString}`)
 }
 
 // マウント時にアイテムを取得
@@ -117,10 +159,33 @@ onMounted(() => {
           </button>
         </div>
       </div>
+
+      <div class="form-group">
+        <label>
+          <Icon name="mdi:calendar-range" />
+          日付範囲
+        </label>
+        <div class="date-range">
+          <UiInput
+            v-model="dateRangeStart"
+            type="date"
+            placeholder="開始日"
+          />
+          <span class="date-separator">〜</span>
+          <UiInput
+            v-model="dateRangeEnd"
+            type="date"
+            placeholder="終了日"
+          />
+        </div>
+      </div>
     </section>
 
     <!-- 検索結果 -->
-    <section class="search-results">
+    <section
+      v-if="hasSearchCriteria"
+      class="search-results"
+    >
       <div class="results-header">
         <h2>
           <Icon name="mdi:format-list-bulleted" />
@@ -137,24 +202,34 @@ onMounted(() => {
           name="mdi:inbox-outline"
           class="empty-icon"
         />
-        <p v-if="searchKeyword || selectedType">
-          検索条件に一致するアイテムが見つかりません
-        </p>
-        <p v-else>
-          キーワードを入力して検索してください
-        </p>
+        <p>検索条件に一致するアイテムが見つかりません</p>
       </div>
 
       <div
         v-else
         class="results-list"
       >
-        <ItemCard
+        <div
           v-for="item in searchResults"
           :key="item.id"
-          :item="item"
-        />
+          class="result-item"
+          @click="goToItemDay(item)"
+        >
+          <ItemCard :item="item" />
+        </div>
       </div>
+    </section>
+
+    <!-- 検索前の状態 -->
+    <section
+      v-else
+      class="search-prompt"
+    >
+      <Icon
+        name="mdi:magnify"
+        class="prompt-icon"
+      />
+      <p>キーワード、種別、または日付範囲を指定して検索してください</p>
     </section>
   </div>
 </template>
@@ -236,6 +311,28 @@ onMounted(() => {
       min-height: 44px;
     }
   }
+
+  .date-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .date-separator {
+      color: #666;
+      font-size: 14px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 600px) {
+      flex-direction: column;
+      gap: 12px;
+
+      .date-separator {
+        display: none;
+      }
+    }
+  }
 }
 
 .search-results {
@@ -285,6 +382,36 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 0;
+
+    .result-item {
+      cursor: pointer;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: translateX(4px);
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+  }
+}
+
+.search-prompt {
+  text-align: center;
+  padding: 64px 16px;
+
+  .prompt-icon {
+    font-size: 80px;
+    color: #ddd;
+    margin-bottom: 16px;
+  }
+
+  p {
+    font-size: 14px;
+    color: #999;
+    line-height: 1.6;
   }
 }
 
