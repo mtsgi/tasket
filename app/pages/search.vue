@@ -4,7 +4,6 @@
  * アイテムをキーワードや種別で検索できます。
  */
 import { useItemsStore } from '~/stores/items'
-import { formatDisplayDateTime } from '~/utils/dateHelpers'
 import ItemCard from '~/components/shared/ItemCard.vue'
 import type { ItemType } from '~/types/item'
 

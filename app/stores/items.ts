@@ -99,28 +99,28 @@ export const useItemsStore = defineStore('items', {
       return (keyword: string, type?: ItemType) => {
         const lowerKeyword = keyword.toLowerCase().trim()
         
-        if (!lowerKeyword) {
-          // キーワードが空の場合は全アイテムを返す
-          return state.items
-            .filter((item) => !type || item.type === type)
-            .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
+        // フィルタリング処理
+        let filteredItems = state.items
+        
+        // タイプフィルタ
+        if (type) {
+          filteredItems = filteredItems.filter(item => item.type === type)
         }
-
-        return state.items
-          .filter((item) => {
-            // タイプフィルタ
-            if (type && item.type !== type) {
-              return false
-            }
-
-            // キーワード検索：タイトル、備考、金額（文字列化）で検索
+        
+        // キーワード検索
+        if (lowerKeyword) {
+          filteredItems = filteredItems.filter((item) => {
             const titleMatch = item.title.toLowerCase().includes(lowerKeyword)
             const notesMatch = item.notes.toLowerCase().includes(lowerKeyword)
             const amountMatch = item.amount.toString().includes(lowerKeyword)
-
             return titleMatch || notesMatch || amountMatch
           })
-          .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
+        }
+
+        // 日時の降順でソート（新しいものが先）
+        return filteredItems.slice().sort((a, b) => {
+          return new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime()
+        })
       }
     },
   },
