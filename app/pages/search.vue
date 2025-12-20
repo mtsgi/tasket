@@ -39,14 +39,21 @@ const searchResults = computed(() => {
   // 日付範囲フィルタを適用
   if (dateRangeStart.value || dateRangeEnd.value) {
     results = results.filter((item) => {
-      const itemDate = formatDate(item.scheduled_at)
+      const itemDate = new Date(item.scheduled_at)
       
-      if (dateRangeStart.value && itemDate < dateRangeStart.value) {
-        return false
+      if (dateRangeStart.value) {
+        const startDate = new Date(dateRangeStart.value)
+        if (itemDate < startDate) {
+          return false
+        }
       }
       
-      if (dateRangeEnd.value && itemDate > dateRangeEnd.value) {
-        return false
+      if (dateRangeEnd.value) {
+        const endDate = new Date(dateRangeEnd.value)
+        endDate.setHours(23, 59, 59, 999) // 終了日の最後まで含める
+        if (itemDate > endDate) {
+          return false
+        }
       }
       
       return true
