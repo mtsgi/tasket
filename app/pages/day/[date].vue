@@ -65,6 +65,13 @@ function goToMenu() {
 }
 
 /**
+ * 検索画面に移動する
+ */
+function goToSearch() {
+  router.push('/search')
+}
+
+/**
  * 週表示から日付が選択されたときの処理
  */
 function handleDateSelect(dateString: string) {
@@ -86,6 +93,7 @@ onMounted(() => {
       @next="goToNextDay"
       @go-to-month="goToMonth"
       @go-to-menu="goToMenu"
+      @go-to-search="goToSearch"
     />
 
     <!-- 週表示カレンダー -->

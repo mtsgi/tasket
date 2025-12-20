@@ -12,6 +12,7 @@ const emit = defineEmits<{
   next: []
   goToMonth: []
   goToMenu: []
+  goToSearch: []
 }>()
 </script>
 
@@ -26,6 +27,13 @@ const emit = defineEmits<{
         月表示へ
       </button>
       <hr>
+      <button
+        class="btn btn-secondary btn-icon"
+        aria-label="検索"
+        @click="emit('goToSearch')"
+      >
+        <Icon name="mdi:magnify" />
+      </button>
       <button
         class="btn btn-secondary btn-icon menu-btn"
         aria-label="メニュー"

@@ -59,6 +59,15 @@ export function formatDisplayYearMonth(date: Date | string): string {
 }
 
 /**
+ * 日付を日本語表示形式の日時に変換（例: 2025年12月1日 12:30）
+ * @param date - 変換する日付
+ * @returns 日本語形式の日時文字列
+ */
+export function formatDisplayDateTime(date: Date | string): string {
+  return dayjs(date).format('YYYY年M月D日 HH:mm')
+}
+
+/**
  * 指定日の開始時刻（00:00:00）を取得
  * @param date - 対象の日付
  * @returns その日の開始時刻
