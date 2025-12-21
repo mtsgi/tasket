@@ -88,6 +88,41 @@ export const useItemsStore = defineStore('items', {
         return Array.from(new Set(titles))
       }
     },
+
+    /**
+     * キーワードでアイテムを検索
+     * @param keyword - 検索キーワード
+     * @param type - アイテムタイプでフィルタ（省略可）
+     * @returns 検索結果のアイテムリスト（日時順）
+     */
+    searchItems: (state) => {
+      return (keyword: string, type?: ItemType) => {
+        const lowerKeyword = keyword.toLowerCase().trim()
+
+        // フィルタリング処理
+        let filteredItems = state.items
+
+        // タイプフィルタ
+        if (type) {
+          filteredItems = filteredItems.filter(item => item.type === type)
+        }
+
+        // キーワード検索
+        if (lowerKeyword) {
+          filteredItems = filteredItems.filter((item) => {
+            const titleMatch = item.title.toLowerCase().includes(lowerKeyword)
+            const notesMatch = item.notes.toLowerCase().includes(lowerKeyword)
+            const amountMatch = item.amount.toString().includes(lowerKeyword)
+            return titleMatch || notesMatch || amountMatch
+          })
+        }
+
+        // 日時の降順でソート（新しいものが先）
+        return filteredItems.slice().sort((a, b) => {
+          return new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime()
+        })
+      }
+    },
   },
 
   /**

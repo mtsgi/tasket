@@ -53,6 +53,10 @@ function goToMenu() {
   router.push('/menu')
 }
 
+function goToSearch() {
+  router.push('/search')
+}
+
 function getItemCountForDate(dateString: string) {
   return getItemCountByDate(items.value, dateString)
 }
@@ -103,6 +107,13 @@ watch(yearMonthParam, async () => {
         今日
       </button>
       <hr>
+      <button
+        class="btn btn-secondary btn-icon"
+        aria-label="検索"
+        @click="goToSearch"
+      >
+        <Icon name="mdi:magnify" />
+      </button>
       <button
         class="btn btn-secondary btn-icon"
         aria-label="メニュー"

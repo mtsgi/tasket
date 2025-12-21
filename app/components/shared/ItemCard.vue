@@ -11,7 +11,18 @@ import ItemEditModal from '~/components/shared/ItemEditModal.vue'
 
 const props = defineProps<{
   item: Item
+  clickable?: boolean
 }>()
+
+const emit = defineEmits<{
+  click: []
+}>()
+
+function handleClick() {
+  if (props.clickable) {
+    emit('click')
+  }
+}
 
 const itemsStore = useItemsStore()
 
@@ -112,7 +123,13 @@ const executionStatus = computed(() => {
       </div>
     </div>
 
-    <div class="item-content">
+    <div
+      class="item-content"
+      role="button"
+      tabindex="0"
+      @click="handleClick"
+      @keydown.enter="handleClick"
+    >
       <h3 class="title">
         {{ item.title }}
       </h3>

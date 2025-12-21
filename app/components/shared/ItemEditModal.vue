@@ -51,14 +51,19 @@ async function handleSubmit() {
 
   isSubmitting.value = true
   try {
-    const [hours, minutes] = time.value.split(':').map(Number)
+    // 入力時刻の安全なパース（未入力時は 00:00 を使用）
+    const [hoursStr, minutesStr] = (time.value ? time.value.split(':') : ['00', '00'])
+    const hours = Number(hoursStr ?? '0')
+    const minutes = Number(minutesStr ?? '0')
     const scheduledAt = new Date(date.value)
     scheduledAt.setHours(hours, minutes, 0, 0)
 
     // 実行時刻が設定されている場合のみ変換
     let executedAt: Date | null = null
     if (executedTime.value) {
-      const [execHours, execMinutes] = executedTime.value.split(':').map(Number)
+      const [execHoursStr, execMinutesStr] = executedTime.value.split(':')
+      const execHours = Number(execHoursStr ?? '0')
+      const execMinutes = Number(execMinutesStr ?? '0')
       executedAt = new Date(date.value)
       executedAt.setHours(execHours, execMinutes, 0, 0)
     }
@@ -95,179 +100,155 @@ async function handleDelete() {
 function clearExecutedTime() {
   executedTime.value = ''
 }
-
-/**
- * オーバーレイクリック時にモーダルを閉じる
- */
-function handleOverlayClick(event: MouseEvent) {
-  if (event.target === event.currentTarget) {
-    emit('close')
-  }
-}
 </script>
 
 <template>
-  <div
-    class="modal-overlay"
-    @click="handleOverlayClick"
+  <UiModal
+    :show="true"
+    title="アイテムを編集"
+    @close="emit('close')"
   >
-    <div class="modal">
-      <header class="modal-header">
-        <h2>アイテムを編集</h2>
-        <UiButton
-          variant="secondary"
-          icon
-          aria-label="閉じる"
-          @click="emit('close')"
-        >
-          <Icon name="mdi:close" />
-        </UiButton>
-      </header>
+    <form
+      class="edit-form"
+      @submit.prevent="handleSubmit"
+    >
+      <!-- 種別選択ボタン（横並び） -->
+      <div class="form-group">
+        <div class="type-buttons">
+          <UiButton
+            variant="secondary"
+            class="type-btn type-todo"
+            :class="{ active: type === 'todo' }"
+            @click="selectType('todo')"
+          >
+            <Icon name="mdi:checkbox-marked-outline" />
+            TODO
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            class="type-btn type-expense"
+            :class="{ active: type === 'expense' }"
+            @click="selectType('expense')"
+          >
+            <Icon name="mdi:cart-outline" />
+            支出
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            class="type-btn type-income"
+            :class="{ active: type === 'income' }"
+            @click="selectType('income')"
+          >
+            <Icon name="mdi:wallet-plus-outline" />
+            収入
+          </UiButton>
+        </div>
+      </div>
 
-      <form
-        class="modal-body"
-        @submit.prevent="handleSubmit"
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit-date">日付</label>
+          <UiInput
+            id="edit-date"
+            v-model="date"
+            type="date"
+          />
+        </div>
+        <div class="form-group">
+          <label for="edit-time">予定時刻</label>
+          <UiInput
+            id="edit-time"
+            v-model="time"
+            type="time"
+          />
+        </div>
+      </div>
+
+      <!-- 実行時刻 -->
+      <div class="form-group">
+        <label for="edit-executed-time">
+          実行時刻
+          <span class="label-hint">（実際に行った時刻）</span>
+        </label>
+        <div class="time-input-with-clear">
+          <UiInput
+            id="edit-executed-time"
+            v-model="executedTime"
+            type="time"
+            placeholder="未設定"
+          />
+          <UiButton
+            v-if="executedTime"
+            variant="secondary"
+            icon
+            class="btn-clear"
+            aria-label="クリア"
+            @click="clearExecutedTime"
+          >
+            <Icon name="mdi:close-circle" />
+          </UiButton>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-title">タイトル</label>
+        <UiInput
+          id="edit-title"
+          v-model="title"
+          type="text"
+          placeholder="アイテム名を入力"
+          required
+        />
+      </div>
+
+      <!-- 備考 -->
+      <div class="form-group">
+        <label for="edit-notes">備考</label>
+        <textarea
+          id="edit-notes"
+          v-model="notes"
+          class="form-control textarea"
+          placeholder="備考を入力"
+          rows="2"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="edit-amount">金額</label>
+        <UiInput
+          id="edit-amount"
+          v-model="amount"
+          type="number"
+          :min="0"
+          placeholder="金額を入力"
+          :disabled="type === 'todo'"
+        />
+      </div>
+    </form>
+    <template #footer>
+      <UiButton
+        variant="danger"
+        @click="handleDelete"
       >
-        <!-- 種別選択ボタン（横並び） -->
-        <div class="form-group">
-          <div class="type-buttons">
-            <UiButton
-              variant="secondary"
-              class="type-btn type-todo"
-              :class="{ active: type === 'todo' }"
-              @click="selectType('todo')"
-            >
-              <Icon name="mdi:checkbox-marked-outline" />
-              TODO
-            </UiButton>
-            <UiButton
-              variant="secondary"
-              class="type-btn type-expense"
-              :class="{ active: type === 'expense' }"
-              @click="selectType('expense')"
-            >
-              <Icon name="mdi:cart-outline" />
-              支出
-            </UiButton>
-            <UiButton
-              variant="secondary"
-              class="type-btn type-income"
-              :class="{ active: type === 'income' }"
-              @click="selectType('income')"
-            >
-              <Icon name="mdi:wallet-plus-outline" />
-              収入
-            </UiButton>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="edit-date">日付</label>
-            <UiInput
-              id="edit-date"
-              v-model="date"
-              type="date"
-            />
-          </div>
-          <div class="form-group">
-            <label for="edit-time">予定時刻</label>
-            <UiInput
-              id="edit-time"
-              v-model="time"
-              type="time"
-            />
-          </div>
-        </div>
-
-        <!-- 実行時刻 -->
-        <div class="form-group">
-          <label for="edit-executed-time">
-            実行時刻
-            <span class="label-hint">（実際に行った時刻）</span>
-          </label>
-          <div class="time-input-with-clear">
-            <UiInput
-              id="edit-executed-time"
-              v-model="executedTime"
-              type="time"
-              placeholder="未設定"
-            />
-            <UiButton
-              v-if="executedTime"
-              variant="secondary"
-              icon
-              class="btn-clear"
-              aria-label="クリア"
-              @click="clearExecutedTime"
-            >
-              <Icon name="mdi:close-circle" />
-            </UiButton>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="edit-title">タイトル</label>
-          <UiInput
-            id="edit-title"
-            v-model="title"
-            type="text"
-            placeholder="アイテム名を入力"
-            required
-          />
-        </div>
-
-        <!-- 備考 -->
-        <div class="form-group">
-          <label for="edit-notes">備考</label>
-          <textarea
-            id="edit-notes"
-            v-model="notes"
-            class="form-control textarea"
-            placeholder="備考を入力"
-            rows="2"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="edit-amount">金額</label>
-          <UiInput
-            id="edit-amount"
-            v-model="amount"
-            type="number"
-            :min="0"
-            placeholder="金額を入力"
-            :disabled="type === 'todo'"
-          />
-        </div>
-      </form>
-
-      <footer class="modal-footer">
-        <UiButton
-          variant="danger"
-          @click="handleDelete"
-        >
-          <Icon name="mdi:delete" />
-          削除
-        </UiButton>
-        <div class="spacer" />
-        <UiButton
-          variant="secondary"
-          @click="emit('close')"
-        >
-          キャンセル
-        </UiButton>
-        <UiButton
-          variant="primary"
-          :disabled="isSubmitting || !title.trim()"
-          @click="handleSubmit"
-        >
-          <Icon name="mdi:content-save" />
-          保存
-        </UiButton>
-      </footer>
-    </div>
-  </div>
+        <Icon name="mdi:delete" />
+        削除
+      </UiButton>
+      <UiButton
+        variant="secondary"
+        @click="emit('close')"
+      >
+        キャンセル
+      </UiButton>
+      <UiButton
+        variant="primary"
+        :disabled="isSubmitting || !title.trim()"
+        @click="handleSubmit"
+      >
+        <Icon name="mdi:content-save" />
+        保存
+      </UiButton>
+    </template>
+  </UiModal>
 </template>
 
 <style lang="scss" scoped>
@@ -355,35 +336,6 @@ function handleOverlayClick(event: MouseEvent) {
   @media (max-width: 600px) {
     min-height: 44px;
     font-size: 16px;
-  }
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  .spacer {
-    flex: 1;
-  }
-
-  @media (max-width: 600px) {
-    flex-wrap: wrap;
-
-    .spacer {
-      display: none;
-    }
-
-    :deep(.ui-btn) {
-      flex: 1;
-      min-width: calc(50% - 4px);
-
-      &:first-child {
-        order: 3;
-        min-width: 100%;
-        margin-top: 8px;
-      }
-    }
   }
 }
 </style>
