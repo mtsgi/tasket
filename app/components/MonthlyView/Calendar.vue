@@ -157,10 +157,11 @@ function handleDayClick(dateString: string | null) {
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .calendar-day {
+  min-width: 0;
   min-height: 70px;
   padding: 4px;
   border-right: 1px solid #f0f0f0;
