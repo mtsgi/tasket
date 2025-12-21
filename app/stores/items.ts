@@ -98,15 +98,15 @@ export const useItemsStore = defineStore('items', {
     searchItems: (state) => {
       return (keyword: string, type?: ItemType) => {
         const lowerKeyword = keyword.toLowerCase().trim()
-        
+
         // フィルタリング処理
         let filteredItems = state.items
-        
+
         // タイプフィルタ
         if (type) {
           filteredItems = filteredItems.filter(item => item.type === type)
         }
-        
+
         // キーワード検索
         if (lowerKeyword) {
           filteredItems = filteredItems.filter((item) => {

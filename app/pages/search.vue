@@ -40,14 +40,14 @@ const searchResults = computed(() => {
   if (dateRangeStart.value || dateRangeEnd.value) {
     results = results.filter((item) => {
       const itemDate = new Date(item.scheduled_at)
-      
+
       if (dateRangeStart.value) {
         const startDate = new Date(dateRangeStart.value)
         if (itemDate < startDate) {
           return false
         }
       }
-      
+
       if (dateRangeEnd.value) {
         const endDate = new Date(dateRangeEnd.value)
         endDate.setHours(23, 59, 59, 999) // 終了日の最後まで含める
@@ -55,7 +55,7 @@ const searchResults = computed(() => {
           return false
         }
       }
-      
+
       return true
     })
   }
@@ -82,22 +82,8 @@ function resetTypeFilter() {
 
 /**
  * アイテムの日のページに移動
- * チェックボックスや編集ボタンをクリックした場合は遷移しない
  */
-function goToItemDay(item: Item, event: MouseEvent) {
-  // クリックされた要素を取得
-  const target = event.target as HTMLElement
-  
-  // チェックボックス、ボタン、またはそれらの子要素の場合は遷移しない
-  if (
-    target.closest('button') ||
-    target.closest('input[type="checkbox"]') ||
-    target.closest('.ui-checkbox') ||
-    target.closest('.item-actions')
-  ) {
-    return
-  }
-  
+function goToItemDay(item: Item) {
   const dateString = formatDate(item.scheduled_at)
   router.push(`/day/${dateString}`)
 }
@@ -234,9 +220,12 @@ onMounted(() => {
           v-for="item in searchResults"
           :key="item.id"
           class="result-item"
-          @click="goToItemDay(item, $event)"
         >
-          <ItemCard :item="item" />
+          <ItemCard
+            :item="item"
+            :clickable="true"
+            @click="goToItemDay(item)"
+          />
         </div>
       </div>
     </section>
