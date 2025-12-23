@@ -13,7 +13,7 @@ onMounted(async () => {
   try {
     const response = await fetch('/licenses.txt')
     if (!response.ok) {
-      throw new Error('ライセンス情報の取得に失敗しました')
+      throw new Error(`ライセンス情報の取得に失敗しました: ${response.status} ${response.statusText}`)
     }
     licensesText.value = await response.text()
   }
@@ -164,7 +164,7 @@ onMounted(async () => {
 
     pre {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.6;
       color: #333;
       white-space: pre-wrap;
