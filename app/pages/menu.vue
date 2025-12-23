@@ -347,6 +347,21 @@ onMounted(() => {
             <li>Material Design Icons</li>
           </ul>
         </div>
+        <div class="credit-item">
+          <h3>オープンソースライセンス</h3>
+          <p class="oss-description">
+            このアプリケーションは多くのOSSモジュールを使用しています。
+          </p>
+          <NuxtLink to="/licenses">
+            <UiButton
+              variant="secondary"
+              block
+            >
+              <Icon name="mdi:file-document-outline" />
+              OSSライセンスを表示
+            </UiButton>
+          </NuxtLink>
+        </div>
       </div>
     </section>
   </div>
@@ -459,6 +474,12 @@ onMounted(() => {
     p {
       font-size: 14px;
       color: #333;
+    }
+
+    .oss-description {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 12px;
     }
   }
 
