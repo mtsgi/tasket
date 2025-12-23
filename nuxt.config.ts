@@ -1,7 +1,34 @@
+import license from 'rollup-plugin-license'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@pinia/nuxt', '@vite-pwa/nuxt', '@nuxt/icon'],
   devtools: { enabled: true },
+  vite: {
+    plugins: [
+      // OSSライセンス表記をビルド成果物に含める
+      license({
+        thirdParty: {
+          includePrivate: false,
+          output: {
+            file: path.join(__dirname, 'public', 'licenses.txt'),
+            template(dependencies) {
+              return dependencies
+                .map(
+                  (dep) =>
+                    `${dep.name}@${dep.version}\nLicense: ${dep.license || 'Unknown'}\n${dep.licenseText || 'No license text available'}\n${'='.repeat(80)}\n`,
+                )
+                .join('\n')
+            },
+          },
+        },
+      }),
+    ],
+  },
   app: {
     head: {
       title: 'Tasket',
