@@ -5,13 +5,14 @@
  */
 import type { Item } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
-import { formatTime } from '~/utils/dateHelpers'
+import { formatTime, formatDisplayDate } from '~/utils/dateHelpers'
 import { formatCurrency } from '~/utils/formatters'
 import ItemEditModal from '~/components/shared/ItemEditModal.vue'
 
 const props = defineProps<{
   item: Item
   clickable?: boolean
+  showDate?: boolean // 日付を表示するかどうか（検索画面用）
 }>()
 
 const emit = defineEmits<{
@@ -99,6 +100,17 @@ const executionStatus = computed(() => {
         @update:model-value="handleToggleComplete"
       />
       <div class="item-info">
+        <!-- 日付（showDateがtrueの場合のみ表示） -->
+        <span
+          v-if="showDate"
+          class="date"
+        >
+          <Icon
+            name="mdi:calendar"
+            class="date-icon"
+          />
+          {{ formatDisplayDate(item.scheduled_at) }}
+        </span>
         <!-- 予定時刻 -->
         <span class="time scheduled">
           <Icon
@@ -202,6 +214,19 @@ const executionStatus = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+
+  .date {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4a90d9;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+
+    .date-icon {
+      font-size: 10px;
+    }
+  }
 
   .time {
     font-size: 11px;
