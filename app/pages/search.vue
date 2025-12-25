@@ -224,6 +224,7 @@ onMounted(() => {
           <ItemCard
             :item="item"
             :clickable="true"
+            :show-date="true"
             @click="goToItemDay(item)"
           />
         </div>
