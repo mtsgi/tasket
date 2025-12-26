@@ -97,23 +97,6 @@ function getTooltipText(routineTitle: string, date: string, status: RoutineStatu
     </h2>
 
     <div class="grid-container">
-      <!-- 日付ヘッダー -->
-      <div class="grid-header">
-        <div class="grid-header__routine-label">
-          日課
-        </div>
-        <div class="grid-header__dates">
-          <div
-            v-for="date in datesInMonth"
-            :key="date"
-            class="grid-header__date"
-            :title="date"
-          >
-            {{ new Date(date).getDate() }}
-          </div>
-        </div>
-      </div>
-
       <!-- 各日課の行 -->
       <div class="grid-body">
         <div
@@ -121,18 +104,13 @@ function getTooltipText(routineTitle: string, date: string, status: RoutineStatu
           :key="routine.id"
           class="grid-row"
         >
-          <div class="grid-row__label">
-            {{ routine.title }}
-          </div>
-          <div class="grid-row__cells">
-            <div
-              v-for="date in datesInMonth"
-              :key="`${routine.id}-${date}`"
-              class="cell"
-              :class="getStatusColorClass(getRoutineStatusForDate(routine.id, date))"
-              :title="getTooltipText(routine.title, date, getRoutineStatusForDate(routine.id, date))"
-            />
-          </div>
+          <div
+            v-for="date in datesInMonth"
+            :key="`${routine.id}-${date}`"
+            class="cell"
+            :class="getStatusColorClass(getRoutineStatusForDate(routine.id, date))"
+            :title="getTooltipText(routine.title, date, getRoutineStatusForDate(routine.id, date))"
+          />
         </div>
       </div>
     </div>
@@ -178,79 +156,15 @@ function getTooltipText(routineTitle: string, date: string, status: RoutineStatu
   margin-bottom: 12px;
 }
 
-.grid-header {
-  display: flex;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #666;
-
-  &__routine-label {
-    width: 120px;
-    flex-shrink: 0;
-    padding-right: 8px;
-    font-weight: 600;
-
-    @media (max-width: 600px) {
-      width: 80px;
-      font-size: 11px;
-    }
-  }
-
-  &__dates {
-    display: flex;
-    gap: 2px;
-    flex-grow: 1;
-  }
-
-  &__date {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    color: #999;
-
-    @media (max-width: 600px) {
-      width: 12px;
-      height: 12px;
-      font-size: 9px;
-    }
-  }
-}
-
 .grid-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .grid-row {
   display: flex;
-  align-items: center;
-
-  &__label {
-    width: 120px;
-    flex-shrink: 0;
-    padding-right: 8px;
-    font-size: 13px;
-    color: #333;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    @media (max-width: 600px) {
-      width: 80px;
-      font-size: 12px;
-    }
-  }
-
-  &__cells {
-    display: flex;
-    gap: 2px;
-    flex-grow: 1;
-  }
+  gap: 2px;
 }
 
 .cell {
