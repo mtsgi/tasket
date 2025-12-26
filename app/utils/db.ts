@@ -4,7 +4,7 @@
  * idb ライブラリを使用してIndexedDBを操作します。
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Item, DayTitle, Routine, RoutineLog, Preset } from '~/types/item'
+import type { Item, DayTitle, Routine, RoutineLog, Preset, RoutineStatus } from '~/types/item'
 
 /**
  * データベーススキーマの型定義
@@ -60,8 +60,8 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 3, {
-      upgrade(db, oldVersion) {
+    dbPromise = openDB<TasketDB>('tasket-db', 4, {
+      upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
           // itemsオブジェクトストアを作成
@@ -92,6 +92,25 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           // presetsオブジェクトストアを作成
           const presetsStore = db.createObjectStore('presets', { keyPath: 'id' })
           presetsStore.createIndex('by-type', 'type')
+        }
+
+        // バージョン4の新機能: 日課ログのステータス三値化
+        if (oldVersion < 4 && oldVersion >= 2) {
+          // 既存の日課ログを新しい形式に移行
+          const routineLogsStore = transaction.objectStore('routineLogs')
+          const request = routineLogsStore.getAll()
+          
+          request.onsuccess = () => {
+            const logs = request.result
+            logs.forEach((log: any) => {
+              // is_completedからstatusに変換
+              if ('is_completed' in log && !('status' in log)) {
+                log.status = log.is_completed ? 'achieved' : 'not_achieved'
+                // 後方互換性のためis_completedは保持
+                routineLogsStore.put(log)
+              }
+            })
+          }
         }
       },
     })

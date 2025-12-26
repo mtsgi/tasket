@@ -43,7 +43,7 @@ async function exportData() {
     const dayTitles = await getAllDayTitles()
 
     const exportPayload = {
-      version: 3, // バージョン3: 日タイトルデータを含む
+      version: 4, // バージョン4: 日課ログのステータス三値化
       exportedAt: new Date().toISOString(),
       items: itemsStore.items.map(item => ({
         ...item,
@@ -140,6 +140,31 @@ async function importData(event: Event) {
         await routinesStore.createRoutine({
           title: routineData.title,
           yearMonth: routineData.yearMonth,
+        })
+      }
+    }
+
+    // 日課ログをインポート（バージョン2以降）
+    if (data.version >= 2 && Array.isArray(data.routineLogs)) {
+      const { saveRoutineLog } = await import('~/utils/db')
+      for (const logData of data.routineLogs) {
+        // 旧形式（バージョン2-3）のデータを新形式（バージョン4）に変換
+        let status: 'unconfirmed' | 'not_achieved' | 'achieved'
+        if (data.version < 4) {
+          // is_completedからstatusに変換
+          status = logData.is_completed ? 'achieved' : 'not_achieved'
+        }
+        else {
+          // バージョン4以降はstatusを使用
+          status = logData.status || 'unconfirmed'
+        }
+
+        await saveRoutineLog({
+          id: logData.id,
+          routineId: logData.routineId,
+          date: logData.date,
+          status,
+          completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
         })
       }
     }
