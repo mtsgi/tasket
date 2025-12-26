@@ -388,8 +388,13 @@ export async function getAllRoutineLogs(): Promise<RoutineLog[]> {
  * @returns 指定期間の日課ログリスト
  */
 export async function getRoutineLogsByDateRange(startDate: string, endDate: string): Promise<RoutineLog[]> {
-  const allLogs = await getAllRoutineLogs()
-  return allLogs.filter(log => log.date >= startDate && log.date <= endDate)
+  const db = await getDB()
+  const range = IDBKeyRange.bound(startDate, endDate)
+  const logs = await db.getAllFromIndex('routineLogs', 'by-date', range)
+  return logs.map(log => ({
+    ...log,
+    completed_at: log.completed_at ? new Date(log.completed_at) : null,
+  }))
 }
 
 // ============================================

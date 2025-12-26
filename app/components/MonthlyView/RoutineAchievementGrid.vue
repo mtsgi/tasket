@@ -17,11 +17,16 @@ const props = defineProps<{
 }>()
 
 /**
+ * yearMonth に '-01' を追加した完全な日付文字列
+ */
+const fullDateString = computed(() => `${props.yearMonth}-01`)
+
+/**
  * 月内の全日付リストを生成
  */
 const datesInMonth = computed(() => {
-  const startOfMonth = getStartOfMonth(props.yearMonth + '-01')
-  const daysCount = getDaysInMonth(props.yearMonth + '-01')
+  const startOfMonth = getStartOfMonth(fullDateString.value)
+  const daysCount = getDaysInMonth(fullDateString.value)
   const dates: string[] = []
 
   for (let i = 0; i < daysCount; i++) {
