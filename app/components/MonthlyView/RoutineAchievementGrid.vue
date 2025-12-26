@@ -84,6 +84,51 @@ function getTooltipText(routineTitle: string, date: string, status: RoutineStatu
   const day = dateObj.getDate()
   return `${routineTitle}\n${month}/${day}: ${getStatusLabel(status)}`
 }
+
+/**
+ * タッチデバイス用のポップアップ情報
+ */
+const touchPopup = ref<{
+  show: boolean
+  title: string
+  date: string
+  status: string
+  x: number
+  y: number
+} | null>(null)
+
+/**
+ * セルがタップされた時の処理（タッチデバイス用）
+ */
+function handleCellTap(event: MouseEvent | TouchEvent, routineTitle: string, date: string, status: RoutineStatus) {
+  // タッチイベントの場合のみポップアップを表示
+  if (event.type === 'touchstart') {
+    event.preventDefault()
+
+    const dateObj = new Date(date)
+    const month = dateObj.getMonth() + 1
+    const day = dateObj.getDate()
+
+    // タッチ位置を取得
+    const rect = (event.target as HTMLElement).getBoundingClientRect()
+
+    touchPopup.value = {
+      show: true,
+      title: routineTitle,
+      date: `${month}/${day}`,
+      status: getStatusLabel(status),
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    }
+  }
+}
+
+/**
+ * ポップアップを閉じる
+ */
+function closePopup() {
+  touchPopup.value = null
+}
 </script>
 
 <template>
@@ -110,10 +155,38 @@ function getTooltipText(routineTitle: string, date: string, status: RoutineStatu
             class="cell"
             :class="getStatusColorClass(getRoutineStatusForDate(routine.id, date))"
             :title="getTooltipText(routine.title, date, getRoutineStatusForDate(routine.id, date))"
+            @touchstart="handleCellTap($event, routine.title, date, getRoutineStatusForDate(routine.id, date))"
           />
         </div>
       </div>
     </div>
+
+    <!-- タッチデバイス用ポップアップ -->
+    <Teleport to="body">
+      <div
+        v-if="touchPopup?.show"
+        class="touch-popup-overlay"
+        @click="closePopup"
+        @touchstart="closePopup"
+      >
+        <div
+          class="touch-popup"
+          :style="{
+            left: `${touchPopup.x}px`,
+            top: `${touchPopup.y}px`,
+          }"
+          @click.stop
+          @touchstart.stop
+        >
+          <div class="touch-popup__title">
+            {{ touchPopup.title }}
+          </div>
+          <div class="touch-popup__info">
+            {{ touchPopup.date }}: {{ touchPopup.status }}
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- 凡例 -->
     <div class="legend">
@@ -238,6 +311,58 @@ function getTooltipText(routineTitle: string, date: string, status: RoutineStatu
 
   span {
     white-space: nowrap;
+  }
+}
+
+// タッチデバイス用ポップアップ
+.touch-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-popup {
+  position: fixed;
+  background: white;
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  max-width: 250px;
+  z-index: 1001;
+
+  &__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+  }
+
+  &__info {
+    font-size: 13px;
+    color: #666;
+  }
+
+  // ダークモード対応
+  .dark-mode & {
+    background: #2a2a2a;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    &__title {
+      color: #e0e0e0;
+    }
+
+    &__info {
+      color: #999;
+    }
   }
 }
 </style>
