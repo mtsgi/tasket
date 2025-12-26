@@ -4,7 +4,7 @@
  * idb ライブラリを使用してIndexedDBを操作します。
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Item, DayTitle, Routine, RoutineLog, Preset, RoutineStatus } from '~/types/item'
+import type { Item, DayTitle, Routine, RoutineLog, Preset } from '~/types/item'
 
 /**
  * データベーススキーマの型定義
@@ -99,15 +99,18 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           // 既存の日課ログを新しい形式に移行
           const routineLogsStore = transaction.objectStore('routineLogs')
           const request = routineLogsStore.getAll()
-          
+
           request.onsuccess = () => {
-            const logs = request.result
-            logs.forEach((log: any) => {
+            const logs = request.result as RoutineLog[]
+            logs.forEach((log) => {
               // is_completedからstatusに変換
               if ('is_completed' in log && !('status' in log)) {
-                log.status = log.is_completed ? 'achieved' : 'not_achieved'
+                const migratedLog = {
+                  ...log,
+                  status: log.is_completed ? ('achieved' as const) : ('not_achieved' as const),
+                }
                 // 後方互換性のためis_completedは保持
-                routineLogsStore.put(log)
+                routineLogsStore.put(migratedLog)
               }
             })
           }

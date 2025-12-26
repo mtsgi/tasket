@@ -15,7 +15,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'click': []
+  click: []
 }>()
 
 /**
@@ -64,7 +64,7 @@ function handleClick() {
     class="ui-routine-status-button"
     :class="[
       `ui-routine-status-button--${status}`,
-      { 'ui-routine-status-button--disabled': disabled }
+      { 'ui-routine-status-button--disabled': disabled },
     ]"
     :disabled="disabled"
     :aria-label="`${label || '日課'}: ${statusLabel}`"

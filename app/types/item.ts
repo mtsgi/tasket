@@ -63,7 +63,7 @@ export interface RoutineLog {
   date: string // 達成日（YYYY-MM-DD形式）
   status: RoutineStatus // ステータス（未確認・未達成・達成）
   completed_at: Date | null // 完了日時（達成時のみ）
-  
+
   // 後方互換性のため保持（マイグレーション時に使用）
   is_completed?: boolean
 }
