@@ -95,24 +95,26 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
         }
 
         // バージョン4の新機能: 日課ログのステータス三値化
-        if (oldVersion < 4 && oldVersion >= 2) {
-          // 既存の日課ログを新しい形式に移行
-          const routineLogsStore = transaction.objectStore('routineLogs')
-          const request = routineLogsStore.getAll()
+        if (oldVersion < 4) {
+          // 既存の日課ログを新しい形式に移行（バージョン2以降に日課ログが存在）
+          if (oldVersion >= 2) {
+            const routineLogsStore = transaction.objectStore('routineLogs')
+            const request = routineLogsStore.getAll()
 
-          request.onsuccess = () => {
-            const logs = request.result as RoutineLog[]
-            logs.forEach((log) => {
-              // is_completedからstatusに変換
-              if ('is_completed' in log && !('status' in log)) {
-                const migratedLog = {
-                  ...log,
-                  status: log.is_completed ? ('achieved' as const) : ('not_achieved' as const),
+            request.onsuccess = () => {
+              const logs = request.result as RoutineLog[]
+              logs.forEach((log) => {
+                // is_completedからstatusに変換
+                if ('is_completed' in log && !('status' in log)) {
+                  const migratedLog = {
+                    ...log,
+                    status: log.is_completed ? ('achieved' as const) : ('not_achieved' as const),
+                  }
+                  // 後方互換性のためis_completedは保持
+                  routineLogsStore.put(migratedLog)
                 }
-                // 後方互換性のためis_completedは保持
-                routineLogsStore.put(migratedLog)
-              }
-            })
+              })
+            }
           }
         }
       },

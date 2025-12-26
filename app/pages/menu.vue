@@ -7,6 +7,7 @@ import { useItemsStore } from '~/stores/items'
 import { useRoutinesStore } from '~/stores/routines'
 import { useDayTitlesStore } from '~/stores/dayTitles'
 import { getAllRoutines, getAllRoutineLogs, getAllDayTitles } from '~/utils/db'
+import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 
 const itemsStore = useItemsStore()
@@ -149,7 +150,7 @@ async function importData(event: Event) {
       const { saveRoutineLog } = await import('~/utils/db')
       for (const logData of data.routineLogs) {
         // 旧形式（バージョン2-3）のデータを新形式（バージョン4）に変換
-        let status: 'unconfirmed' | 'not_achieved' | 'achieved'
+        let status: RoutineStatus
         if (data.version < 4) {
           // is_completedからstatusに変換
           status = logData.is_completed ? 'achieved' : 'not_achieved'
