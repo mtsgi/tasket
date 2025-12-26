@@ -381,6 +381,17 @@ export async function getAllRoutineLogs(): Promise<RoutineLog[]> {
   }))
 }
 
+/**
+ * 日付範囲で日課ログを取得
+ * @param startDate - 開始日（YYYY-MM-DD形式）
+ * @param endDate - 終了日（YYYY-MM-DD形式）
+ * @returns 指定期間の日課ログリスト
+ */
+export async function getRoutineLogsByDateRange(startDate: string, endDate: string): Promise<RoutineLog[]> {
+  const allLogs = await getAllRoutineLogs()
+  return allLogs.filter(log => log.date >= startDate && log.date <= endDate)
+}
+
 // ============================================
 // Presets（プリセット）関連の操作
 // ============================================
