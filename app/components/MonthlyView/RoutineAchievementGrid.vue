@@ -98,18 +98,21 @@ const touchPopup = ref<{
 } | null>(null)
 
 /**
- * セルがタップされた時の処理（タッチデバイス用）
+ * タッチデバイスかどうかを判定
  */
-function handleCellTap(event: MouseEvent | TouchEvent, routineTitle: string, date: string, status: RoutineStatus) {
-  // タッチイベントの場合のみポップアップを表示
-  if (event.type === 'touchstart') {
-    event.preventDefault()
+const isTouchDevice = ref(false)
 
+/**
+ * セルがクリック/タップされた時の処理
+ */
+function handleCellClick(event: MouseEvent, routineTitle: string, date: string, status: RoutineStatus) {
+  // タッチデバイスの場合のみポップアップを表示
+  if (isTouchDevice.value) {
     const dateObj = new Date(date)
     const month = dateObj.getMonth() + 1
     const day = dateObj.getDate()
 
-    // タッチ位置を取得
+    // タップ位置を取得
     const rect = (event.target as HTMLElement).getBoundingClientRect()
 
     touchPopup.value = {
@@ -129,6 +132,14 @@ function handleCellTap(event: MouseEvent | TouchEvent, routineTitle: string, dat
 function closePopup() {
   touchPopup.value = null
 }
+
+/**
+ * タッチデバイスの検出
+ */
+onMounted(() => {
+  // タッチイベントがサポートされているかチェック
+  isTouchDevice.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+})
 </script>
 
 <template>
@@ -155,7 +166,7 @@ function closePopup() {
             class="cell"
             :class="getStatusColorClass(getRoutineStatusForDate(routine.id, date))"
             :title="getTooltipText(routine.title, date, getRoutineStatusForDate(routine.id, date))"
-            @touchstart="handleCellTap($event, routine.title, date, getRoutineStatusForDate(routine.id, date))"
+            @click="handleCellClick($event, routine.title, date, getRoutineStatusForDate(routine.id, date))"
           />
         </div>
       </div>
@@ -167,7 +178,6 @@ function closePopup() {
         v-if="touchPopup?.show"
         class="touch-popup-overlay"
         @click="closePopup"
-        @touchstart="closePopup"
       >
         <div
           class="touch-popup"
@@ -176,7 +186,6 @@ function closePopup() {
             top: `${touchPopup.y}px`,
           }"
           @click.stop
-          @touchstart.stop
         >
           <div class="touch-popup__title">
             {{ touchPopup.title }}
