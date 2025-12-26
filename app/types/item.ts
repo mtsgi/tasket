@@ -46,15 +46,26 @@ export interface Routine {
 }
 
 /**
+ * 日課のステータス
+ * - unconfirmed: 未確認（デフォルト）
+ * - not_achieved: 未達成（明示的に未完了）
+ * - achieved: 達成（完了）
+ */
+export type RoutineStatus = 'unconfirmed' | 'not_achieved' | 'achieved'
+
+/**
  * 日課の達成記録
- * 特定の日に日課を完了したかどうかを記録
+ * 特定の日に日課の状態を記録
  */
 export interface RoutineLog {
   id: string // 一意のID（UUID）
   routineId: string // 対象の日課ID
   date: string // 達成日（YYYY-MM-DD形式）
-  is_completed: boolean // 完了状態
-  completed_at: Date | null // 完了日時
+  status: RoutineStatus // ステータス（未確認・未達成・達成）
+  completed_at: Date | null // 完了日時（達成時のみ）
+
+  // 後方互換性のため保持（マイグレーション時に使用）
+  is_completed?: boolean
 }
 
 /**

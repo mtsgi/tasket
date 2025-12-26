@@ -5,6 +5,7 @@
  */
 import { useRoutinesStore } from '~/stores/routines'
 import { formatYearMonth } from '~/utils/dateHelpers'
+import type { RoutineStatus } from '~/types/item'
 
 const props = defineProps<{
   /** 対象日（YYYY-MM-DD形式） */
@@ -28,24 +29,24 @@ watch(
 )
 
 /**
- * 日課の完了状態を切り替え
+ * 日課のステータスを循環的に変更
  */
-async function toggleRoutine(routineId: string) {
-  await routinesStore.toggleRoutineComplete(routineId, props.date)
+async function cycleStatus(routineId: string) {
+  await routinesStore.cycleRoutineStatus(routineId, props.date)
 }
 
 /**
- * 日課が完了しているか確認
+ * 日課のステータスを取得
  */
-function isCompleted(routineId: string): boolean {
-  return routinesStore.isRoutineCompleted(routineId, props.date)
+function getStatus(routineId: string): RoutineStatus {
+  return routinesStore.getRoutineStatus(routineId, props.date)
 }
 
 /**
- * 完了した日課の数を取得
+ * 達成した日課の数を取得
  */
-const completedCount = computed(() => {
-  return routines.value.filter(r => isCompleted(r.id)).length
+const achievedCount = computed(() => {
+  return routines.value.filter(r => getStatus(r.id) === 'achieved').length
 })
 
 /**
@@ -62,21 +63,18 @@ const totalCount = computed(() => routines.value.length)
     <h2>
       <Icon name="mdi:checkbox-multiple-marked" />
       日課
-      <span class="routine-checklist__count">{{ completedCount }} / {{ totalCount }}</span>
+      <span class="routine-checklist__count">{{ achievedCount }} / {{ totalCount }}</span>
     </h2>
     <ul class="routine-checklist__list">
       <li
         v-for="routine in routines"
         :key="routine.id"
         class="routine-checklist__item"
-        :class="{ 'routine-checklist__item--completed': isCompleted(routine.id) }"
-        @click="toggleRoutine(routine.id)"
       >
-        <UiCheckbox
-          :model-value="isCompleted(routine.id)"
+        <UiRoutineStatusButton
+          :status="getStatus(routine.id)"
           :label="routine.title"
-          @update:model-value="toggleRoutine(routine.id)"
-          @click.stop
+          @click="cycleStatus(routine.id)"
         />
       </li>
     </ul>
@@ -115,24 +113,11 @@ const totalCount = computed(() => routines.value.length)
 
   &__item {
     display: flex;
-    padding: 12px 8px;
     border-radius: 8px;
-    cursor: pointer;
     transition: background-color 0.15s ease;
 
-    &:hover {
-      background-color: #f5f7fa;
-    }
-
-    &--completed {
-      :deep(.ui-checkbox__label) {
-        text-decoration: line-through;
-        color: #999;
-      }
-    }
-
     @media (max-width: 600px) {
-      padding: 2px;
+      padding: 0;
     }
   }
 }

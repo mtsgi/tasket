@@ -60,8 +60,8 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 3, {
-      upgrade(db, oldVersion) {
+    dbPromise = openDB<TasketDB>('tasket-db', 4, {
+      upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
           // itemsオブジェクトストアを作成
@@ -92,6 +92,30 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           // presetsオブジェクトストアを作成
           const presetsStore = db.createObjectStore('presets', { keyPath: 'id' })
           presetsStore.createIndex('by-type', 'type')
+        }
+
+        // バージョン4の新機能: 日課ログのステータス三値化
+        if (oldVersion < 4) {
+          // 既存の日課ログを新しい形式に移行（バージョン2以降に日課ログが存在）
+          if (oldVersion >= 2) {
+            const routineLogsStore = transaction.objectStore('routineLogs')
+            const request = routineLogsStore.getAll()
+
+            request.onsuccess = () => {
+              const logs = request.result as RoutineLog[]
+              logs.forEach((log) => {
+                // is_completedからstatusに変換
+                if ('is_completed' in log && !('status' in log)) {
+                  const migratedLog = {
+                    ...log,
+                    status: log.is_completed ? ('achieved' as const) : ('not_achieved' as const),
+                  }
+                  // 後方互換性のためis_completedは保持
+                  routineLogsStore.put(migratedLog)
+                }
+              })
+            }
+          }
         }
       },
     })

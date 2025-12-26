@@ -4,7 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
-import type { Routine, RoutineLog } from '~/types/item'
+import type { Routine, RoutineLog, RoutineStatus } from '~/types/item'
 import {
   getRoutinesByYearMonth,
   getAllRoutines,
@@ -45,7 +45,21 @@ export const useRoutinesStore = defineStore('routines', {
     },
 
     /**
-     * 特定の日課が特定の日に完了しているかを確認
+     * 特定の日課の特定の日のステータスを取得
+     * @param routineId - 日課ID
+     * @param date - 日付文字列（YYYY-MM-DD）
+     * @returns ステータス（デフォルトは'unconfirmed'）
+     */
+    getRoutineStatus: (state) => {
+      return (routineId: string, date: string): RoutineStatus => {
+        const logs = state.routineLogs[date] || []
+        const log = logs.find(l => l.routineId === routineId)
+        return log?.status ?? 'unconfirmed'
+      }
+    },
+
+    /**
+     * 特定の日課が特定の日に完了しているかを確認（後方互換性のため保持）
      * @param routineId - 日課ID
      * @param date - 日付文字列（YYYY-MM-DD）
      * @returns 完了状態
@@ -54,7 +68,7 @@ export const useRoutinesStore = defineStore('routines', {
       return (routineId: string, date: string): boolean => {
         const logs = state.routineLogs[date] || []
         const log = logs.find(l => l.routineId === routineId)
-        return log?.is_completed ?? false
+        return log?.status === 'achieved'
       }
     },
   },
@@ -163,7 +177,67 @@ export const useRoutinesStore = defineStore('routines', {
     },
 
     /**
-     * 日課の完了状態を切り替え
+     * 日課のステータスを循環的に変更（未確認 → 達成 → 未達成 → 未確認）
+     * @param routineId - 日課ID
+     * @param date - 日付文字列（YYYY-MM-DD）
+     */
+    async cycleRoutineStatus(routineId: string, date: string) {
+      // 既存のログを取得
+      let log = await getRoutineLog(routineId, date)
+
+      // 現在のステータスを取得
+      const currentStatus: RoutineStatus = log?.status ?? 'unconfirmed'
+
+      // ステータスを循環: unconfirmed → achieved → not_achieved → unconfirmed
+      let newStatus: RoutineStatus
+      if (currentStatus === 'unconfirmed') {
+        newStatus = 'achieved'
+      }
+      else if (currentStatus === 'achieved') {
+        newStatus = 'not_achieved'
+      }
+      else {
+        newStatus = 'unconfirmed'
+      }
+
+      if (log) {
+        // 既存のログがある場合は更新
+        log = {
+          ...log,
+          status: newStatus,
+          completed_at: newStatus === 'achieved' ? new Date() : null,
+        }
+      }
+      else {
+        // 新規ログを作成
+        log = {
+          id: uuidv4(),
+          routineId,
+          date,
+          status: newStatus,
+          completed_at: newStatus === 'achieved' ? new Date() : null,
+        }
+      }
+
+      await saveRoutineLog(log)
+
+      // ストアの状態を更新
+      if (!this.routineLogs[date]) {
+        this.routineLogs[date] = []
+      }
+
+      const existingIndex = this.routineLogs[date].findIndex(l => l.routineId === routineId)
+      if (existingIndex !== -1) {
+        this.routineLogs[date][existingIndex] = log
+      }
+      else {
+        this.routineLogs[date].push(log)
+      }
+    },
+
+    /**
+     * 日課の完了状態を切り替え（後方互換性のため保持）
+     * @deprecated cycleRoutineStatus を使用してください
      * @param routineId - 日課ID
      * @param date - 日付文字列（YYYY-MM-DD）
      */
@@ -173,10 +247,11 @@ export const useRoutinesStore = defineStore('routines', {
 
       if (log) {
         // 既存のログがある場合は完了状態を切り替え
+        const newStatus: RoutineStatus = log.status === 'achieved' ? 'not_achieved' : 'achieved'
         log = {
           ...log,
-          is_completed: !log.is_completed,
-          completed_at: !log.is_completed ? new Date() : null,
+          status: newStatus,
+          completed_at: newStatus === 'achieved' ? new Date() : null,
         }
       }
       else {
@@ -185,7 +260,7 @@ export const useRoutinesStore = defineStore('routines', {
           id: uuidv4(),
           routineId,
           date,
-          is_completed: true,
+          status: 'achieved',
           completed_at: new Date(),
         }
       }
