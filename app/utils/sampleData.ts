@@ -185,7 +185,7 @@ export function generateSampleData(): SampleDataSet {
       notes: '月額料金',
     },
     {
-      title: 'NetflixサブスクIPション',
+      title: 'Netflixサブスクリプション',
       amount: 1490,
       type: 'expense',
       is_completed: false,
