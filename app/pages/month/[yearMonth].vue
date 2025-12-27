@@ -5,6 +5,7 @@
  */
 import { useItemsStore } from '~/stores/items'
 import { useDayTitlesStore } from '~/stores/dayTitles'
+import { useRoutinesStore } from '~/stores/routines'
 import { useStatistics } from '~/composables/useStatistics'
 import { formatDisplayYearMonth, formatYearMonth, addMonths, formatDate, getDaysInMonth, getStartOfMonth, addDays } from '~/utils/dateHelpers'
 import Calendar from '~/components/MonthlyView/Calendar.vue'
@@ -12,14 +13,18 @@ import CalendarSettings from '~/components/MonthlyView/CalendarSettings.vue'
 import ExpenseChart from '~/components/MonthlyView/ExpenseChart.vue'
 import MonthlySummaryComponent from '~/components/MonthlyView/MonthlySummary.vue'
 import ExpenseRanking from '~/components/MonthlyView/ExpenseRanking.vue'
+import RoutineAchievementGrid from '~/components/MonthlyView/RoutineAchievementGrid.vue'
+import type { RoutineLog } from '~/types/item'
 
 const route = useRoute()
 const router = useRouter()
 const itemsStore = useItemsStore()
 const dayTitlesStore = useDayTitlesStore()
+const routinesStore = useRoutinesStore()
 const { calculateMonthlySummary, calculateExpenseRanking, calculateDailyTotals, getItemCountByDate } = useStatistics()
 
 const showCalendarSettings = ref(false)
+const monthRoutineLogs = ref<RoutineLog[]>([])
 
 const yearMonthParam = computed(() => route.params.yearMonth as string)
 
@@ -27,6 +32,7 @@ const items = computed(() => itemsStore.getItemsByMonth(yearMonthParam.value))
 const summary = computed(() => calculateMonthlySummary(items.value, yearMonthParam.value))
 const expenseRanking = computed(() => calculateExpenseRanking(items.value))
 const dailyTotals = computed(() => calculateDailyTotals(items.value, yearMonthParam.value))
+const routines = computed(() => routinesStore.routines)
 
 const displayYearMonth = computed(() => formatDisplayYearMonth(yearMonthParam.value + '-01'))
 
@@ -86,13 +92,23 @@ async function fetchMonthDayTitles() {
   await Promise.all(fetchPromises)
 }
 
+/**
+ * 月の日課と日課ログを取得
+ */
+async function fetchMonthRoutines() {
+  await routinesStore.fetchRoutines(yearMonthParam.value)
+  monthRoutineLogs.value = await routinesStore.fetchMonthRoutineLogs(yearMonthParam.value)
+}
+
 onMounted(async () => {
   itemsStore.fetchItems()
   await fetchMonthDayTitles()
+  await fetchMonthRoutines()
 })
 
 watch(yearMonthParam, async () => {
   await fetchMonthDayTitles()
+  await fetchMonthRoutines()
 })
 </script>
 
@@ -162,6 +178,12 @@ watch(yearMonthParam, async () => {
     <CalendarSettings
       :show="showCalendarSettings"
       @close="closeCalendarSettings"
+    />
+
+    <RoutineAchievementGrid
+      :year-month="yearMonthParam"
+      :routines="routines"
+      :routine-logs="monthRoutineLogs"
     />
 
     <ExpenseChart :daily-totals="dailyTotals" />

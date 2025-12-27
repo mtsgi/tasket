@@ -381,6 +381,22 @@ export async function getAllRoutineLogs(): Promise<RoutineLog[]> {
   }))
 }
 
+/**
+ * 日付範囲で日課ログを取得
+ * @param startDate - 開始日（YYYY-MM-DD形式）
+ * @param endDate - 終了日（YYYY-MM-DD形式）
+ * @returns 指定期間の日課ログリスト
+ */
+export async function getRoutineLogsByDateRange(startDate: string, endDate: string): Promise<RoutineLog[]> {
+  const db = await getDB()
+  const range = IDBKeyRange.bound(startDate, endDate)
+  const logs = await db.getAllFromIndex('routineLogs', 'by-date', range)
+  return logs.map(log => ({
+    ...log,
+    completed_at: log.completed_at ? new Date(log.completed_at) : null,
+  }))
+}
+
 // ============================================
 // Presets（プリセット）関連の操作
 // ============================================

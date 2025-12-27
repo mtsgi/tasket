@@ -15,6 +15,7 @@ import {
   getRoutineLog,
   saveRoutineLog,
   getAllRoutineLogs,
+  getRoutineLogsByDateRange,
 } from '~/utils/db'
 
 export const useRoutinesStore = defineStore('routines', {
@@ -124,6 +125,34 @@ export const useRoutinesStore = defineStore('routines', {
       }
       catch (e) {
         this.error = e instanceof Error ? e.message : '日課ログの取得に失敗しました'
+      }
+      finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * 月内の全日課ログを取得
+     * @param yearMonth - 年月文字列（YYYY-MM形式）
+     * @returns 月内の全日課ログリスト
+     */
+    async fetchMonthRoutineLogs(yearMonth: string): Promise<RoutineLog[]> {
+      this.isLoading = true
+      this.error = null
+      try {
+        // 月の最初の日と最後の日を計算
+        const startDate = `${yearMonth}-01`
+        const year = Number.parseInt(yearMonth.split('-')[0])
+        const month = Number.parseInt(yearMonth.split('-')[1])
+        const lastDay = new Date(year, month, 0).getDate()
+        const endDate = `${yearMonth}-${String(lastDay).padStart(2, '0')}`
+
+        const logs = await getRoutineLogsByDateRange(startDate, endDate)
+        return logs
+      }
+      catch (e) {
+        this.error = e instanceof Error ? e.message : '日課ログの取得に失敗しました'
+        return []
       }
       finally {
         this.isLoading = false
