@@ -227,12 +227,8 @@ async function addSampleData() {
   // 既存データを確認
   const existingCount = itemsStore.items.length
   if (existingCount > 0) {
-    const confirmed = confirm(
-      'サンプルデータを追加しますか？\n'
-      + `現在${existingCount}件のアイテムがあります。\n`
-      + 'サンプルデータは既存データに追加されます。',
-    )
-    if (!confirmed) return
+    showNotification('error', '既にデータが存在するため、サンプルデータを追加できません')
+    return
   }
 
   isLoadingSampleData.value = true
@@ -355,7 +351,7 @@ onMounted(() => {
         <UiButton
           variant="primary"
           block
-          :disabled="isLoadingSampleData"
+          :disabled="isLoadingSampleData || itemsStore.items.length > 0"
           @click="addSampleData"
         >
           <Icon name="mdi:lightbulb-on" />
@@ -365,7 +361,7 @@ onMounted(() => {
       <div class="sample-data-info">
         <Icon name="mdi:information-outline" />
         <span>
-          サンプルデータには、TODO・収入・支出・日課・プリセットの例が含まれます
+          {{ itemsStore.items.length > 0 ? '既にデータが存在するため、サンプルデータを追加できません' : 'サンプルデータには、TODO・収入・支出・日課・プリセットの例が含まれます' }}
         </span>
       </div>
       <div class="danger-zone">
