@@ -216,7 +216,7 @@ async function importData(event: Event) {
       await tutorialStore.loadTutorialState()
     }
 
-    showNotification('success', `${data.items.length}${t('件のアイテムをインポートしました')}`)
+    showNotification('success', t('{count}件のアイテムをインポートしました', { count: data.items.length }))
     await itemsStore.fetchItems()
   }
   catch (e) {
@@ -273,7 +273,11 @@ async function addSampleData() {
 
     showNotification(
       'success',
-      `${t('サンプルデータを追加しました')}（アイテム: ${result.itemsCount}${t('件')}、日課: ${result.routinesCount}${t('件')}、プリセット: ${result.presetsCount}${t('件')}）`,
+      t('サンプルデータを追加しました（アイテム: {itemsCount}件、日課: {routinesCount}件、プリセット: {presetsCount}件）', {
+        itemsCount: result.itemsCount,
+        routinesCount: result.routinesCount,
+        presetsCount: result.presetsCount,
+      }),
     )
   }
   catch (e) {

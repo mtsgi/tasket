@@ -64,12 +64,13 @@ export default {
   // Notification messages
   'データのエクスポートが完了しました': 'Data export completed',
   'エクスポートに失敗しました': 'Export failed',
-  '件のアイテムをインポートしました': ' items imported',
+  '{count}件のアイテムをインポートしました': '{count} items imported',
   'インポートに失敗しました': 'Import failed',
   '無効なファイル形式です': 'Invalid file format',
   'すべてのデータを削除しました': 'All data has been deleted',
   'データの削除に失敗しました': 'Failed to delete data',
-  'サンプルデータを追加しました': 'Sample data added',
+  'サンプルデータを追加しました（アイテム: {itemsCount}件、日課: {routinesCount}件、プリセット: {presetsCount}件）':
+    'Sample data added (Items: {itemsCount}, Routines: {routinesCount}, Presets: {presetsCount})',
   'サンプルデータの追加に失敗しました': 'Failed to add sample data',
 
   // Confirmation dialogs

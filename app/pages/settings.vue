@@ -283,7 +283,7 @@ watch(pinSetupStep, () => {
 /**
  * 言語を変更
  */
-async function handleLanguageChange(lang: string) {
+async function handleLanguageChange(lang: 'ja' | 'en') {
   locale.value = lang
   await settingsStore.setLanguage(lang)
 }

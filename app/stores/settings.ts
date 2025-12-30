@@ -178,7 +178,7 @@ export const useSettingsStore = defineStore('settings', {
      * 言語設定の更新
      * @param lang - 言語コード（'ja' | 'en'）
      */
-    async setLanguage(lang: string) {
+    async setLanguage(lang: 'ja' | 'en') {
       this.language = lang
       await this.saveSettings()
     },
