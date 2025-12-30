@@ -86,6 +86,22 @@ const isCustomBackground = computed(() => {
 })
 
 /**
+ * ダークモード変更ハンドラ
+ */
+async function handleDarkModeChange() {
+  await nextTick()
+  await settingsStore.saveSettings()
+}
+
+/**
+ * 日付変更線変更ハンドラ
+ */
+async function handleDateChangeLineChange() {
+  await nextTick()
+  await settingsStore.saveSettings()
+}
+
+/**
  * PIN設定モーダルを開く
  */
 function openPinSetup() {
@@ -289,7 +305,7 @@ watch(pinSetupStep, () => {
           <input
             v-model="settingsStore.darkMode"
             type="checkbox"
-            @change="settingsStore.saveSettings()"
+            @change="handleDarkModeChange"
           >
           <span class="slider" />
         </label>
@@ -320,7 +336,7 @@ watch(pinSetupStep, () => {
             min="0"
             max="23"
             class="date-line-slider"
-            @change="settingsStore.saveSettings()"
+            @change="handleDateChangeLineChange"
           >
         </div>
       </div>
