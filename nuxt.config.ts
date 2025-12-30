@@ -13,12 +13,12 @@ export default defineNuxtConfig({
       {
         code: 'ja',
         name: '日本語',
-        file: 'ja.ts',
+        file: 'ja.js',
       },
       {
         code: 'en',
         name: 'English',
-        file: 'en.ts',
+        file: 'en.js',
       },
     ],
     lazy: true,
