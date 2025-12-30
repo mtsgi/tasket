@@ -22,7 +22,7 @@ export default defineNuxtConfig({
       },
     ],
     lazy: true,
-    langDir: 'i18n/locales',
+    langDir: 'locales',
     defaultLocale: 'ja',
     strategy: 'no_prefix',
     detectBrowserLanguage: {
