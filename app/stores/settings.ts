@@ -3,6 +3,7 @@
  * ダークモード、背景画像などのユーザー設定を管理します。
  */
 import { defineStore } from 'pinia'
+import { getAppSettings, saveAppSettings } from '~/utils/db'
 
 export interface CalendarDisplaySettings {
   showExpense: boolean // 支出合計の表示/非表示
@@ -39,15 +40,12 @@ export const useSettingsStore = defineStore('settings', {
    */
   actions: {
     /**
-     * 設定をローカルストレージから読み込む
+     * 設定をIndexedDBから読み込む
      */
-    loadSettings() {
-      if (typeof window === 'undefined') return
-
-      const savedSettings = localStorage.getItem('tasket-settings')
-      if (savedSettings) {
-        try {
-          const settings = JSON.parse(savedSettings) as Settings
+    async loadSettings() {
+      try {
+        const settings = await getAppSettings()
+        if (settings) {
           this.darkMode = settings.darkMode ?? false
           this.backgroundImage = settings.backgroundImage ?? 'none'
           this.dateChangeLine = settings.dateChangeLine ?? 0
@@ -58,62 +56,79 @@ export const useSettingsStore = defineStore('settings', {
             showTaskCount: true,
           }
         }
-        catch (e) {
-          console.error('設定の読み込みに失敗しました:', e)
-        }
+      }
+      catch (e) {
+        console.error('設定の読み込みに失敗しました:', e)
       }
     },
 
     /**
-     * 設定をローカルストレージに保存
+     * 設定をIndexedDBに保存
      */
-    saveSettings() {
-      if (typeof window === 'undefined') return
-
-      const settings: Settings = {
-        darkMode: this.darkMode,
-        backgroundImage: this.backgroundImage,
-        dateChangeLine: this.dateChangeLine,
-        calendarDisplay: this.calendarDisplay,
+    async saveSettings() {
+      try {
+        // 既存の設定を取得
+        const existingSettings = await getAppSettings()
+        
+        // 表示設定のみ更新
+        await saveAppSettings({
+          ...(existingSettings || {
+            id: 'app-settings',
+            hasSeenTutorial: false,
+            lockEnabled: false,
+            pinHash: null,
+            biometricEnabled: false,
+            biometricCredentialId: null,
+            maxAttempts: 5,
+            lockTimeout: 0,
+          }),
+          darkMode: this.darkMode,
+          backgroundImage: this.backgroundImage,
+          dateChangeLine: this.dateChangeLine,
+          calendarDisplay: this.calendarDisplay,
+          updated_at: new Date(),
+        })
       }
-      localStorage.setItem('tasket-settings', JSON.stringify(settings))
+      catch (e) {
+        console.error('設定の保存に失敗しました:', e)
+      }
     },
 
     /**
      * ダークモードの切り替え
      */
-    toggleDarkMode() {
+    async toggleDarkMode() {
       this.darkMode = !this.darkMode
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
      * 背景画像の設定
      * @param imagePath - 背景画像のパス（'none'の場合は背景画像なし）
      */
-    setBackgroundImage(imagePath: string) {
+    async setBackgroundImage(imagePath: string) {
       this.backgroundImage = imagePath
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
      * 日付変更線の設定
      * @param hour - 日付変更線の時刻（0-23時）
      */
-    setDateChangeLine(hour: number) {
+    async setDateChangeLine(hour: number) {
       // 0-23の範囲内に制限
       this.dateChangeLine = Math.max(0, Math.min(23, hour))
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
      * カレンダー表示設定の更新
      * @param settings - カレンダー表示設定
      */
-    updateCalendarDisplay(settings: Partial<CalendarDisplaySettings>) {
+    async updateCalendarDisplay(settings: Partial<CalendarDisplaySettings>) {
       try {
         this.calendarDisplay = { ...this.calendarDisplay, ...settings }
-        this.saveSettings()
+        await this.saveSettings()
       }
       catch (e) {
         console.error('カレンダー表示設定の保存に失敗しました:', e)

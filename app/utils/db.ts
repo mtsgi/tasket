@@ -4,11 +4,11 @@
  * idb ライブラリを使用してIndexedDBを操作します。
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Item, DayTitle, Routine, RoutineLog, Preset } from '~/types/item'
+import type { Item, DayTitle, Routine, RoutineLog, Preset, AppSettings } from '~/types/item'
 
 /**
  * データベーススキーマの型定義
- * itemsストア、dayTitlesストア、routinesストア、routineLogsストア、presetsストアを定義
+ * itemsストア、dayTitlesストア、routinesストア、routineLogsストア、presetsストア、appSettingsストアを定義
  */
 interface TasketDB extends DBSchema {
   items: {
@@ -49,6 +49,10 @@ interface TasketDB extends DBSchema {
       'by-type': string // 種別でのインデックス
     }
   }
+  appSettings: {
+    key: string
+    value: AppSettings
+  }
 }
 
 // データベース接続のシングルトンインスタンス
@@ -60,7 +64,7 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 4, {
+    dbPromise = openDB<TasketDB>('tasket-db', 5, {
       upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
@@ -116,6 +120,12 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
               })
             }
           }
+        }
+
+        // バージョン5の新機能: アプリ設定（チュートリアル状態など）
+        if (oldVersion < 5) {
+          // appSettingsオブジェクトストアを作成
+          db.createObjectStore('appSettings', { keyPath: 'id' })
         }
       },
     })
@@ -458,4 +468,46 @@ export async function updatePreset(preset: Preset): Promise<void> {
 export async function deletePreset(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('presets', id)
+}
+
+// ============================================
+// AppSettings（アプリ設定）関連の操作
+// ============================================
+
+/**
+ * アプリ設定を取得
+ * @returns アプリ設定、または見つからない場合はundefined
+ */
+export async function getAppSettings(): Promise<AppSettings | undefined> {
+  const db = await getDB()
+  const settings = await db.get('appSettings', 'app-settings')
+  if (settings) {
+    return {
+      ...settings,
+      updated_at: new Date(settings.updated_at),
+    }
+  }
+  return undefined
+}
+
+/**
+ * アプリ設定を保存または更新
+ * @param settings - アプリ設定
+ */
+export async function saveAppSettings(settings: AppSettings): Promise<void> {
+  const db = await getDB()
+  await db.put('appSettings', settings)
+}
+
+/**
+ * すべてのアプリ設定を取得
+ * @returns すべてのアプリ設定リスト
+ */
+export async function getAllAppSettings(): Promise<AppSettings[]> {
+  const db = await getDB()
+  const settings = await db.getAll('appSettings')
+  return settings.map(s => ({
+    ...s,
+    updated_at: new Date(s.updated_at),
+  }))
 }

@@ -3,6 +3,7 @@
  * PINコード認証と生体認証によるアプリのロック機能を管理します。
  */
 import { defineStore } from 'pinia'
+import { getAppSettings, saveAppSettings } from '~/utils/db'
 
 /**
  * PINコードをSHA-256でハッシュ化
@@ -83,16 +84,13 @@ export const useLockStore = defineStore('lock', {
    */
   actions: {
     /**
-     * 設定をローカルストレージから読み込む
+     * 設定をIndexedDBから読み込む
      */
-    loadSettings() {
-      if (typeof window === 'undefined') return
-
-      const savedSettings = localStorage.getItem('tasket-lock-settings')
-      if (savedSettings) {
-        try {
-          const settings = JSON.parse(savedSettings) as LockSettings
-          this.enabled = settings.enabled ?? false
+    async loadSettings() {
+      try {
+        const settings = await getAppSettings()
+        if (settings) {
+          this.enabled = settings.lockEnabled ?? false
           this.pinHash = settings.pinHash ?? null
           this.biometricEnabled = settings.biometricEnabled ?? false
           this.biometricCredentialId = settings.biometricCredentialId ?? null
@@ -102,27 +100,47 @@ export const useLockStore = defineStore('lock', {
           // ロック機能が有効な場合は初期状態をロックにする
           this.isLocked = this.isLockConfigured
         }
-        catch (e) {
-          console.error('ロック設定の読み込みに失敗しました:', e)
-        }
+      }
+      catch (e) {
+        console.error('ロック設定の読み込みに失敗しました:', e)
       }
     },
 
     /**
-     * 設定をローカルストレージに保存
+     * 設定をIndexedDBに保存
      */
-    saveSettings() {
-      if (typeof window === 'undefined') return
-
-      const settings: LockSettings = {
-        enabled: this.enabled,
-        pinHash: this.pinHash,
-        biometricEnabled: this.biometricEnabled,
-        biometricCredentialId: this.biometricCredentialId,
-        maxAttempts: this.maxAttempts,
-        lockTimeout: this.lockTimeout,
+    async saveSettings() {
+      try {
+        // 既存の設定を取得
+        const existingSettings = await getAppSettings()
+        
+        // ロック設定のみ更新
+        await saveAppSettings({
+          ...(existingSettings || {
+            id: 'app-settings',
+            hasSeenTutorial: false,
+            darkMode: false,
+            backgroundImage: 'none',
+            dateChangeLine: 0,
+            calendarDisplay: {
+              showExpense: true,
+              showIncome: true,
+              showMainTask: true,
+              showTaskCount: true,
+            },
+          }),
+          lockEnabled: this.enabled,
+          pinHash: this.pinHash,
+          biometricEnabled: this.biometricEnabled,
+          biometricCredentialId: this.biometricCredentialId,
+          maxAttempts: this.maxAttempts,
+          lockTimeout: this.lockTimeout,
+          updated_at: new Date(),
+        })
       }
-      localStorage.setItem('tasket-lock-settings', JSON.stringify(settings))
+      catch (e) {
+        console.error('ロック設定の保存に失敗しました:', e)
+      }
     },
 
     /**
@@ -135,7 +153,7 @@ export const useLockStore = defineStore('lock', {
       }
 
       this.pinHash = await hashPin(pin)
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
@@ -182,55 +200,55 @@ export const useLockStore = defineStore('lock', {
     /**
      * ロック機能を有効化
      */
-    enableLock() {
+    async enableLock() {
       this.enabled = true
-      this.saveSettings()
+      await this.saveSettings()
       this.lock()
     },
 
     /**
      * ロック機能を無効化
      */
-    disableLock() {
+    async disableLock() {
       this.enabled = false
       this.isLocked = false
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
      * 生体認証の有効/無効を切り替え
      */
-    toggleBiometric(enabled: boolean) {
+    async toggleBiometric(enabled: boolean) {
       this.biometricEnabled = enabled
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
      * 生体認証のクレデンシャルIDを保存
      */
-    setBiometricCredential(credentialId: string) {
+    async setBiometricCredential(credentialId: string) {
       this.biometricCredentialId = credentialId
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
      * 生体認証の登録を解除
      */
-    clearBiometricCredential() {
+    async clearBiometricCredential() {
       this.biometricCredentialId = null
       this.biometricEnabled = false
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**
      * PINコードをリセット（ロック機能を無効化）
      */
-    resetPin() {
+    async resetPin() {
       this.pinHash = null
       this.enabled = false
       this.isLocked = false
       this.failedAttempts = 0
-      this.saveSettings()
+      await this.saveSettings()
     },
 
     /**

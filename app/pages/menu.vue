@@ -6,7 +6,10 @@
 import { useItemsStore } from '~/stores/items'
 import { useDayTitlesStore } from '~/stores/dayTitles'
 import { usePresetsStore } from '~/stores/presets'
-import { getAllRoutines, getAllRoutineLogs, getAllDayTitles } from '~/utils/db'
+import { useTutorialStore } from '~/stores/tutorial'
+import { useSettingsStore } from '~/stores/settings'
+import { useLockStore } from '~/stores/lock'
+import { getAllRoutines, getAllRoutineLogs, getAllDayTitles, getAllAppSettings } from '~/utils/db'
 import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
@@ -14,6 +17,9 @@ import { loadSampleData } from '~/utils/sampleData'
 const itemsStore = useItemsStore()
 const dayTitlesStore = useDayTitlesStore()
 const presetsStore = usePresetsStore()
+const tutorialStore = useTutorialStore()
+const settingsStore = useSettingsStore()
+const lockStore = useLockStore()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -28,6 +34,13 @@ const isLoadingSampleData = ref(false)
 const notification = ref<{ type: 'success' | 'error', message: string } | null>(null)
 
 /**
+ * チュートリアルを開始
+ */
+function openTutorial() {
+  tutorialStore.startTutorial()
+}
+
+/**
  * 通知を表示
  */
 function showNotification(type: 'success' | 'error', message: string) {
@@ -38,7 +51,7 @@ function showNotification(type: 'success' | 'error', message: string) {
 }
 
 /**
- * データをJSON形式でエクスポート（日課、日課ログ、日タイトルを含む）
+ * データをJSON形式でエクスポート（日課、日課ログ、日タイトル、アプリ設定を含む）
  */
 async function exportData() {
   try {
@@ -46,9 +59,10 @@ async function exportData() {
     const routines = await getAllRoutines()
     const routineLogs = await getAllRoutineLogs()
     const dayTitles = await getAllDayTitles()
+    const appSettings = await getAllAppSettings()
 
     const exportPayload = {
-      version: 4, // バージョン4: 日課ログのステータス三値化
+      version: 5, // バージョン5: アプリ設定をIndexedDBに統合
       exportedAt: new Date().toISOString(),
       items: itemsStore.items.map(item => ({
         ...item,
@@ -67,6 +81,10 @@ async function exportData() {
       dayTitles: dayTitles.map(dt => ({
         ...dt,
         created_at: dt.created_at.toISOString(),
+      })),
+      appSettings: appSettings.map(settings => ({
+        ...settings,
+        updated_at: settings.updated_at.toISOString(),
       })),
     }
 
@@ -181,6 +199,21 @@ async function importData(event: Event) {
       }
     }
 
+    // アプリ設定をインポート（バージョン5以降）
+    if (data.version >= 5 && Array.isArray(data.appSettings) && data.appSettings.length > 0) {
+      const { saveAppSettings } = await import('~/utils/db')
+      for (const settingsData of data.appSettings) {
+        await saveAppSettings({
+          ...settingsData,
+          updated_at: new Date(settingsData.updated_at),
+        })
+      }
+      // 設定を再読み込み
+      await settingsStore.loadSettings()
+      await lockStore.loadSettings()
+      await tutorialStore.loadTutorialState()
+    }
+
     showNotification('success', `${data.items.length}件のアイテムをインポートしました`)
     await itemsStore.fetchItems()
   }
@@ -281,6 +314,25 @@ onMounted(() => {
         {{ notification.message }}
       </div>
     </Transition>
+
+    <!-- チュートリアル -->
+    <section class="menu-section card">
+      <h2>
+        <Icon name="mdi:school" />
+        チュートリアル
+      </h2>
+      <p class="section-description">
+        Tasketの使い方や機能を確認できます。いつでも見直すことができます。
+      </p>
+      <UiButton
+        variant="primary"
+        block
+        @click="openTutorial"
+      >
+        <Icon name="mdi:play-circle" />
+        チュートリアルを見る
+      </UiButton>
+    </section>
 
     <!-- アプリ設定 -->
     <section class="menu-section card">
