@@ -94,7 +94,7 @@ export const useSettingsStore = defineStore('settings', {
         // 既存の設定を取得
         const existingSettings = await getAppSettings()
 
-        // 表示設定のみ更新
+        // 表示設定のみ更新（reactive proxyを plain objectに変換）
         await saveAppSettings({
           ...(existingSettings || {
             id: 'app-settings',
@@ -109,7 +109,7 @@ export const useSettingsStore = defineStore('settings', {
           darkMode: this.darkMode,
           backgroundImage: this.backgroundImage,
           dateChangeLine: this.dateChangeLine,
-          calendarDisplay: this.calendarDisplay,
+          calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
           updated_at: new Date(),
         })
       }

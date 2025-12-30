@@ -48,8 +48,8 @@ export const useTutorialStore = defineStore('tutorial', {
         // 既存の設定を取得
         const existingSettings = await getAppSettings()
 
-        // チュートリアル状態のみ更新
-        await saveAppSettings({
+        // チュートリアル状態のみ更新（reactive proxyを plain objectに変換）
+        const settingsToSave = {
           ...(existingSettings || {
             id: 'app-settings',
             lockEnabled: false,
@@ -70,7 +70,14 @@ export const useTutorialStore = defineStore('tutorial', {
           }),
           hasSeenTutorial: this.hasSeenTutorial,
           updated_at: new Date(),
-        })
+        }
+
+        // calendarDisplayがreactive proxyの場合は plain objectに変換
+        if (settingsToSave.calendarDisplay && typeof settingsToSave.calendarDisplay === 'object') {
+          settingsToSave.calendarDisplay = { ...settingsToSave.calendarDisplay }
+        }
+
+        await saveAppSettings(settingsToSave)
       }
       catch (e) {
         console.error('チュートリアル状態の保存に失敗しました:', e)

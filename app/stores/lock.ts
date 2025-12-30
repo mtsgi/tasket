@@ -114,8 +114,8 @@ export const useLockStore = defineStore('lock', {
         // 既存の設定を取得
         const existingSettings = await getAppSettings()
 
-        // ロック設定のみ更新
-        await saveAppSettings({
+        // ロック設定のみ更新（reactive proxyを plain objectに変換）
+        const settingsToSave = {
           ...(existingSettings || {
             id: 'app-settings',
             hasSeenTutorial: false,
@@ -136,7 +136,14 @@ export const useLockStore = defineStore('lock', {
           maxAttempts: this.maxAttempts,
           lockTimeout: this.lockTimeout,
           updated_at: new Date(),
-        })
+        }
+
+        // calendarDisplayがreactive proxyの場合は plain objectに変換
+        if (settingsToSave.calendarDisplay && typeof settingsToSave.calendarDisplay === 'object') {
+          settingsToSave.calendarDisplay = { ...settingsToSave.calendarDisplay }
+        }
+
+        await saveAppSettings(settingsToSave)
       }
       catch (e) {
         console.error('ロック設定の保存に失敗しました:', e)
