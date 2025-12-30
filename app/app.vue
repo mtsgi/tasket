@@ -6,15 +6,22 @@
  */
 import { useSettingsStore } from '~/stores/settings'
 import { useLockStore } from '~/stores/lock'
+import { useTutorialStore } from '~/stores/tutorial'
 import LockScreen from '~/components/shared/LockScreen.vue'
+import TutorialModal from '~/components/shared/TutorialModal.vue'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
+const tutorialStore = useTutorialStore()
 
 // 初期化時に設定を読み込む
-onMounted(() => {
-  settingsStore.loadSettings()
-  lockStore.loadSettings()
+onMounted(async () => {
+  await settingsStore.loadSettings()
+  await lockStore.loadSettings()
+  await tutorialStore.loadTutorialState()
+
+  // 初回起動チェック（チュートリアル自動表示）
+  await tutorialStore.checkFirstLaunch()
 
   // タイムアウトチェック（バックグラウンドから復帰時など）
   if (typeof document !== 'undefined') {
@@ -26,13 +33,21 @@ onMounted(() => {
   }
 })
 
+// クリーンアップ: Object URLを解放
+onUnmounted(() => {
+  if (settingsStore.backgroundImageUrl && settingsStore.backgroundImage instanceof File) {
+    URL.revokeObjectURL(settingsStore.backgroundImageUrl)
+  }
+})
+
 // 背景画像のスタイルを算出
 const backgroundStyle = computed(() => {
-  if (settingsStore.backgroundImage === 'none') {
+  const bgDisplay = settingsStore.backgroundImageDisplay
+  if (bgDisplay === 'none') {
     return {}
   }
   return {
-    backgroundImage: `url(${settingsStore.backgroundImage})`,
+    backgroundImage: `url(${bgDisplay})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -56,6 +71,9 @@ const showLockScreen = computed(() => {
 
     <!-- メインコンテンツ -->
     <NuxtPage v-show="!showLockScreen" />
+
+    <!-- チュートリアルモーダル -->
+    <TutorialModal />
   </div>
 </template>
 

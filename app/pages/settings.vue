@@ -69,22 +69,8 @@ function uploadCustomImage(event: Event) {
     return
   }
 
-  // FileReaderで画像をBase64に変換
-  const reader = new FileReader()
-
-  reader.onload = (e) => {
-    const base64 = e.target?.result as string
-    if (base64) {
-      settingsStore.setBackgroundImage(base64)
-    }
-  }
-
-  reader.onerror = () => {
-    console.error('画像の読み込みに失敗しました')
-    alert('画像の読み込みに失敗しました')
-  }
-
-  reader.readAsDataURL(file)
+  // Fileオブジェクトをそのまま保存
+  settingsStore.setBackgroundImage(file)
 
   // ファイル入力をリセット
   input.value = ''
@@ -94,8 +80,26 @@ function uploadCustomImage(event: Event) {
  * カスタム背景画像かどうかを判定
  */
 const isCustomBackground = computed(() => {
-  return settingsStore.backgroundImage.startsWith('data:')
+  const bg = settingsStore.backgroundImage
+  // Fileオブジェクトまたはdata: URLの場合はカスタム画像
+  return bg instanceof File || (typeof bg === 'string' && bg.startsWith('data:'))
 })
+
+/**
+ * ダークモード変更ハンドラ
+ */
+async function handleDarkModeChange() {
+  await nextTick()
+  await settingsStore.saveSettings()
+}
+
+/**
+ * 日付変更線変更ハンドラ
+ */
+async function handleDateChangeLineChange() {
+  await nextTick()
+  await settingsStore.saveSettings()
+}
 
 /**
  * PIN設定モーダルを開く
@@ -301,7 +305,7 @@ watch(pinSetupStep, () => {
           <input
             v-model="settingsStore.darkMode"
             type="checkbox"
-            @change="settingsStore.saveSettings()"
+            @change="handleDarkModeChange"
           >
           <span class="slider" />
         </label>
@@ -332,7 +336,7 @@ watch(pinSetupStep, () => {
             min="0"
             max="23"
             class="date-line-slider"
-            @change="settingsStore.saveSettings()"
+            @change="handleDateChangeLineChange"
           >
         </div>
       </div>
@@ -466,7 +470,7 @@ watch(pinSetupStep, () => {
         >
           <div
             class="background-preview"
-            :style="isCustomBackground ? { backgroundImage: `url(${settingsStore.backgroundImage})` } : {}"
+            :style="isCustomBackground ? { backgroundImage: `url(${settingsStore.backgroundImageDisplay})` } : {}"
           >
             <Icon
               v-if="!isCustomBackground"

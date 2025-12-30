@@ -117,3 +117,35 @@ export interface Preset {
   notes: string // 備考
   created_at: Date // 作成日時
 }
+
+/**
+ * アプリ設定のデータ構造
+ * チュートリアル状態、ロック設定、表示設定などのアプリケーション設定を保存
+ */
+export interface AppSettings {
+  id: string // 設定ID（固定値 'app-settings' を使用）
+
+  // チュートリアル関連
+  hasSeenTutorial: boolean // チュートリアルを見たことがあるか
+
+  // ロック設定関連
+  lockEnabled: boolean // ロック機能の有効/無効
+  pinHash: string | null // PINコードのハッシュ値
+  biometricEnabled: boolean // 生体認証の有効/無効
+  biometricCredentialId: string | null // 生体認証のクレデンシャルID
+  maxAttempts: number // 最大試行回数
+  lockTimeout: number // ロック解除後の再ロックタイムアウト（ミリ秒）
+
+  // 表示設定関連
+  darkMode: boolean // ダークモードの有効/無効
+  backgroundImage: string | File // 背景画像（パスまたはFileオブジェクト）
+  dateChangeLine: number // 日付変更線の時刻（0-23時）
+  calendarDisplay: {
+    showExpense: boolean // 支出合計の表示/非表示
+    showIncome: boolean // 収入合計の表示/非表示
+    showMainTask: boolean // その日のメインタスクの表示/非表示
+    showTaskCount: boolean // タスクの合計数の表示/非表示
+  }
+
+  updated_at: Date // 更新日時
+}
