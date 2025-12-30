@@ -10,7 +10,7 @@ import PresetManager from '~/components/settings/PresetManager.vue'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
-const { locale, t } = useI18n()
+const { locale, t, setLocale } = useI18n()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -284,14 +284,14 @@ watch(pinSetupStep, () => {
  * 言語を変更
  */
 async function handleLanguageChange(lang: 'ja' | 'en') {
-  locale.value = lang
+  await setLocale(lang)
   await settingsStore.setLanguage(lang)
 }
 
 // 初期化時に保存された言語設定を適用
-onMounted(() => {
+onMounted(async () => {
   if (settingsStore.language) {
-    locale.value = settingsStore.language
+    await setLocale(settingsStore.language)
   }
 })
 </script>

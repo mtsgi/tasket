@@ -13,7 +13,7 @@ import TutorialModal from '~/components/shared/TutorialModal.vue'
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const tutorialStore = useTutorialStore()
-const { locale } = useI18n()
+const { setLocale } = useI18n()
 
 // 初期化時に設定を読み込む
 onMounted(async () => {
@@ -23,7 +23,7 @@ onMounted(async () => {
 
   // 言語設定を適用
   if (settingsStore.language) {
-    locale.value = settingsStore.language
+    await setLocale(settingsStore.language)
   }
 
   // 初回起動チェック（チュートリアル自動表示）
