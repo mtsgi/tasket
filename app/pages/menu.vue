@@ -4,21 +4,25 @@
  * アプリ設定、データ管理（エクスポート・インポート）、日課管理、権利表記を提供します。
  */
 import { useItemsStore } from '~/stores/items'
-import { useRoutinesStore } from '~/stores/routines'
 import { useDayTitlesStore } from '~/stores/dayTitles'
+import { usePresetsStore } from '~/stores/presets'
 import { getAllRoutines, getAllRoutineLogs, getAllDayTitles } from '~/utils/db'
 import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
+import { loadSampleData } from '~/utils/sampleData'
 
 const itemsStore = useItemsStore()
-const routinesStore = useRoutinesStore()
 const dayTitlesStore = useDayTitlesStore()
+const presetsStore = usePresetsStore()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // インポート処理中フラグ
 const isImporting = ref(false)
+
+// サンプルデータ追加中フラグ
+const isLoadingSampleData = ref(false)
 
 // 通知メッセージ
 const notification = ref<{ type: 'success' | 'error', message: string } | null>(null)
@@ -216,6 +220,40 @@ async function clearAllData() {
   }
 }
 
+/**
+ * サンプルデータを追加
+ */
+async function addSampleData() {
+  // 既存データを確認
+  const existingCount = itemsStore.items.length
+  if (existingCount > 0) {
+    showNotification('error', '既にデータが存在するため、サンプルデータを追加できません')
+    return
+  }
+
+  isLoadingSampleData.value = true
+
+  try {
+    const result = await loadSampleData()
+
+    // データを再読み込み
+    await itemsStore.fetchItems()
+    await presetsStore.fetchPresets()
+
+    showNotification(
+      'success',
+      `サンプルデータを追加しました（アイテム: ${result.itemsCount}件、日課: ${result.routinesCount}件、プリセット: ${result.presetsCount}件）`,
+    )
+  }
+  catch (e) {
+    const message = e instanceof Error ? e.message : 'サンプルデータの追加に失敗しました'
+    showNotification('error', message)
+  }
+  finally {
+    isLoadingSampleData.value = false
+  }
+}
+
 // 初期化
 onMounted(() => {
   itemsStore.fetchItems()
@@ -310,6 +348,21 @@ onMounted(() => {
           style="display: none"
           @change="importData"
         >
+        <UiButton
+          variant="primary"
+          block
+          :disabled="isLoadingSampleData || itemsStore.items.length > 0"
+          @click="addSampleData"
+        >
+          <Icon name="mdi:lightbulb-on" />
+          {{ isLoadingSampleData ? 'サンプルデータ追加中...' : 'サンプルデータを追加' }}
+        </UiButton>
+      </div>
+      <div class="sample-data-info">
+        <Icon name="mdi:information-outline" />
+        <span>
+          {{ itemsStore.items.length > 0 ? '既にデータが存在するため、サンプルデータを追加できません' : 'サンプルデータには、TODO・収入・支出・日課・プリセットの例が含まれます' }}
+        </span>
       </div>
       <div class="danger-zone">
         <h3>
@@ -546,6 +599,25 @@ onMounted(() => {
     background-color: rgba(244, 67, 54, 0.1);
     color: #f44336;
     border: 1px solid #f44336;
+  }
+}
+
+.sample-data-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: rgba(74, 144, 217, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #555;
+  margin-top: 12px;
+  border: 1px solid rgba(74, 144, 217, 0.3);
+
+  // ダークモード対応
+  .dark-mode & {
+    background-color: rgba(74, 144, 217, 0.15);
+    color: #b0b0b0;
   }
 }
 
