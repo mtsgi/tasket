@@ -173,8 +173,8 @@ export default {
   '日課を削除しますか？': 'Delete this routine?',
 
   // Calendar
-  '月': 'Month',
-  '日': 'Day',
+  '月（単位）': 'Month',
+  '日（単位）': 'Day',
   '月曜': 'Monday',
   '火曜': 'Tuesday',
   '水曜': 'Wednesday',
@@ -182,13 +182,13 @@ export default {
   '金曜': 'Friday',
   '土曜': 'Saturday',
   '日曜': 'Sunday',
-  '月': 'Mon',
-  '火': 'Tue',
-  '水': 'Wed',
-  '木': 'Thu',
-  '金': 'Fri',
-  '土': 'Sat',
-  '日': 'Sun',
+  '月（省略形）': 'Mon',
+  '火（省略形）': 'Tue',
+  '水（省略形）': 'Wed',
+  '木（省略形）': 'Thu',
+  '金（省略形）': 'Fri',
+  '土（省略形）': 'Sat',
+  '日（省略形）': 'Sun',
 
   // Summary
   '収支': 'Balance',
