@@ -124,10 +124,10 @@ export interface Preset {
  */
 export interface AppSettings {
   id: string // 設定ID（固定値 'app-settings' を使用）
-  
+
   // チュートリアル関連
   hasSeenTutorial: boolean // チュートリアルを見たことがあるか
-  
+
   // ロック設定関連
   lockEnabled: boolean // ロック機能の有効/無効
   pinHash: string | null // PINコードのハッシュ値
@@ -135,7 +135,7 @@ export interface AppSettings {
   biometricCredentialId: string | null // 生体認証のクレデンシャルID
   maxAttempts: number // 最大試行回数
   lockTimeout: number // ロック解除後の再ロックタイムアウト（ミリ秒）
-  
+
   // 表示設定関連
   darkMode: boolean // ダークモードの有効/無効
   backgroundImage: string // 背景画像のパス
@@ -146,6 +146,6 @@ export interface AppSettings {
     showMainTask: boolean // その日のメインタスクの表示/非表示
     showTaskCount: boolean // タスクの合計数の表示/非表示
   }
-  
+
   updated_at: Date // 更新日時
 }

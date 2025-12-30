@@ -47,7 +47,7 @@ export const useTutorialStore = defineStore('tutorial', {
       try {
         // 既存の設定を取得
         const existingSettings = await getAppSettings()
-        
+
         // チュートリアル状態のみ更新
         await saveAppSettings({
           ...(existingSettings || {

@@ -69,7 +69,7 @@ export const useSettingsStore = defineStore('settings', {
       try {
         // 既存の設定を取得
         const existingSettings = await getAppSettings()
-        
+
         // 表示設定のみ更新
         await saveAppSettings({
           ...(existingSettings || {

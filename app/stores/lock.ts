@@ -113,7 +113,7 @@ export const useLockStore = defineStore('lock', {
       try {
         // 既存の設定を取得
         const existingSettings = await getAppSettings()
-        
+
         // ロック設定のみ更新
         await saveAppSettings({
           ...(existingSettings || {
