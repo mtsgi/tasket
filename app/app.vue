@@ -33,13 +33,21 @@ onMounted(async () => {
   }
 })
 
+// クリーンアップ: Object URLを解放
+onUnmounted(() => {
+  if (settingsStore.backgroundImageUrl && settingsStore.backgroundImage instanceof File) {
+    URL.revokeObjectURL(settingsStore.backgroundImageUrl)
+  }
+})
+
 // 背景画像のスタイルを算出
 const backgroundStyle = computed(() => {
-  if (settingsStore.backgroundImage === 'none') {
+  const bgDisplay = settingsStore.backgroundImageDisplay
+  if (bgDisplay === 'none') {
     return {}
   }
   return {
-    backgroundImage: `url(${settingsStore.backgroundImage})`,
+    backgroundImage: `url(${bgDisplay})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

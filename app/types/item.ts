@@ -138,7 +138,7 @@ export interface AppSettings {
 
   // 表示設定関連
   darkMode: boolean // ダークモードの有効/無効
-  backgroundImage: string // 背景画像のパス
+  backgroundImage: string | File // 背景画像（パスまたはFileオブジェクト）
   dateChangeLine: number // 日付変更線の時刻（0-23時）
   calendarDisplay: {
     showExpense: boolean // 支出合計の表示/非表示

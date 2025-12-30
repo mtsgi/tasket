@@ -14,7 +14,7 @@ export interface CalendarDisplaySettings {
 
 export interface Settings {
   darkMode: boolean // ダークモードの有効/無効
-  backgroundImage: string // 背景画像のパス（'none'の場合は背景画像なし）
+  backgroundImage: string | File // 背景画像（パス、Base64、またはFileオブジェクト）
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
 }
@@ -25,7 +25,7 @@ export const useSettingsStore = defineStore('settings', {
    */
   state: () => ({
     darkMode: false,
-    backgroundImage: 'none' as string,
+    backgroundImage: 'none' as string | File,
     dateChangeLine: 0, // デフォルトは0時（通常の日付変更）
     calendarDisplay: {
       showExpense: true,
@@ -33,7 +33,26 @@ export const useSettingsStore = defineStore('settings', {
       showMainTask: true,
       showTaskCount: true,
     } as CalendarDisplaySettings,
+    backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
   }),
+
+  /**
+   * ゲッター
+   */
+  getters: {
+    /**
+     * 背景画像のURLを取得（FileオブジェクトをObject URLに変換）
+     */
+    backgroundImageDisplay(): string {
+      if (typeof this.backgroundImage === 'string') {
+        return this.backgroundImage
+      }
+      else if (this.backgroundImage instanceof File) {
+        return this.backgroundImageUrl || 'none'
+      }
+      return 'none'
+    },
+  },
 
   /**
    * アクション
@@ -54,6 +73,11 @@ export const useSettingsStore = defineStore('settings', {
             showIncome: true,
             showMainTask: true,
             showTaskCount: true,
+          }
+
+          // Fileオブジェクトの場合はObject URLを生成
+          if (this.backgroundImage instanceof File) {
+            this.backgroundImageUrl = URL.createObjectURL(this.backgroundImage)
           }
         }
       }
@@ -104,10 +128,22 @@ export const useSettingsStore = defineStore('settings', {
 
     /**
      * 背景画像の設定
-     * @param imagePath - 背景画像のパス（'none'の場合は背景画像なし）
+     * @param imagePathOrFile - 背景画像（パス、Base64、またはFileオブジェクト）
      */
-    async setBackgroundImage(imagePath: string) {
-      this.backgroundImage = imagePath
+    async setBackgroundImage(imagePathOrFile: string | File) {
+      // 古いObject URLがある場合は解放
+      if (this.backgroundImageUrl && this.backgroundImage instanceof File) {
+        URL.revokeObjectURL(this.backgroundImageUrl)
+        this.backgroundImageUrl = null
+      }
+
+      this.backgroundImage = imagePathOrFile
+
+      // Fileオブジェクトの場合はObject URLを生成
+      if (imagePathOrFile instanceof File) {
+        this.backgroundImageUrl = URL.createObjectURL(imagePathOrFile)
+      }
+
       await this.saveSettings()
     },
 
