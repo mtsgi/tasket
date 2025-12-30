@@ -10,6 +10,7 @@ import PresetManager from '~/components/settings/PresetManager.vue'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
+const { locale, t } = useI18n()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -25,14 +26,14 @@ const pinError = ref('')
 const isSettingPin = ref(false)
 
 // 利用可能な背景画像のリスト
-const backgroundImages = [
-  { value: 'none', label: 'なし', preview: '' },
-  { value: '/backgrounds/gradient-1.svg', label: 'グラデーション 1', preview: '/backgrounds/gradient-1.svg' },
-  { value: '/backgrounds/gradient-2.svg', label: 'グラデーション 2', preview: '/backgrounds/gradient-2.svg' },
-  { value: '/backgrounds/gradient-3.svg', label: 'グラデーション 3', preview: '/backgrounds/gradient-3.svg' },
-  { value: '/backgrounds/nature-1.svg', label: '自然 1', preview: '/backgrounds/nature-1.svg' },
-  { value: '/backgrounds/nature-2.svg', label: '自然 2', preview: '/backgrounds/nature-2.svg' },
-]
+const backgroundImages = computed(() => [
+  { value: 'none', label: t('なし'), preview: '' },
+  { value: '/backgrounds/gradient-1.svg', label: t('グラデーション 1'), preview: '/backgrounds/gradient-1.svg' },
+  { value: '/backgrounds/gradient-2.svg', label: t('グラデーション 2'), preview: '/backgrounds/gradient-2.svg' },
+  { value: '/backgrounds/gradient-3.svg', label: t('グラデーション 3'), preview: '/backgrounds/gradient-3.svg' },
+  { value: '/backgrounds/nature-1.svg', label: t('自然 1'), preview: '/backgrounds/nature-1.svg' },
+  { value: '/backgrounds/nature-2.svg', label: t('自然 2'), preview: '/backgrounds/nature-2.svg' },
+])
 
 /**
  * 背景画像を選択
@@ -59,13 +60,13 @@ function uploadCustomImage(event: Event) {
 
   // 画像ファイルかチェック
   if (!file.type.startsWith('image/')) {
-    alert('画像ファイルを選択してください')
+    alert(t('画像ファイルを選択してください'))
     return
   }
 
   // ファイルサイズチェック（5MB以下）
   if (file.size > 5 * 1024 * 1024) {
-    alert('ファイルサイズは5MB以下にしてください')
+    alert(t('ファイルサイズは5MB以下にしてください'))
     return
   }
 
@@ -134,7 +135,7 @@ async function handlePinSetup(pin: string) {
   if (pinSetupStep.value === 'initial') {
     // 初回入力
     if (pin.length < 4) {
-      pinError.value = 'PINコードは4桁以上で入力してください'
+      pinError.value = t('PINコードは4桁以上で入力してください')
       return
     }
     initialPin.value = pin
@@ -148,7 +149,7 @@ async function handlePinSetup(pin: string) {
   else {
     // 確認入力
     if (pin !== initialPin.value) {
-      pinError.value = 'PINコードが一致しません'
+      pinError.value = t('PINコードが一致しません')
       pinSetupStep.value = 'initial'
       initialPin.value = ''
       // エラー時はPIN入力を自動的にクリア
@@ -166,10 +167,10 @@ async function handlePinSetup(pin: string) {
       initialPin.value = ''
       pinError.value = ''
       // 成功メッセージを表示
-      alert('PINコードを設定しました')
+      alert(t('PINコードを設定しました'))
     }
     catch (e) {
-      pinError.value = e instanceof Error ? e.message : 'PIN設定に失敗しました'
+      pinError.value = e instanceof Error ? e.message : t('PIN設定に失敗しました')
       pinSetupStep.value = 'initial'
       initialPin.value = ''
     }
@@ -183,10 +184,10 @@ async function handlePinSetup(pin: string) {
  * ロック機能を無効化
  */
 function disableLock() {
-  const confirmed = confirm('ロック機能を無効化しますか？\nPINコードもリセットされます。')
+  const confirmed = confirm(t('ロック機能を無効化しますか？\nPINコードもリセットされます。'))
   if (confirmed) {
     lockStore.resetPin()
-    alert('ロック機能を無効化しました')
+    alert(t('ロック機能を無効化しました'))
   }
 }
 
@@ -206,7 +207,7 @@ async function toggleBiometric() {
       // 登録に失敗した場合はトグルを戻す
       lockStore.biometricEnabled = false
       console.error('生体認証の登録に失敗しました:', error)
-      alert('生体認証の登録に失敗しました。デバイスが生体認証に対応しているか確認してください。')
+      alert(t('生体認証の登録に失敗しました。デバイスが生体認証に対応しているか確認してください。'))
     }
   }
   else {
@@ -220,7 +221,7 @@ async function toggleBiometric() {
  */
 async function registerBiometric() {
   if (typeof window === 'undefined' || !window.PublicKeyCredential) {
-    throw new Error('このブラウザは生体認証に対応していません')
+    throw new Error(t('このブラウザは生体認証に対応していません'))
   }
 
   // チャレンジを生成
@@ -263,7 +264,7 @@ async function registerBiometric() {
       const credentialId = btoa(Array.from(credentialIdArray, byte => String.fromCharCode(byte)).join(''))
       lockStore.setBiometricCredential(credentialId)
       lockStore.toggleBiometric(true)
-      alert('生体認証を登録しました')
+      alert(t('生体認証を登録しました'))
     }
   }
   catch (error) {
@@ -278,6 +279,21 @@ watch(pinSetupStep, () => {
     pinInputRef.value?.clear()
   })
 })
+
+/**
+ * 言語を変更
+ */
+async function handleLanguageChange(lang: string) {
+  locale.value = lang
+  await settingsStore.setLanguage(lang)
+}
+
+// 初期化時に保存された言語設定を適用
+onMounted(() => {
+  if (settingsStore.language) {
+    locale.value = settingsStore.language
+  }
+})
 </script>
 
 <template>
@@ -286,7 +302,7 @@ watch(pinSetupStep, () => {
     <header class="settings-header">
       <h1>
         <Icon name="mdi:cog" />
-        設定
+        {{ $t('設定') }}
       </h1>
     </header>
 
@@ -294,12 +310,12 @@ watch(pinSetupStep, () => {
     <section class="settings-section card">
       <h2>
         <Icon name="mdi:theme-light-dark" />
-        表示設定
+        {{ $t('表示設定') }}
       </h2>
       <div class="setting-item">
         <div class="setting-info">
-          <h3>ダークモード</h3>
-          <p>画面を暗い色調で表示します</p>
+          <h3>{{ $t('ダークモード') }}</h3>
+          <p>{{ $t('画面を暗い色調で表示します') }}</p>
         </div>
         <label class="toggle-switch">
           <input
@@ -312,21 +328,56 @@ watch(pinSetupStep, () => {
       </div>
     </section>
 
+    <!-- 言語設定 -->
+    <section class="settings-section card">
+      <h2>
+        <Icon name="mdi:translate" />
+        {{ $t('言語') }}
+      </h2>
+      <p class="section-description">
+        {{ $t('アプリの表示言語を選択できます') }}
+      </p>
+      <div class="language-options">
+        <div
+          class="language-option"
+          :class="{ active: settingsStore.language === 'ja' }"
+          @click="handleLanguageChange('ja')"
+        >
+          <Icon
+            name="mdi:check-circle"
+            class="check-icon"
+          />
+          <span>{{ $t('日本語') }}</span>
+        </div>
+        <div
+          class="language-option"
+          :class="{ active: settingsStore.language === 'en' }"
+          @click="handleLanguageChange('en')"
+        >
+          <Icon
+            name="mdi:check-circle"
+            class="check-icon"
+          />
+          <span>{{ $t('英語') }}</span>
+        </div>
+      </div>
+    </section>
+
     <!-- 日付変更線設定 -->
     <section class="settings-section card">
       <h2>
         <Icon name="mdi:clock-outline" />
-        日付変更線
+        {{ $t('日付変更線') }}
       </h2>
       <p class="section-description">
-        日付変更線を設定すると、指定した時刻から翌日同時刻の直前までを1日として扱います。深夜作業が多い場合に便利です。
+        {{ $t('日付変更線を設定すると、指定した時刻から翌日同時刻の直前までを1日として扱います。深夜作業が多い場合に便利です。') }}
       </p>
       <div class="setting-item">
         <div class="setting-info">
-          <h3>日付変更線の時刻</h3>
+          <h3>{{ $t('日付変更線の時刻') }}</h3>
           <p>
-            {{ settingsStore.dateChangeLine }}時
-            {{ settingsStore.dateChangeLine > 0 ? `（当日${settingsStore.dateChangeLine}時〜翌日${settingsStore.dateChangeLine - 1}時台）` : '（通常の日付変更）' }}
+            {{ settingsStore.dateChangeLine }}{{ $t('時') }}
+            {{ settingsStore.dateChangeLine > 0 ? $t('（当日{hour}時〜翌日{nextHour}時台）', { hour: settingsStore.dateChangeLine, nextHour: settingsStore.dateChangeLine - 1 }) : $t('（通常の日付変更）') }}
           </p>
         </div>
         <div class="date-line-input">
@@ -343,7 +394,7 @@ watch(pinSetupStep, () => {
       <div class="date-line-example">
         <Icon name="mdi:information-outline" />
         <span>
-          例: 4時に設定した場合、12月12日は当日4:00から翌日3:59までを指します
+          {{ $t('例: 4時に設定した場合、12月12日は当日4:00から翌日3:59までを指します') }}
         </span>
       </div>
     </section>
@@ -357,10 +408,10 @@ watch(pinSetupStep, () => {
     <section class="settings-section card">
       <h2>
         <Icon name="mdi:lock" />
-        セキュリティ
+        {{ $t('セキュリティ') }}
       </h2>
       <p class="section-description">
-        PINコードまたは生体認証でアプリをロックできます
+        {{ $t('PINコードまたは生体認証でアプリをロックできます') }}
       </p>
 
       <!-- ロック機能が未設定の場合 -->
@@ -369,7 +420,7 @@ watch(pinSetupStep, () => {
         class="lock-setup"
       >
         <p class="lock-info">
-          ロック機能を有効にすると、アプリ起動時にPINコードの入力が必要になります。
+          {{ $t('ロック機能を有効にすると、アプリ起動時にPINコードの入力が必要になります。') }}
         </p>
         <UiButton
           variant="primary"
@@ -377,7 +428,7 @@ watch(pinSetupStep, () => {
           @click="openPinSetup"
         >
           <Icon name="mdi:lock-plus" />
-          PINコードを設定
+          {{ $t('PINコードを設定') }}
         </UiButton>
       </div>
 
@@ -388,8 +439,8 @@ watch(pinSetupStep, () => {
       >
         <div class="setting-item">
           <div class="setting-info">
-            <h3>ロック機能</h3>
-            <p>有効</p>
+            <h3>{{ $t('ロック機能') }}</h3>
+            <p>{{ $t('有効') }}</p>
           </div>
           <Icon
             name="mdi:check-circle"
@@ -399,9 +450,9 @@ watch(pinSetupStep, () => {
 
         <div class="setting-item">
           <div class="setting-info">
-            <h3>生体認証</h3>
+            <h3>{{ $t('生体認証') }}</h3>
             <p>
-              {{ lockStore.biometricCredentialId ? '登録済み - 指紋認証・顔認証を使用する' : '指紋認証・顔認証を使用する' }}
+              {{ lockStore.biometricCredentialId ? $t('登録済み - 指紋認証・顔認証を使用する') : $t('指紋認証・顔認証を使用する') }}
             </p>
           </div>
           <label class="toggle-switch">
@@ -421,7 +472,7 @@ watch(pinSetupStep, () => {
             @click="disableLock"
           >
             <Icon name="mdi:lock-off" />
-            ロック機能を無効化
+            {{ $t('ロック機能を無効化') }}
           </UiButton>
         </div>
       </div>
@@ -431,10 +482,10 @@ watch(pinSetupStep, () => {
     <section class="settings-section card">
       <h2>
         <Icon name="mdi:image" />
-        背景画像
+        {{ $t('背景画像') }}
       </h2>
       <p class="section-description">
-        アプリの背景に表示する画像を選択できます
+        {{ $t('アプリの背景に表示する画像を選択できます') }}
       </p>
       <div class="background-grid">
         <div
@@ -483,7 +534,7 @@ watch(pinSetupStep, () => {
               class="selected-icon"
             />
           </div>
-          <span class="background-label">カスタム画像</span>
+          <span class="background-label">{{ $t('カスタム画像') }}</span>
         </div>
       </div>
 
@@ -505,19 +556,19 @@ watch(pinSetupStep, () => {
         @click="$router.back()"
       >
         <Icon name="mdi:arrow-left" />
-        戻る
+        {{ $t('戻る') }}
       </UiButton>
     </div>
 
     <!-- PIN設定モーダル -->
     <UiModal
       :show="showPinSetupModal"
-      title="PINコード設定"
+      :title="$t('PINコード設定')"
       @close="closePinSetupModal"
     >
       <div class="pin-setup-modal">
         <p class="pin-setup-instruction">
-          {{ pinSetupStep === 'initial' ? 'PINコードを入力してください（4桁以上）' : 'もう一度PINコードを入力してください' }}
+          {{ pinSetupStep === 'initial' ? $t('PINコードを入力してください（4桁以上）') : $t('もう一度PINコードを入力してください') }}
         </p>
 
         <div
@@ -866,6 +917,68 @@ watch(pinSetupStep, () => {
   .dark-mode & {
     background-color: rgba(74, 144, 217, 0.15);
     color: #b0b0b0;
+  }
+}
+
+// 言語選択
+.language-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #4a90d9;
+    background-color: rgba(74, 144, 217, 0.05);
+  }
+
+  &.active {
+    border-color: #4a90d9;
+    background-color: rgba(74, 144, 217, 0.1);
+
+    .check-icon {
+      color: #4a90d9;
+    }
+  }
+
+  .check-icon {
+    font-size: 24px;
+    color: transparent;
+    transition: color 0.2s ease;
+  }
+
+  span {
+    font-size: 16px;
+    font-weight: 500;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #e0e0e0;
+    }
+  }
+
+  // ダークモード対応
+  .dark-mode & {
+    border-color: #444;
+
+    &:hover {
+      border-color: #4a90d9;
+      background-color: rgba(74, 144, 217, 0.1);
+    }
+
+    &.active {
+      background-color: rgba(74, 144, 217, 0.15);
+    }
   }
 }
 

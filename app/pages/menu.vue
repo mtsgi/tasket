@@ -20,6 +20,7 @@ const presetsStore = usePresetsStore()
 const tutorialStore = useTutorialStore()
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
+const { t } = useI18n()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -98,10 +99,10 @@ async function exportData() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    showNotification('success', 'データのエクスポートが完了しました')
+    showNotification('success', t('データのエクスポートが完了しました'))
   }
   catch {
-    showNotification('error', 'エクスポートに失敗しました')
+    showNotification('error', t('エクスポートに失敗しました'))
   }
 }
 
@@ -129,16 +130,17 @@ async function importData(event: Event) {
 
     // バリデーション
     if (!data.version || !Array.isArray(data.items)) {
-      throw new Error('無効なファイル形式です')
+      throw new Error(t('無効なファイル形式です'))
     }
 
     // 既存データを確認
     const existingCount = itemsStore.items.length
     if (existingCount > 0) {
       const confirmed = confirm(
-        `現在${existingCount}件のアイテムがあります。\n`
-        + `インポートすると${data.items.length}件のアイテムが追加されます。\n`
-        + `続行しますか？`,
+        t('現在{count}件のアイテムがあります。\nインポートすると{importCount}件のアイテムが追加されます。\n続行しますか？', {
+          count: existingCount,
+          importCount: data.items.length,
+        }),
       )
       if (!confirmed) {
         isImporting.value = false
@@ -214,11 +216,11 @@ async function importData(event: Event) {
       await tutorialStore.loadTutorialState()
     }
 
-    showNotification('success', `${data.items.length}件のアイテムをインポートしました`)
+    showNotification('success', `${data.items.length}${t('件のアイテムをインポートしました')}`)
     await itemsStore.fetchItems()
   }
   catch (e) {
-    const message = e instanceof Error ? e.message : 'インポートに失敗しました'
+    const message = e instanceof Error ? e.message : t('インポートに失敗しました')
     showNotification('error', message)
   }
   finally {
@@ -232,11 +234,7 @@ async function importData(event: Event) {
  * すべてのデータを削除
  */
 async function clearAllData() {
-  const confirmed = confirm(
-    '本当にすべてのデータを削除しますか？\n'
-    + 'この操作は取り消せません。\n'
-    + '事前にエクスポートすることをお勧めします。',
-  )
+  const confirmed = confirm(t('本当にすべてのデータを削除しますか？\nこの操作は取り消せません。\n事前にエクスポートすることをお勧めします。'))
 
   if (!confirmed) return
 
@@ -246,10 +244,10 @@ async function clearAllData() {
     for (const item of items) {
       await itemsStore.deleteItemById(item.id)
     }
-    showNotification('success', 'すべてのデータを削除しました')
+    showNotification('success', t('すべてのデータを削除しました'))
   }
   catch {
-    showNotification('error', 'データの削除に失敗しました')
+    showNotification('error', t('データの削除に失敗しました'))
   }
 }
 
@@ -260,7 +258,7 @@ async function addSampleData() {
   // 既存データを確認
   const existingCount = itemsStore.items.length
   if (existingCount > 0) {
-    showNotification('error', '既にデータが存在するため、サンプルデータを追加できません')
+    showNotification('error', t('既にデータが存在するため、サンプルデータを追加できません'))
     return
   }
 
@@ -275,11 +273,11 @@ async function addSampleData() {
 
     showNotification(
       'success',
-      `サンプルデータを追加しました（アイテム: ${result.itemsCount}件、日課: ${result.routinesCount}件、プリセット: ${result.presetsCount}件）`,
+      `${t('サンプルデータを追加しました')}（アイテム: ${result.itemsCount}${t('件')}、日課: ${result.routinesCount}${t('件')}、プリセット: ${result.presetsCount}${t('件')}）`,
     )
   }
   catch (e) {
-    const message = e instanceof Error ? e.message : 'サンプルデータの追加に失敗しました'
+    const message = e instanceof Error ? e.message : t('サンプルデータの追加に失敗しました')
     showNotification('error', message)
   }
   finally {
@@ -299,7 +297,7 @@ onMounted(() => {
     <header class="menu-header">
       <h1>
         <Icon name="mdi:menu" />
-        メニュー
+        {{ $t('メニュー') }}
       </h1>
     </header>
 
@@ -319,10 +317,10 @@ onMounted(() => {
     <section class="menu-section card">
       <h2>
         <Icon name="mdi:school" />
-        チュートリアル
+        {{ $t('チュートリアル') }}
       </h2>
       <p class="section-description">
-        Tasketの使い方や機能を確認できます。いつでも見直すことができます。
+        {{ $t('Tasketの使い方や機能を確認できます。いつでも見直すことができます。') }}
       </p>
       <UiButton
         variant="primary"
@@ -330,7 +328,7 @@ onMounted(() => {
         @click="openTutorial"
       >
         <Icon name="mdi:play-circle" />
-        チュートリアルを見る
+        {{ $t('チュートリアルを見る') }}
       </UiButton>
     </section>
 
@@ -338,10 +336,10 @@ onMounted(() => {
     <section class="menu-section card">
       <h2>
         <Icon name="mdi:cog" />
-        アプリ設定
+        {{ $t('アプリ設定') }}
       </h2>
       <p class="section-description">
-        ダークモード、背景画像などの表示設定を変更できます。
+        {{ $t('ダークモード、背景画像などの表示設定を変更できます。') }}
       </p>
       <NuxtLink to="/settings">
         <UiButton
@@ -349,7 +347,7 @@ onMounted(() => {
           block
         >
           <Icon name="mdi:cog" />
-          設定を開く
+          {{ $t('設定を開く') }}
         </UiButton>
       </NuxtLink>
     </section>
@@ -358,10 +356,10 @@ onMounted(() => {
     <section class="menu-section card">
       <h2>
         <Icon name="mdi:checkbox-multiple-marked" />
-        日課管理
+        {{ $t('日課管理') }}
       </h2>
       <p class="section-description">
-        毎日繰り返し行う習慣やタスクを月ごとに設定できます。
+        {{ $t('毎日繰り返し行う習慣やタスクを月ごとに設定できます。') }}
       </p>
       <RoutineManager />
     </section>
@@ -370,10 +368,10 @@ onMounted(() => {
     <section class="menu-section card">
       <h2>
         <Icon name="mdi:database" />
-        データ管理
+        {{ $t('データ管理') }}
       </h2>
       <p class="section-description">
-        アプリのデータをJSONファイルとしてバックアップ・復元できます。
+        {{ $t('アプリのデータをJSONファイルとしてバックアップ・復元できます。') }}
       </p>
       <div class="menu-buttons">
         <UiButton
@@ -382,7 +380,7 @@ onMounted(() => {
           @click="exportData"
         >
           <Icon name="mdi:export" />
-          エクスポート
+          {{ $t('エクスポート') }}
         </UiButton>
         <UiButton
           variant="secondary"
@@ -391,7 +389,7 @@ onMounted(() => {
           @click="openImportDialog"
         >
           <Icon name="mdi:import" />
-          {{ isImporting ? 'インポート中...' : 'インポート' }}
+          {{ isImporting ? $t('インポート中') + '...' : $t('インポート') }}
         </UiButton>
         <input
           ref="fileInputRef"
@@ -407,19 +405,19 @@ onMounted(() => {
           @click="addSampleData"
         >
           <Icon name="mdi:lightbulb-on" />
-          {{ isLoadingSampleData ? 'サンプルデータ追加中...' : 'サンプルデータを追加' }}
+          {{ isLoadingSampleData ? $t('サンプルデータ追加中') + '...' : $t('サンプルデータを追加') }}
         </UiButton>
       </div>
       <div class="sample-data-info">
         <Icon name="mdi:information-outline" />
         <span>
-          {{ itemsStore.items.length > 0 ? '既にデータが存在するため、サンプルデータを追加できません' : 'サンプルデータには、TODO・収入・支出・日課・プリセットの例が含まれます' }}
+          {{ itemsStore.items.length > 0 ? $t('既にデータが存在するため、サンプルデータを追加できません') : $t('サンプルデータには、TODO・収入・支出・日課・プリセットの例が含まれます') }}
         </span>
       </div>
       <div class="danger-zone">
         <h3>
           <Icon name="mdi:alert" />
-          危険な操作
+          {{ $t('危険な操作') }}
         </h3>
         <UiButton
           variant="danger"
@@ -427,7 +425,7 @@ onMounted(() => {
           @click="clearAllData"
         >
           <Icon name="mdi:delete-forever" />
-          すべてのデータを削除
+          {{ $t('すべてのデータを削除') }}
         </UiButton>
       </div>
     </section>
@@ -436,7 +434,7 @@ onMounted(() => {
     <section class="menu-section card">
       <h2>
         <Icon name="mdi:information" />
-        アプリ情報
+        {{ $t('アプリ情報') }}
       </h2>
       <div class="app-info">
         <div class="app-logo">
@@ -452,7 +450,7 @@ onMounted(() => {
           Version 1.0.0
         </p>
         <p class="app-description">
-          TODO・家計簿・カレンダー統合ライフマネジメントPWAアプリケーション
+          {{ $t('TODO・家計簿・カレンダー統合ライフマネジメントPWAアプリケーション') }}
         </p>
       </div>
     </section>
@@ -461,15 +459,15 @@ onMounted(() => {
     <section class="menu-section card">
       <h2>
         <Icon name="mdi:license" />
-        権利表記
+        {{ $t('権利表記') }}
       </h2>
       <div class="credits">
         <div class="credit-item">
-          <h3>ライセンス</h3>
+          <h3>{{ $t('ライセンス') }}</h3>
           <p>MIT License</p>
         </div>
         <div class="credit-item">
-          <h3>使用技術</h3>
+          <h3>{{ $t('使用技術') }}</h3>
           <ul class="tech-list">
             <li>Nuxt 4 / Vue 3</li>
             <li>Pinia</li>
@@ -479,9 +477,9 @@ onMounted(() => {
           </ul>
         </div>
         <div class="credit-item">
-          <h3>オープンソースライセンス</h3>
+          <h3>{{ $t('オープンソースライセンス') }}</h3>
           <p class="oss-description">
-            このアプリケーションは多くのOSSモジュールを使用しています。
+            {{ $t('このアプリケーションは多くのOSSモジュールを使用しています。') }}
           </p>
           <NuxtLink to="/licenses">
             <UiButton
@@ -489,7 +487,7 @@ onMounted(() => {
               block
             >
               <Icon name="mdi:file-document-outline" />
-              OSSライセンスを表示
+              {{ $t('OSSライセンスを表示') }}
             </UiButton>
           </NuxtLink>
         </div>

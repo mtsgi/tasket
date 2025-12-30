@@ -27,6 +27,7 @@ export const useSettingsStore = defineStore('settings', {
     darkMode: false,
     backgroundImage: 'none' as string | File,
     dateChangeLine: 0, // デフォルトは0時（通常の日付変更）
+    language: 'ja', // デフォルトは日本語
     calendarDisplay: {
       showExpense: true,
       showIncome: true,
@@ -68,6 +69,7 @@ export const useSettingsStore = defineStore('settings', {
           this.darkMode = settings.darkMode ?? false
           this.backgroundImage = settings.backgroundImage ?? 'none'
           this.dateChangeLine = settings.dateChangeLine ?? 0
+          this.language = settings.language ?? 'ja'
           this.calendarDisplay = settings.calendarDisplay ?? {
             showExpense: true,
             showIncome: true,
@@ -109,6 +111,7 @@ export const useSettingsStore = defineStore('settings', {
           darkMode: this.darkMode,
           backgroundImage: this.backgroundImage,
           dateChangeLine: this.dateChangeLine,
+          language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
           updated_at: new Date(),
         })
@@ -169,6 +172,15 @@ export const useSettingsStore = defineStore('settings', {
       catch (e) {
         console.error('カレンダー表示設定の保存に失敗しました:', e)
       }
+    },
+
+    /**
+     * 言語設定の更新
+     * @param lang - 言語コード（'ja' | 'en'）
+     */
+    async setLanguage(lang: string) {
+      this.language = lang
+      await this.saveSettings()
     },
   },
 })
