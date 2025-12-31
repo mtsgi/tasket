@@ -224,6 +224,19 @@ export default {
   '折れ線グラフ': 'Line Chart',
   '棒グラフ': 'Bar Chart',
 
+  // Routines
+  '日課': 'Routines',
+  '日課達成状況': 'Routine Achievement Status',
+  '達成': 'Achieved',
+  '未達成': 'Not Achieved',
+  '前の週': 'Previous Week',
+  '次の週': 'Next Week',
+
+  // Day Title
+  '今日やること': 'Today\'s Main Task',
+  '今日やること...': 'Today\'s main task...',
+  '今日やることを設定...': 'Set today\'s main task...',
+
   // Expense ranking
   '支出ランキング': 'Expense Ranking',
   '今月の支出が多い項目': 'Top expenses this month',

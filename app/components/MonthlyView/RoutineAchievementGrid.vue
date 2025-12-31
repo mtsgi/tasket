@@ -16,6 +16,7 @@ const props = defineProps<{
   routineLogs: RoutineLog[]
 }>()
 
+const { t } = useI18n()
 /**
  * yearMonth に '-01' を追加した完全な日付文字列
  */
@@ -66,9 +67,9 @@ function getStatusColorClass(status: RoutineStatus): string {
 function getStatusLabel(status: RoutineStatus): string {
   switch (status) {
     case 'achieved':
-      return '達成'
+      return t('達成')
     case 'not_achieved':
-      return '未達成'
+      return t('未達成')
     case 'unconfirmed':
     default:
       return '未確認'
@@ -149,7 +150,7 @@ onMounted(() => {
   >
     <h2>
       <Icon name="mdi:calendar-check" />
-      日課達成状況
+      {{ $t('日課達成状況') }}
     </h2>
 
     <div class="grid-container">
@@ -205,11 +206,11 @@ onMounted(() => {
       </div>
       <div class="legend-item">
         <div class="legend-item__box cell--achieved" />
-        <span>達成</span>
+        <span>{{ $t('達成') }}</span>
       </div>
       <div class="legend-item">
         <div class="legend-item__box cell--not-achieved" />
-        <span>未達成</span>
+        <span>{{ $t('未達成') }}</span>
       </div>
     </div>
   </section>

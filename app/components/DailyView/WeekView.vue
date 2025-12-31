@@ -104,7 +104,7 @@ function handleDayClick(dateString: string) {
     <div class="week-header">
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="前の週"
+        :aria-label="$t('前の週')"
         @click="goToPreviousWeek"
       >
         <Icon name="mdi:chevron-left" />
@@ -112,7 +112,7 @@ function handleDayClick(dateString: string) {
       <span class="week-label">{{ weekLabel }}</span>
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="次の週"
+        :aria-label="$t('次の週')"
         @click="goToNextWeek"
       >
         <Icon name="mdi:chevron-right" />
