@@ -247,6 +247,31 @@ export default {
   '検索結果': 'Search Results',
   'キーワードで検索': 'Search by keyword',
   '該当するアイテムがありません': 'No matching items',
+  'アイテム検索': 'Search Items',
+  'キーワード': 'Keyword',
+  'タイトル、備考、金額で検索...': 'Search by title, note, or amount...',
+  '種別でフィルタ': 'Filter by Type',
+  'すべて': 'All',
+  '日付範囲': 'Date Range',
+  '開始日': 'Start Date',
+  '終了日': 'End Date',
+  '検索条件に一致するアイテムが見つかりません': 'No items match the search criteria',
+  'キーワード、種別、または日付範囲を指定して検索してください': 'Specify keyword, type, or date range to search',
+
+  // Tutorial
+  'チュートリアルをスキップしますか？\nメニュー画面からいつでも見直すことができます。': 'Skip tutorial?\nYou can review it anytime from the menu.',
+  'ステップ {step}: {title}': 'Step {step}: {title}',
+  '次へ': 'Next',
+  
+  // Lock Screen
+  'PINコードを入力してください': 'Enter PIN code',
+  '新しいPINコードを設定してください（{length}桁）': 'Set new PIN code ({length} digits)',
+  'PINコードを再入力してください': 'Re-enter PIN code',
+  'PINコードが一致しません': 'PIN codes do not match',
+  '数字を入力...': 'Enter digits...',
+  'PINコードが正しくありません（残り{count}回）': 'Incorrect PIN ({count} attempts remaining)',
+  '試行回数が上限に達しました': 'Maximum attempts reached',
+  '認証エラーが発生しました': 'Authentication error occurred',
 
   // Calendar display settings
   'カレンダー表示設定': 'Calendar Display Settings',

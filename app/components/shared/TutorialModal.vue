@@ -7,6 +7,7 @@ import { useTutorialStore } from '~/stores/tutorial'
 import { tutorialSteps } from '~/utils/tutorialSteps'
 
 const tutorialStore = useTutorialStore()
+const { t } = useI18n()
 
 // 現在のステップ情報
 const currentStepData = computed(() => {
@@ -47,7 +48,7 @@ function handlePrevious() {
  * スキップボタンのクリック
  */
 async function handleSkip() {
-  const confirmed = confirm('チュートリアルをスキップしますか？\nメニュー画面からいつでも見直すことができます。')
+  const confirmed = confirm(t('チュートリアルをスキップしますか？\nメニュー画面からいつでも見直すことができます。'))
   if (confirmed) {
     await tutorialStore.skipTutorial()
   }
@@ -110,7 +111,7 @@ function goToStep(index: number) {
               :key="index"
               class="step-dot"
               :class="{ active: index === tutorialStore.currentStep }"
-              :aria-label="`ステップ ${index + 1}: ${step.title}`"
+              :aria-label="$t('ステップ {step}: {title}', { step: index + 1, title: step.title })"
               @click="goToStep(index)"
             />
           </div>
@@ -123,14 +124,14 @@ function goToStep(index: number) {
               @click="handlePrevious"
             >
               <Icon name="mdi:chevron-left" />
-              戻る
+              {{ $t('戻る') }}
             </button>
             <div class="spacer" />
             <button
               class="btn btn-primary"
               @click="handleNext"
             >
-              {{ isLastStep ? '完了' : '次へ' }}
+              {{ isLastStep ? $t('完了') : $t('次へ') }}
               <Icon
                 v-if="!isLastStep"
                 name="mdi:chevron-right"
