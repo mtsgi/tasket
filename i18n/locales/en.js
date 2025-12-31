@@ -201,10 +201,33 @@ export default {
   '今月のタスク': 'This Month\'s Tasks',
   '今日の収支': 'Today\'s Balance',
   '今日のタスク': 'Today\'s Tasks',
+  '収入合計': 'Total Income',
+  '支出合計': 'Total Expenses',
+  '収支差額': 'Net Balance',
+  '完了タスク': 'Completed Tasks',
+  '未完了タスク': 'Pending Tasks',
+
+  // Navigation
+  '今日': 'Today',
+  '前月へ': 'Previous Month',
+  '翌月へ': 'Next Month',
+  '前日へ': 'Previous Day',
+  '翌日へ': 'Next Day',
+  '月表示へ': 'Monthly View',
+
+  // Charts
+  '収支推移': 'Balance Trends',
+  '単日': 'Daily',
+  '累積': 'Cumulative',
+  '単日表示': 'Daily View',
+  '累積表示': 'Cumulative View',
+  '折れ線グラフ': 'Line Chart',
+  '棒グラフ': 'Bar Chart',
 
   // Expense ranking
   '支出ランキング': 'Expense Ranking',
   '今月の支出が多い項目': 'Top expenses this month',
+  '支出データがありません': 'No expense data',
   '回': 'times',
 
   // Search

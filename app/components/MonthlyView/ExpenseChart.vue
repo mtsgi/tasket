@@ -38,6 +38,7 @@ type ChartType = 'line' | 'bar'
 
 const dataMode = ref<DataMode>('daily')
 const chartType = ref<ChartType>('line')
+const { t } = useI18n()
 
 /**
  * 累積データを計算
@@ -83,7 +84,7 @@ const chartData = computed(() => ({
   labels: props.dailyTotals.dates,
   datasets: [
     {
-      label: '収入',
+      label: t('収入'),
       data: displayData.value.incomes,
       borderColor: '#4caf50',
       backgroundColor: `rgba(76, 175, 80, ${backgroundOpacity.value})`,
@@ -91,7 +92,7 @@ const chartData = computed(() => ({
       pointRadius: 2,
     },
     {
-      label: '支出',
+      label: t('支出'),
       data: displayData.value.expenses,
       borderColor: '#f44336',
       backgroundColor: `rgba(244, 67, 54, ${backgroundOpacity.value})`,
@@ -99,7 +100,7 @@ const chartData = computed(() => ({
       pointRadius: 2,
     },
     {
-      label: '残高',
+      label: t('残高'),
       data: displayData.value.balances,
       borderColor: '#4a90d9',
       backgroundColor: `rgba(74, 144, 217, ${backgroundOpacity.value})`,
@@ -174,32 +175,32 @@ const chartOptions = {
     <div class="header-section">
       <h2>
         <Icon name="mdi:chart-line" />
-        収支推移
+        {{ $t('収支推移') }}
       </h2>
       <div class="chart-controls">
         <div class="control-group">
           <button
             class="control-btn"
             :class="{ active: dataMode === 'daily' }"
-            aria-label="単日表示"
+            :aria-label="$t('単日表示')"
             @click="dataMode = 'daily'"
           >
-            単日
+            {{ $t('単日') }}
           </button>
           <button
             class="control-btn"
             :class="{ active: dataMode === 'cumulative' }"
-            aria-label="累積表示"
+            :aria-label="$t('累積表示')"
             @click="dataMode = 'cumulative'"
           >
-            累積
+            {{ $t('累積') }}
           </button>
         </div>
         <div class="control-group">
           <button
             class="control-btn"
             :class="{ active: chartType === 'line' }"
-            aria-label="折れ線グラフ"
+            :aria-label="$t('折れ線グラフ')"
             @click="chartType = 'line'"
           >
             <Icon name="mdi:chart-line" />
@@ -207,7 +208,7 @@ const chartOptions = {
           <button
             class="control-btn"
             :class="{ active: chartType === 'bar' }"
-            aria-label="棒グラフ"
+            :aria-label="$t('棒グラフ')"
             @click="chartType = 'bar'"
           >
             <Icon name="mdi:chart-bar" />
