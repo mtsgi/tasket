@@ -14,6 +14,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n()
 const settingsStore = useSettingsStore()
 
 // ローカルコピーで設定を管理
@@ -47,33 +48,33 @@ function handleClose() {
 <template>
   <UiModal
     :show="show"
-    title="カレンダー表示設定"
+    :title="$t('カレンダー表示設定')"
     @close="handleClose"
   >
     <div class="calendar-settings">
       <p class="description">
-        カレンダーに表示する項目を選択してください
+        {{ $t('カレンダーに表示する項目を選択してください') }}
       </p>
 
       <div class="settings-list">
         <UiCheckbox
           v-model="localSettings.showExpense"
-          label="支出合計を表示"
+          :label="$t('支出合計を表示')"
         />
 
         <UiCheckbox
           v-model="localSettings.showIncome"
-          label="収入合計を表示"
+          :label="$t('収入合計を表示')"
         />
 
         <UiCheckbox
           v-model="localSettings.showMainTask"
-          label="その日のメインタスクを表示"
+          :label="$t('その日のメインタスクを表示')"
         />
 
         <UiCheckbox
           v-model="localSettings.showTaskCount"
-          label="タスクの合計数を表示"
+          :label="$t('タスクの合計数を表示')"
         />
       </div>
     </div>
@@ -83,13 +84,13 @@ function handleClose() {
         variant="secondary"
         @click="handleClose"
       >
-        キャンセル
+        {{ $t('キャンセル') }}
       </UiButton>
       <UiButton
         variant="primary"
         @click="saveAndClose"
       >
-        保存
+        {{ $t('保存') }}
       </UiButton>
     </template>
   </UiModal>

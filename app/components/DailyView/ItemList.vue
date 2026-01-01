@@ -9,13 +9,15 @@ import ItemCard from '~/components/shared/ItemCard.vue'
 defineProps<{
   items: Item[]
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <section class="item-list">
     <h2>
       <Icon name="mdi:format-list-bulleted" />
-      アイテム一覧
+      {{ $t('アイテム一覧') }}
     </h2>
     <div
       v-if="items.length === 0"
@@ -25,7 +27,7 @@ defineProps<{
         name="mdi:inbox-outline"
         class="empty-icon"
       />
-      <p>この日のアイテムはありません</p>
+      <p>{{ $t('この日のアイテムはありません') }}</p>
     </div>
     <div
       v-else

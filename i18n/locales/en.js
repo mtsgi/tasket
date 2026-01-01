@@ -294,10 +294,50 @@ export default {
 
   // Calendar display settings
   'カレンダー表示設定': 'Calendar Display Settings',
+  'カレンダーに表示する項目を選択してください': 'Select items to display on the calendar',
   '収入合計を表示': 'Show Total Income',
   '支出合計を表示': 'Show Total Expenses',
   'メインタスクを表示': 'Show Main Task',
   'タスク数を表示': 'Show Task Count',
+  'その日のメインタスクを表示': 'Show main task of the day',
+  'タスクの合計数を表示': 'Show total task count',
+
+  // Item List
+  'アイテム一覧': 'Item List',
+  'この日のアイテムはありません': 'No items for this day',
+
+  // Item Edit
+  'アイテムを編集': 'Edit Item',
+  'このアイテムを削除しますか？': 'Are you sure you want to delete this item?',
+  '予定時刻': 'Scheduled Time',
+  '実行時刻（任意）': 'Execution Time (Optional)',
+  '実行時刻をクリア': 'Clear Execution Time',
+
+  // Preset Manager
+  'プリセット管理': 'Preset Management',
+  '新規プリセット': 'New Preset',
+  'よく使うタスクをプリセットとして保存できます。時刻とタイトルを設定して、簡単にタスクを作成しましょう。':
+    'Save frequently used tasks as presets. Set time and title to create tasks easily.',
+  'まだプリセットがありません': 'No presets yet',
+  'よく使うタスクをプリセットとして登録すると、簡単にタスクを作成できるようになります。':
+    'Register frequently used tasks as presets to create tasks more easily.',
+  'プリセットの保存に失敗しました': 'Failed to save preset',
+  'プリセットの削除に失敗しました': 'Failed to delete preset',
+  '「{title}」を削除しますか？': 'Delete "{title}"?',
+  'プリセットを編集': 'Edit Preset',
+  'プリセット名': 'Preset Name',
+  'プリセット名を入力': 'Enter preset name',
+  '時刻': 'Time',
+
+  // Background Settings
+  'なし': 'None',
+  'グラデーション 1': 'Gradient 1',
+  'グラデーション 2': 'Gradient 2',
+  'グラデーション 3': 'Gradient 3',
+  '自然 1': 'Nature 1',
+  '自然 2': 'Nature 2',
+  '画像ファイルを選択してください': 'Please select an image file',
+  'ファイルサイズは5MB以下にしてください': 'File size must be 5MB or less',
 
   // Error messages
   'エラーが発生しました': 'An error occurred',
