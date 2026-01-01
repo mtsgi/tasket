@@ -136,7 +136,7 @@ async function handleSubmit() {
       >
         <UiDropdown
           :show="showPresetDropdown"
-          :empty-message="type === 'todo' ? 'TODOのプリセットがありません' : type === 'expense' ? '支出のプリセットがありません' : '収入のプリセットがありません'"
+          :empty-message="type === 'todo' ? $t('TODOのプリセットがありません') : type === 'expense' ? $t('支出のプリセットがありません') : $t('収入のプリセットがありません')"
           @toggle="togglePresetDropdown"
         >
           <template #trigger>
@@ -145,7 +145,7 @@ async function handleSubmit() {
               block
             >
               <Icon name="mdi:bookmark-outline" />
-              プリセットから選択
+              {{ $t('プリセットから選択') }}
               <Icon
                 :name="showPresetDropdown ? 'mdi:chevron-up' : 'mdi:chevron-down'"
                 class="dropdown-icon"
@@ -196,7 +196,7 @@ async function handleSubmit() {
             @click="selectType('expense')"
           >
             <Icon name="mdi:cart-outline" />
-            支出
+            {{ $t('支出') }}
           </UiButton>
           <UiButton
             variant="secondary"
@@ -205,7 +205,7 @@ async function handleSubmit() {
             @click="selectType('income')"
           >
             <Icon name="mdi:wallet-plus-outline" />
-            収入
+            {{ $t('収入') }}
           </UiButton>
         </div>
       </div>
@@ -223,7 +223,7 @@ async function handleSubmit() {
           id="title"
           v-model="title"
           :suggestions="autocompleteSuggestions"
-          placeholder="アイテム名を入力"
+          :placeholder="$t('アイテム名を入力')"
           required
         />
       </div>
@@ -234,7 +234,7 @@ async function handleSubmit() {
           id="notes"
           v-model="notes"
           class="form-control textarea"
-          placeholder="備考（任意）"
+          :placeholder="$t('備考（任意）')"
           rows="2"
         />
       </div>
@@ -243,13 +243,13 @@ async function handleSubmit() {
         v-if="type !== 'todo'"
         class="form-group"
       >
-        <label for="amount">金額</label>
+        <label for="amount">{{ $t('金額') }}</label>
         <UiInput
           id="amount"
           v-model="amount"
           type="number"
           :min="0"
-          placeholder="金額を入力"
+          :placeholder="$t('金額を入力')"
         />
       </div>
 
@@ -260,7 +260,7 @@ async function handleSubmit() {
         :disabled="isSubmitting || !title.trim()"
       >
         <Icon name="mdi:plus" />
-        追加
+        {{ $t('追加') }}
       </UiButton>
     </form>
   </section>

@@ -8,6 +8,7 @@ import { formatYearMonth, formatDisplayYearMonth, addMonths } from '~/utils/date
 import type { Routine } from '~/types/item'
 
 const routinesStore = useRoutinesStore()
+const { t } = useI18n()
 
 // 現在選択中の年月
 const currentYearMonth = ref(formatYearMonth(new Date()))
@@ -167,7 +168,7 @@ async function copyFromPreviousMonth() {
           <UiInput
             v-model="editTitle"
             type="text"
-            placeholder="日課のタイトル"
+            :placeholder="$t('日課のタイトル')"
             @keydown.enter="saveEdit"
             @keydown.escape="cancelEdit"
           />
@@ -213,7 +214,7 @@ async function copyFromPreviousMonth() {
       v-else
       class="routine-manager__empty"
     >
-      この月の日課はありません
+      {{ $t('この月の日課はありません') }}
     </p>
 
     <!-- 新規日課追加 -->
@@ -221,7 +222,7 @@ async function copyFromPreviousMonth() {
       <UiInput
         v-model="newRoutineTitle"
         type="text"
-        placeholder="新しい日課を追加..."
+        :placeholder="$t('新しい日課を追加...')"
         @keydown.enter="addNewRoutine"
       />
       <UiButton
@@ -230,7 +231,7 @@ async function copyFromPreviousMonth() {
         @click="addNewRoutine"
       >
         <Icon name="mdi:plus" />
-        追加
+        {{ $t('追加') }}
       </UiButton>
     </div>
 
@@ -242,7 +243,7 @@ async function copyFromPreviousMonth() {
         @click="copyFromPreviousMonth"
       >
         <Icon name="mdi:content-copy" />
-        前月の日課をコピー
+        {{ $t('前月の日課をコピー') }}
       </UiButton>
     </div>
   </div>

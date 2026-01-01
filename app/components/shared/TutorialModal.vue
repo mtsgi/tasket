@@ -11,7 +11,12 @@ const { t } = useI18n()
 
 // 現在のステップ情報
 const currentStepData = computed(() => {
-  return tutorialSteps[tutorialStore.currentStep] || tutorialSteps[0]
+  const step = tutorialSteps[tutorialStore.currentStep] || tutorialSteps[0]
+  return {
+    title: t(step.titleKey),
+    description: t(step.descriptionKey),
+    icon: step.icon,
+  }
 })
 
 // 進捗状況
@@ -111,7 +116,7 @@ function goToStep(index: number) {
               :key="index"
               class="step-dot"
               :class="{ active: index === tutorialStore.currentStep }"
-              :aria-label="$t('ステップ {step}: {title}', { step: index + 1, title: step.title })"
+              :aria-label="$t('ステップ {step}: {title}', { step: index + 1, title: $t(step.titleKey) })"
               @click="goToStep(index)"
             />
           </div>
