@@ -26,6 +26,10 @@ export default defineNuxtConfig({
     defaultLocale: 'ja',
     strategy: 'no_prefix',
     detectBrowserLanguage: false,
+    compilation: {
+      strictMessage: false,
+      escapeHtml: false,
+    },
   },
   app: {
     head: {
