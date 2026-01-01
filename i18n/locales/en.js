@@ -1,0 +1,373 @@
+/**
+ * English locale file
+ * English translations for all application text
+ */
+export default {
+  // Common
+  '読み込み中': 'Loading...',
+  '戻る': 'Back',
+  '保存': 'Save',
+  '削除': 'Delete',
+  'キャンセル': 'Cancel',
+  '追加': 'Add',
+  '編集': 'Edit',
+  '完了': 'Complete',
+  '確認': 'Confirm',
+  '閉じる': 'Close',
+  '設定': 'Settings',
+  'メニュー': 'Menu',
+  '検索': 'Search',
+
+  // Item types
+  'TODO': 'TODO',
+  '収入': 'Income',
+  '支出': 'Expense',
+  'やること': 'Tasks',
+
+  // Menu screen
+  'チュートリアル': 'Tutorial',
+  'チュートリアルを見る': 'View Tutorial',
+  'Tasketの使い方や機能を確認できます。いつでも見直すことができます。':
+    'Learn how to use Tasket and explore its features. You can review it anytime.',
+  'アプリ設定': 'App Settings',
+  'ダークモード、背景画像などの表示設定を変更できます。':
+    'Change display settings such as dark mode and background image.',
+  '設定を開く': 'Open Settings',
+  '日課管理': 'Routine Management',
+  '毎日繰り返し行う習慣やタスクを月ごとに設定できます。':
+    'Set up daily habits and tasks on a monthly basis.',
+  'データ管理': 'Data Management',
+  'アプリのデータをJSONファイルとしてバックアップ・復元できます。':
+    'Back up and restore app data as JSON files.',
+  'エクスポート': 'Export',
+  'インポート': 'Import',
+  'インポート中': 'Importing...',
+  'サンプルデータを追加': 'Add Sample Data',
+  'サンプルデータ追加中': 'Adding Sample Data...',
+  '既にデータが存在するため、サンプルデータを追加できません':
+    'Cannot add sample data as data already exists',
+  'サンプルデータには、TODO・収入・支出・日課・プリセットの例が含まれます':
+    'Sample data includes examples of TODOs, income, expenses, routines, and presets',
+  '危険な操作': 'Danger Zone',
+  'すべてのデータを削除': 'Delete All Data',
+  'アプリ情報': 'App Information',
+  'TODO・家計簿・カレンダー統合ライフマネジメントPWAアプリケーション':
+    'Integrated Life Management PWA: TODO, Budget, and Calendar',
+  '権利表記': 'Credits',
+  'ライセンス': 'License',
+  '使用技術': 'Technologies',
+  'オープンソースライセンス': 'Open Source Licenses',
+  'このアプリケーションは多くのOSSモジュールを使用しています。':
+    'This application uses many open source modules.',
+  'OSSライセンスを表示': 'View OSS Licenses',
+
+  // Notification messages
+  'データのエクスポートが完了しました': 'Data export completed',
+  'エクスポートに失敗しました': 'Export failed',
+  '{count}件のアイテムをインポートしました': '{count} items imported',
+  'インポートに失敗しました': 'Import failed',
+  '無効なファイル形式です': 'Invalid file format',
+  'すべてのデータを削除しました': 'All data has been deleted',
+  'データの削除に失敗しました': 'Failed to delete data',
+  'サンプルデータを追加しました（アイテム: {itemsCount}件、日課: {routinesCount}件、プリセット: {presetsCount}件）':
+    'Sample data added (Items: {itemsCount}, Routines: {routinesCount}, Presets: {presetsCount})',
+  'サンプルデータの追加に失敗しました': 'Failed to add sample data',
+
+  // Confirmation dialogs
+  '本当にすべてのデータを削除しますか？\nこの操作は取り消せません。\n事前にエクスポートすることをお勧めします。':
+    'Are you sure you want to delete all data?\nThis action cannot be undone.\nWe recommend exporting your data first.',
+  '現在{count}件のアイテムがあります。\nインポートすると{importCount}件のアイテムが追加されます。\n続行しますか？':
+    'You currently have {count} items.\n{importCount} items will be added by importing.\nDo you want to continue?',
+
+  // Settings screen
+  '表示設定': 'Display Settings',
+  'ダークモード': 'Dark Mode',
+  '画面を暗い色調で表示します': 'Display the screen in dark colors',
+  '日付変更線': 'Date Change Line',
+  '日付変更線を設定すると、指定した時刻から翌日同時刻の直前までを1日として扱います。深夜作業が多い場合に便利です。':
+    'Set a date change line to treat the period from a specified time to just before the same time the next day as one day. Useful for late-night work.',
+  '日付変更線の時刻': 'Date Change Line Time',
+  '時': 'h',
+  '（通常の日付変更）': '(Normal date change)',
+  '（当日{hour}時〜翌日{nextHour}時台）': '(Today {hour}:00 to tomorrow {nextHour}:59)',
+  '例: 4時に設定した場合、12月12日は当日4:00から翌日3:59までを指します':
+    'Example: If set to 4:00, December 12 refers to the period from 4:00 on the 12th to 3:59 on the 13th',
+  'セキュリティ': 'Security',
+  'PINコードまたは生体認証でアプリをロックできます':
+    'Lock the app with a PIN code or biometric authentication',
+  'ロック機能を有効にすると、アプリ起動時にPINコードの入力が必要になります。':
+    'When lock is enabled, a PIN code will be required when launching the app.',
+  'PINコードを設定': 'Set PIN Code',
+  'ロック機能': 'Lock Function',
+  '有効': 'Enabled',
+  '生体認証': 'Biometric Authentication',
+  '登録済み - 指紋認証・顔認証を使用する': 'Registered - Use fingerprint or face authentication',
+  '指紋認証・顔認証を使用する': 'Use fingerprint or face authentication',
+  'ロック機能を無効化': 'Disable Lock',
+  'ロック機能を無効化しますか？\nPINコードもリセットされます。':
+    'Disable the lock function?\nYour PIN code will also be reset.',
+  'ロック機能を無効化しました': 'Lock function disabled',
+  '背景画像': 'Background Image',
+  'アプリの背景に表示する画像を選択できます': 'Select an image to display as the app background',
+  'なし': 'None',
+  'グラデーション 1': 'Gradient 1',
+  'グラデーション 2': 'Gradient 2',
+  'グラデーション 3': 'Gradient 3',
+  '自然 1': 'Nature 1',
+  '自然 2': 'Nature 2',
+  'カスタム画像': 'Custom Image',
+  '画像ファイルを選択してください': 'Please select an image file',
+  'ファイルサイズは5MB以下にしてください': 'File size must be 5MB or less',
+  '言語': 'Language',
+  'アプリの表示言語を選択できます': 'Select the display language for the app',
+  '日本語': 'Japanese',
+  '英語': 'English',
+
+  // PIN setup modal
+  'PINコード設定': 'PIN Code Setup',
+  'PINコードを入力してください（4桁以上）': 'Enter a PIN code (4 digits or more)',
+  'もう一度PINコードを入力してください': 'Enter the PIN code again',
+  'PINコードは4桁以上で入力してください': 'PIN code must be 4 digits or more',
+  'PINコードが一致しません': 'PIN codes do not match',
+  'PINコードを設定しました': 'PIN code has been set',
+  'PIN設定に失敗しました': 'Failed to set PIN',
+  '生体認証を登録しました': 'Biometric authentication registered',
+  '生体認証の登録に失敗しました。デバイスが生体認証に対応しているか確認してください。':
+    'Failed to register biometric authentication. Please check if your device supports biometric authentication.',
+  'このブラウザは生体認証に対応していません': 'This browser does not support biometric authentication',
+
+  // Preset management
+  'プリセット管理': 'Preset Management',
+  'よく使うタスクをプリセットとして登録しておくと、簡単に追加できます':
+    'Register frequently used tasks as presets for easy addition',
+  '新しいプリセットを作成': 'Create New Preset',
+  'プリセットがありません': 'No presets',
+  'プリセット名': 'Preset Name',
+  '時刻': 'Time',
+  '金額': 'Amount',
+  '備考': 'Notes',
+  'プリセットを作成': 'Create Preset',
+  'プリセットを更新': 'Update Preset',
+  'プリセットを削除しますか？': 'Delete this preset?',
+
+  // Item form
+  'タイトル': 'Title',
+  'タイトルを入力': 'Enter title',
+  '種別': 'Type',
+  '予定時刻': 'Scheduled Time',
+  'プリセットから選択': 'Select from Presets',
+
+  // Item card
+  '完了済み': 'Completed',
+  '未完了': 'Incomplete',
+  '円': 'yen',
+
+  // Routines
+  '未確認': 'Unconfirmed',
+  '未達成': 'Not Achieved',
+  '達成': 'Achieved',
+  '日課': 'Routine',
+  '日課を追加': 'Add Routine',
+  '日課がありません': 'No routines',
+  '日課のタイトル': 'Routine Title',
+  '日課を作成': 'Create Routine',
+  '日課を削除しますか？': 'Delete this routine?',
+
+  // Calendar
+  '月（単位）': 'Month',
+  '日（単位）': 'Day',
+  '月曜': 'Monday',
+  '火曜': 'Tuesday',
+  '水曜': 'Wednesday',
+  '木曜': 'Thursday',
+  '金曜': 'Friday',
+  '土曜': 'Saturday',
+  '日曜': 'Sunday',
+  '月（省略形）': 'Mon',
+  '火（省略形）': 'Tue',
+  '水（省略形）': 'Wed',
+  '木（省略形）': 'Thu',
+  '金（省略形）': 'Fri',
+  '土（省略形）': 'Sat',
+  '日（省略形）': 'Sun',
+
+  // Summary
+  '収支': 'Balance',
+  '残高': 'Total',
+  'タスク': 'Tasks',
+  '件': '',
+  '合計': 'Total',
+  '今月の収支': 'This Month\'s Balance',
+  '今月のタスク': 'This Month\'s Tasks',
+  '今日の収支': 'Today\'s Balance',
+  '今日のタスク': 'Today\'s Tasks',
+  '収入合計': 'Total Income',
+  '支出合計': 'Total Expenses',
+  '収支差額': 'Net Balance',
+  '完了タスク': 'Completed Tasks',
+  '未完了タスク': 'Pending Tasks',
+
+  // Navigation
+  '今日': 'Today',
+  '前月へ': 'Previous Month',
+  '翌月へ': 'Next Month',
+  '前日へ': 'Previous Day',
+  '翌日へ': 'Next Day',
+  '月表示へ': 'Monthly View',
+
+  // Charts
+  '収支推移': 'Balance Trends',
+  '単日': 'Daily',
+  '累積': 'Cumulative',
+  '単日表示': 'Daily View',
+  '累積表示': 'Cumulative View',
+  '折れ線グラフ': 'Line Chart',
+  '棒グラフ': 'Bar Chart',
+
+  // Routines
+  '日課': 'Routines',
+  '日課達成状況': 'Routine Achievement Status',
+  '達成': 'Achieved',
+  '未達成': 'Not Achieved',
+  '前の週': 'Previous Week',
+  '次の週': 'Next Week',
+
+  // Day Title
+  '今日やること': 'Today\'s Main Task',
+  '今日やること...': 'Today\'s main task...',
+  '今日やることを設定...': 'Set today\'s main task...',
+
+  // Expense ranking
+  '支出ランキング': 'Expense Ranking',
+  '今月の支出が多い項目': 'Top expenses this month',
+  '支出データがありません': 'No expense data',
+  '回': 'times',
+
+  // Search
+  '検索結果': 'Search Results',
+  'キーワードで検索': 'Search by keyword',
+  '該当するアイテムがありません': 'No matching items',
+  'アイテム検索': 'Search Items',
+  'キーワード': 'Keyword',
+  'タイトル、備考、金額で検索...': 'Search by title, note, or amount...',
+  '種別でフィルタ': 'Filter by Type',
+  'すべて': 'All',
+  '日付範囲': 'Date Range',
+  '開始日': 'Start Date',
+  '終了日': 'End Date',
+  '検索条件に一致するアイテムが見つかりません': 'No items match the search criteria',
+  'キーワード、種別、または日付範囲を指定して検索してください': 'Specify keyword, type, or date range to search',
+
+  // Tutorial
+  'チュートリアルをスキップしますか？\nメニュー画面からいつでも見直すことができます。': 'Skip tutorial?\nYou can review it anytime from the menu.',
+  'ステップ {step}: {title}': 'Step {step}: {title}',
+  '次へ': 'Next',
+  
+  // Lock Screen
+  'PINコードを入力してください': 'Enter PIN code',
+  '新しいPINコードを設定してください（{length}桁）': 'Set new PIN code ({length} digits)',
+  'PINコードを再入力してください': 'Re-enter PIN code',
+  'PINコードが一致しません': 'PIN codes do not match',
+  '数字を入力...': 'Enter digits...',
+  'PINコードが正しくありません（残り{count}回）': 'Incorrect PIN ({count} attempts remaining)',
+  '試行回数が上限に達しました': 'Maximum attempts reached',
+  '認証エラーが発生しました': 'Authentication error occurred',
+
+  // Item Form
+  'プリセットから選択': 'Select from presets',
+  'TODOのプリセットがありません': 'No TODO presets available',
+  '支出のプリセットがありません': 'No expense presets available',
+  '収入のプリセットがありません': 'No income presets available',
+  'アイテム名を入力': 'Enter item name',
+  '備考（任意）': 'Notes (optional)',
+  '金額': 'Amount',
+  '金額を入力': 'Enter amount',
+  '追加': 'Add',
+
+  // Routine Manager
+  '日課のタイトル': 'Routine title',
+  'この月の日課はありません': 'No routines for this month',
+  '新しい日課を追加...': 'Add new routine...',
+  '前月の日課をコピー': 'Copy routines from previous month',
+  'この日課を削除しますか？': 'Delete this routine?',
+  '前月に日課がありません': 'No routines in previous month',
+
+  // Calendar display settings
+  'カレンダー表示設定': 'Calendar Display Settings',
+  'カレンダーに表示する項目を選択してください': 'Select items to display on the calendar',
+  '収入合計を表示': 'Show Total Income',
+  '支出合計を表示': 'Show Total Expenses',
+  'メインタスクを表示': 'Show Main Task',
+  'タスク数を表示': 'Show Task Count',
+  'その日のメインタスクを表示': 'Show main task of the day',
+  'タスクの合計数を表示': 'Show total task count',
+
+  // Item List
+  'アイテム一覧': 'Item List',
+  'この日のアイテムはありません': 'No items for this day',
+
+  // Item Edit
+  'アイテムを編集': 'Edit Item',
+  'このアイテムを削除しますか？': 'Are you sure you want to delete this item?',
+  '予定時刻': 'Scheduled Time',
+  '実行時刻（任意）': 'Execution Time (Optional)',
+  '実行時刻をクリア': 'Clear Execution Time',
+
+  // Preset Manager
+  'プリセット管理': 'Preset Management',
+  '新規プリセット': 'New Preset',
+  'よく使うタスクをプリセットとして保存できます。時刻とタイトルを設定して、簡単にタスクを作成しましょう。':
+    'Save frequently used tasks as presets. Set time and title to create tasks easily.',
+  'まだプリセットがありません': 'No presets yet',
+  'よく使うタスクをプリセットとして登録すると、簡単にタスクを作成できるようになります。':
+    'Register frequently used tasks as presets to create tasks more easily.',
+  'プリセットの保存に失敗しました': 'Failed to save preset',
+  'プリセットの削除に失敗しました': 'Failed to delete preset',
+  '「{title}」を削除しますか？': 'Delete "{title}"?',
+  'プリセットを編集': 'Edit Preset',
+  'プリセット名': 'Preset Name',
+  'プリセット名を入力': 'Enter preset name',
+  '時刻': 'Time',
+
+  // Background Settings
+  'なし': 'None',
+  'グラデーション 1': 'Gradient 1',
+  'グラデーション 2': 'Gradient 2',
+  'グラデーション 3': 'Gradient 3',
+  '自然 1': 'Nature 1',
+  '自然 2': 'Nature 2',
+  '画像ファイルを選択してください': 'Please select an image file',
+  'ファイルサイズは5MB以下にしてください': 'File size must be 5MB or less',
+
+  // Error messages
+  'エラーが発生しました': 'An error occurred',
+  '不明なエラー': 'Unknown error',
+
+  // Tutorial Steps
+  'tutorial.welcome.title': 'Welcome to Tasket!',
+  'tutorial.welcome.description': '<p>Tasket is an all-in-one life management app that integrates TODO, expense tracking, and calendar.</p><p>This tutorial will introduce the main features and how to use them.</p><p>You can skip at any time and review from the menu.</p>',
+  
+  'tutorial.datamodel.title': 'Unified Data Model',
+  'tutorial.datamodel.description': '<p>Tasket\'s unique feature is <strong>managing TODOs, income, and expenses all as unified "items"</strong>.</p><p>All items have a "scheduled date/time" and are placed on the calendar.</p><ul><li><strong>TODO</strong>: For task management (amount is 0)</li><li><strong>Income</strong>: For recording salary and extra income</li><li><strong>Expense</strong>: For recording daily expenditures</li></ul>',
+  
+  'tutorial.monthview.title': 'Monthly View',
+  'tutorial.monthview.description': '<p>The <strong>Monthly View</strong> gives you an overview of the entire month.</p><ul><li><strong>Calendar</strong>: Displays item count and amount for each day</li><li><strong>Balance Trend Chart</strong>: Visualizes daily balance changes</li><li><strong>Monthly Summary</strong>: Aggregates monthly balance and task counts</li><li><strong>Expense Ranking</strong>: See where your money goes at a glance</li><li><strong>Routine Achievement Grid</strong>: Check your daily habit progress</li></ul><p>Click on a date to navigate to the detailed view for that day.</p>',
+  
+  'tutorial.dayview.title': 'Daily View',
+  'tutorial.dayview.description': '<p>The <strong>Daily View</strong> allows detailed management of tasks and balance for a specific day.</p><ul><li><strong>Day Title</strong>: Set the main task for the day</li><li><strong>Week View Calendar</strong>: Quickly navigate to nearby dates</li><li><strong>Routine Checklist</strong>: Check off daily habits</li><li><strong>Daily Summary</strong>: Shows balance and task count for the day</li><li><strong>Item List</strong>: Manage items in chronological order</li></ul><p>Tap an item to edit details.</p>',
+  
+  'tutorial.routines.title': 'Routine Feature',
+  'tutorial.routines.description': '<p><strong>Routines</strong> manage habits and tasks that are repeated daily.</p><ul><li>Set routines per month</li><li>Record achievement status in 3 levels (unchecked, not achieved, achieved)</li><li>Visually check progress with achievement grid</li></ul><p>Configure from "Routine Manager" in the menu.</p>',
+  
+  'tutorial.presets.title': 'Preset Feature',
+  'tutorial.presets.description': '<p><strong>Presets</strong> save frequently used items as templates.</p><ul><li>Register recurring items (regular expenses, etc.)</li><li>Quickly recall when adding items</li><li>Time and amount are also saved, reducing input effort</li></ul><p>Save as preset from the item edit screen.</p>',
+  
+  'tutorial.data.title': 'Data Management',
+  'tutorial.data.description': '<p>Tasket data is stored in the browser\'s <strong>IndexedDB</strong>.</p><ul><li><strong>Export</strong>: Backup data as JSON file</li><li><strong>Import</strong>: Restore data from backup</li><li><strong>Sample Data</strong>: Add samples for first-time users</li></ul><p>Access from "Data Management" in the menu.</p><p><strong>※Note</strong>: Deleting browser data will also delete app data. Regular backups are recommended.</p>',
+  
+  'tutorial.features.title': 'Other Features',
+  'tutorial.features.description': '<ul><li><strong>Search</strong>: Cross-search all items</li><li><strong>Dark Mode</strong>: Switch from settings</li><li><strong>Background Image</strong>: Set your preferred image</li><li><strong>Date Change Line</strong>: Settings for late-night workers</li><li><strong>Calendar Display Settings</strong>: Customize monthly view display items</li><li><strong>Lock Feature</strong>: Protect app with PIN code</li></ul><p>Various customizations available from settings screen.</p>',
+  
+  'tutorial.start.title': 'Let\'s Get Started!',
+  'tutorial.start.description': '<p>That concludes the tutorial.</p><p>We recommend <strong>adding sample data</strong> first to try out the features.</p><p>Sample data includes examples of TODOs, income, expenses, routines, and presets.</p><p>You can add from the "Add Sample Data" button on the menu screen.</p><br><p>This tutorial can be reviewed anytime from the "Tutorial" button on the menu screen.</p><p><strong>Enjoy life management!</strong></p>',
+}

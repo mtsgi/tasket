@@ -22,6 +22,7 @@ const itemsStore = useItemsStore()
 const dayTitlesStore = useDayTitlesStore()
 const routinesStore = useRoutinesStore()
 const { calculateMonthlySummary, calculateExpenseRanking, calculateDailyTotals, getItemCountByDate } = useStatistics()
+const { t } = useI18n()
 
 const showCalendarSettings = ref(false)
 const monthRoutineLogs = ref<RoutineLog[]>([])
@@ -120,19 +121,19 @@ watch(yearMonthParam, async () => {
         @click="goToToday"
       >
         <Icon name="mdi:calendar-today" />
-        今日
+        {{ $t('今日') }}
       </button>
       <hr>
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="検索"
+        :aria-label="$t('検索')"
         @click="goToSearch"
       >
         <Icon name="mdi:magnify" />
       </button>
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="メニュー"
+        :aria-label="$t('メニュー')"
         @click="goToMenu"
       >
         <Icon name="mdi:menu" />
@@ -142,7 +143,7 @@ watch(yearMonthParam, async () => {
     <header class="monthly-header">
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="前月へ"
+        :aria-label="$t('前月へ')"
         @click="goToPreviousMonth"
       >
         <Icon name="mdi:chevron-left" />
@@ -150,7 +151,7 @@ watch(yearMonthParam, async () => {
       <h1>{{ displayYearMonth }}</h1>
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="翌月へ"
+        :aria-label="$t('翌月へ')"
         @click="goToNextMonth"
       >
         <Icon name="mdi:chevron-right" />
@@ -164,7 +165,7 @@ watch(yearMonthParam, async () => {
           @click="openCalendarSettings"
         >
           <Icon name="mdi:cog" />
-          表示設定
+          {{ $t('表示設定') }}
         </button>
       </div>
 

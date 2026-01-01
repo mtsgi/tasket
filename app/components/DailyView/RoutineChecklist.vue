@@ -13,6 +13,7 @@ const props = defineProps<{
 }>()
 
 const routinesStore = useRoutinesStore()
+const { t } = useI18n()
 
 // 現在の月の日課リスト
 const routines = computed(() => routinesStore.routines)
@@ -62,7 +63,7 @@ const totalCount = computed(() => routines.value.length)
   >
     <h2>
       <Icon name="mdi:checkbox-multiple-marked" />
-      日課
+      {{ $t('日課') }}
       <span class="routine-checklist__count">{{ achievedCount }} / {{ totalCount }}</span>
     </h2>
     <ul class="routine-checklist__list">

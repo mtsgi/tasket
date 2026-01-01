@@ -10,6 +10,7 @@ import type { Item, ItemType } from '~/types/item'
 
 const router = useRouter()
 const itemsStore = useItemsStore()
+const { t } = useI18n()
 
 // 検索キーワード
 const searchKeyword = ref('')
@@ -100,14 +101,14 @@ onMounted(() => {
     <header class="search-header">
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="戻る"
+        :aria-label="$t('戻る')"
         @click="goBack"
       >
         <Icon name="mdi:arrow-left" />
       </button>
       <h1>
         <Icon name="mdi:magnify" />
-        アイテム検索
+        {{ $t('アイテム検索') }}
       </h1>
     </header>
 
@@ -116,20 +117,20 @@ onMounted(() => {
       <div class="form-group">
         <label for="search-input">
           <Icon name="mdi:magnify" />
-          キーワード
+          {{ $t('キーワード') }}
         </label>
         <UiInput
           id="search-input"
           v-model="searchKeyword"
           type="text"
-          placeholder="タイトル、備考、金額で検索..."
+          :placeholder="$t('タイトル、備考、金額で検索...')"
         />
       </div>
 
       <div class="form-group">
         <label>
           <Icon name="mdi:filter" />
-          種別でフィルタ
+          {{ $t('種別でフィルタ') }}
         </label>
         <div class="type-filters">
           <button
@@ -138,7 +139,7 @@ onMounted(() => {
             @click="resetTypeFilter"
           >
             <Icon name="mdi:all-inclusive" />
-            すべて
+            {{ $t('すべて') }}
           </button>
           <button
             class="filter-btn"
@@ -146,7 +147,7 @@ onMounted(() => {
             @click="selectedType = 'todo'"
           >
             <Icon name="mdi:checkbox-marked-circle-outline" />
-            TODO
+            {{ $t('TODO') }}
           </button>
           <button
             class="filter-btn"
@@ -154,7 +155,7 @@ onMounted(() => {
             @click="selectedType = 'expense'"
           >
             <Icon name="mdi:cash-minus" />
-            支出
+            {{ $t('支出') }}
           </button>
           <button
             class="filter-btn"
@@ -162,7 +163,7 @@ onMounted(() => {
             @click="selectedType = 'income'"
           >
             <Icon name="mdi:cash-plus" />
-            収入
+            {{ $t('収入') }}
           </button>
         </div>
       </div>
@@ -170,19 +171,19 @@ onMounted(() => {
       <div class="form-group">
         <label>
           <Icon name="mdi:calendar-range" />
-          日付範囲
+          {{ $t('日付範囲') }}
         </label>
         <div class="date-range">
           <UiInput
             v-model="dateRangeStart"
             type="date"
-            placeholder="開始日"
+            :placeholder="$t('開始日')"
           />
           <span class="date-separator">〜</span>
           <UiInput
             v-model="dateRangeEnd"
             type="date"
-            placeholder="終了日"
+            :placeholder="$t('終了日')"
           />
         </div>
       </div>
@@ -196,9 +197,9 @@ onMounted(() => {
       <div class="results-header">
         <h2>
           <Icon name="mdi:format-list-bulleted" />
-          検索結果
+          {{ $t('検索結果') }}
         </h2>
-        <span class="result-count">{{ resultCount }}件</span>
+        <span class="result-count">{{ resultCount }}{{ $t('件') }}</span>
       </div>
 
       <div
@@ -209,7 +210,7 @@ onMounted(() => {
           name="mdi:inbox-outline"
           class="empty-icon"
         />
-        <p>検索条件に一致するアイテムが見つかりません</p>
+        <p>{{ $t('検索条件に一致するアイテムが見つかりません') }}</p>
       </div>
 
       <div
@@ -240,7 +241,7 @@ onMounted(() => {
         name="mdi:magnify"
         class="prompt-icon"
       />
-      <p>キーワード、種別、または日付範囲を指定して検索してください</p>
+      <p>{{ $t('キーワード、種別、または日付範囲を指定して検索してください') }}</p>
     </section>
   </div>
 </template>

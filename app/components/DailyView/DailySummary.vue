@@ -11,15 +11,15 @@ defineProps<{
   <section class="daily-summary card">
     <div class="summary-grid">
       <div class="summary-item">
-        <span class="label">収入</span>
+        <span class="label">{{ $t('収入') }}</span>
         <span class="amount amount-income">{{ formatCurrency(summary.income) }}</span>
       </div>
       <div class="summary-item">
-        <span class="label">支出</span>
+        <span class="label">{{ $t('支出') }}</span>
         <span class="amount amount-expense">{{ formatCurrency(summary.expense) }}</span>
       </div>
       <div class="summary-item">
-        <span class="label">収支</span>
+        <span class="label">{{ $t('収支') }}</span>
         <span
           class="amount amount-balance"
           :class="{ positive: summary.balance >= 0, negative: summary.balance < 0 }"
@@ -28,7 +28,7 @@ defineProps<{
         </span>
       </div>
       <div class="summary-item">
-        <span class="label">タスク</span>
+        <span class="label">{{ $t('タスク') }}</span>
         <span class="tasks">
           <span class="completed">{{ summary.completedTasks }}</span>
           /

@@ -8,6 +8,7 @@ import PinInput from '~/components/shared/PinInput.vue'
 
 const lockStore = useLockStore()
 const pinInputRef = ref<InstanceType<typeof PinInput> | null>(null)
+const { t } = useI18n()
 
 // UI状態
 const errorMessage = ref<string>('')
@@ -33,16 +34,16 @@ async function handlePinComplete(pin: string) {
       const remainingAttempts = lockStore.maxAttempts - lockStore.failedAttempts
 
       if (remainingAttempts > 0) {
-        errorMessage.value = `PINコードが正しくありません（残り${remainingAttempts}回）`
+        errorMessage.value = t('PINコードが正しくありません（残り{count}回）', { count: remainingAttempts })
       }
       else {
-        errorMessage.value = '試行回数が上限に達しました'
+        errorMessage.value = t('試行回数が上限に達しました')
       }
     }
   }
   catch {
     showError.value = true
-    errorMessage.value = '認証エラーが発生しました'
+    errorMessage.value = t('認証エラーが発生しました')
   }
   finally {
     isVerifying.value = false
@@ -133,7 +134,7 @@ onMounted(() => {
       </h1>
 
       <p class="lock-screen__subtitle">
-        PINコードを入力してください
+        {{ $t('PINコードを入力してください') }}
       </p>
 
       <!-- エラーメッセージ -->
@@ -176,7 +177,7 @@ onMounted(() => {
         class="lock-screen__blocked"
       >
         <Icon name="mdi:lock-alert" />
-        <p>試行回数が上限に達しました</p>
+        <p>{{ $t('試行回数が上限に達しました') }}</p>
         <p class="blocked-hint">
           アプリを再起動してください
         </p>

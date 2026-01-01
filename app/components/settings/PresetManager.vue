@@ -8,6 +8,7 @@ import type { Preset } from '~/types/item'
 import PresetFormModal from './PresetFormModal.vue'
 
 const presetsStore = usePresetsStore()
+const { t } = useI18n()
 
 // モーダルの状態
 const showPresetModal = ref(false)
@@ -65,7 +66,7 @@ async function handleSavePreset(data: {
   }
   catch (error) {
     console.error('プリセットの保存に失敗しました:', error)
-    alert('プリセットの保存に失敗しました')
+    alert(t('プリセットの保存に失敗しました'))
   }
 }
 
@@ -73,14 +74,14 @@ async function handleSavePreset(data: {
  * プリセットを削除
  */
 async function handleDeletePreset(preset: Preset) {
-  const confirmed = confirm(`「${preset.title}」を削除しますか？`)
+  const confirmed = confirm(t('「{title}」を削除しますか？', { title: preset.title }))
   if (confirmed) {
     try {
       await presetsStore.deletePresetById(preset.id)
     }
     catch (error) {
       console.error('プリセットの削除に失敗しました:', error)
-      alert('プリセットの削除に失敗しました')
+      alert(t('プリセットの削除に失敗しました'))
     }
   }
 }
@@ -115,19 +116,19 @@ function getTypeIcon(type: string): string {
     <div class="preset-header">
       <h2>
         <Icon name="mdi:bookmark-multiple-outline" />
-        プリセット管理
+        {{ $t('プリセット管理') }}
       </h2>
       <UiButton
         variant="primary"
         @click="openNewPresetModal"
       >
         <Icon name="mdi:plus" />
-        新規プリセット
+        {{ $t('新規プリセット') }}
       </UiButton>
     </div>
 
     <p class="section-description">
-      よく使うタスクをプリセットとして保存できます。時刻とタイトルを設定して、簡単にタスクを作成しましょう。
+      {{ $t('よく使うタスクをプリセットとして保存できます。時刻とタイトルを設定して、簡単にタスクを作成しましょう。') }}
     </p>
 
     <!-- プリセット一覧 -->
@@ -144,7 +145,7 @@ function getTypeIcon(type: string): string {
           <div class="preset-header-row">
             <div class="preset-type-badge">
               <Icon :name="getTypeIcon(preset.type)" />
-              {{ getTypeLabel(preset.type) }}
+              {{ $t(getTypeLabel(preset.type)) }}
             </div>
             <div class="preset-time">
               <Icon name="mdi:clock-outline" />
@@ -173,14 +174,14 @@ function getTypeIcon(type: string): string {
             @click="openEditPresetModal(preset)"
           >
             <Icon name="mdi:pencil" />
-            編集
+            {{ $t('編集') }}
           </UiButton>
           <UiButton
             variant="danger"
             @click="handleDeletePreset(preset)"
           >
             <Icon name="mdi:delete" />
-            削除
+            {{ $t('削除') }}
           </UiButton>
         </div>
       </div>
@@ -195,9 +196,9 @@ function getTypeIcon(type: string): string {
         name="mdi:bookmark-outline"
         class="empty-icon"
       />
-      <p>まだプリセットがありません</p>
+      <p>{{ $t('まだプリセットがありません') }}</p>
       <p class="empty-description">
-        よく使うタスクをプリセットとして登録すると、簡単にタスクを作成できるようになります。
+        {{ $t('よく使うタスクをプリセットとして登録すると、簡単にタスクを作成できるようになります。') }}
       </p>
     </div>
 

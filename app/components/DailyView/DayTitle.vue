@@ -11,6 +11,7 @@ const props = defineProps<{
 }>()
 
 const dayTitlesStore = useDayTitlesStore()
+const { t } = useI18n()
 
 // 編集モード状態
 const isEditing = ref(false)
@@ -81,7 +82,7 @@ function handleKeydown(event: KeyboardEvent) {
       <UiInput
         v-model="editTitle"
         type="text"
-        placeholder="今日やること..."
+        :placeholder="$t('今日やること...')"
         @keydown="handleKeydown"
       />
       <div class="day-title__actions">
@@ -89,14 +90,14 @@ function handleKeydown(event: KeyboardEvent) {
           variant="secondary"
           @click="cancelEdit"
         >
-          キャンセル
+          {{ $t('キャンセル') }}
         </UiButton>
         <UiButton
           variant="primary"
           @click="saveTitle"
         >
           <Icon name="mdi:check" />
-          保存
+          {{ $t('保存') }}
         </UiButton>
       </div>
     </div>
@@ -119,7 +120,7 @@ function handleKeydown(event: KeyboardEvent) {
         v-else
         class="day-title__placeholder"
       >
-        今日やることを設定...
+        {{ $t('今日やることを設定...') }}
       </span>
       <Icon
         name="mdi:pencil"

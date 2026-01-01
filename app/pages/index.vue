@@ -2,6 +2,7 @@
 import { formatYearMonth } from '~/utils/dateHelpers'
 
 const router = useRouter()
+const { t } = useI18n()
 
 onMounted(() => {
   const today = new Date()
@@ -12,6 +13,6 @@ onMounted(() => {
 
 <template>
   <div class="loading">
-    読み込み中...
+    {{ $t('読み込み中') }}...
   </div>
 </template>

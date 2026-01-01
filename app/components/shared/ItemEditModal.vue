@@ -15,6 +15,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n()
 const itemsStore = useItemsStore()
 
 // フォームの状態
@@ -88,7 +89,7 @@ async function handleSubmit() {
  * アイテム削除処理
  */
 async function handleDelete() {
-  if (confirm('このアイテムを削除しますか？')) {
+  if (confirm(t('このアイテムを削除しますか？'))) {
     await itemsStore.deleteItemById(props.item.id)
     emit('close')
   }
@@ -105,7 +106,7 @@ function clearExecutedTime() {
 <template>
   <UiModal
     :show="true"
-    title="アイテムを編集"
+    :title="$t('アイテムを編集')"
     @close="emit('close')"
   >
     <form
@@ -122,7 +123,7 @@ function clearExecutedTime() {
             @click="selectType('todo')"
           >
             <Icon name="mdi:checkbox-marked-outline" />
-            TODO
+            {{ $t('TODO') }}
           </UiButton>
           <UiButton
             variant="secondary"
@@ -131,7 +132,7 @@ function clearExecutedTime() {
             @click="selectType('expense')"
           >
             <Icon name="mdi:cart-outline" />
-            支出
+            {{ $t('支出') }}
           </UiButton>
           <UiButton
             variant="secondary"
@@ -140,14 +141,14 @@ function clearExecutedTime() {
             @click="selectType('income')"
           >
             <Icon name="mdi:wallet-plus-outline" />
-            収入
+            {{ $t('収入') }}
           </UiButton>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label for="edit-date">日付</label>
+          <label for="edit-date">{{ $t('日付') }}</label>
           <UiInput
             id="edit-date"
             v-model="date"
@@ -155,7 +156,7 @@ function clearExecutedTime() {
           />
         </div>
         <div class="form-group">
-          <label for="edit-time">予定時刻</label>
+          <label for="edit-time">{{ $t('予定時刻') }}</label>
           <UiInput
             id="edit-time"
             v-model="time"
@@ -167,8 +168,7 @@ function clearExecutedTime() {
       <!-- 実行時刻 -->
       <div class="form-group">
         <label for="edit-executed-time">
-          実行時刻
-          <span class="label-hint">（実際に行った時刻）</span>
+          {{ $t('実行時刻（任意）') }}
         </label>
         <div class="time-input-with-clear">
           <UiInput
@@ -182,7 +182,7 @@ function clearExecutedTime() {
             variant="secondary"
             icon
             class="btn-clear"
-            aria-label="クリア"
+            :aria-label="$t('実行時刻をクリア')"
             @click="clearExecutedTime"
           >
             <Icon name="mdi:close-circle" />
@@ -191,36 +191,36 @@ function clearExecutedTime() {
       </div>
 
       <div class="form-group">
-        <label for="edit-title">タイトル</label>
+        <label for="edit-title">{{ $t('タイトル') }}</label>
         <UiInput
           id="edit-title"
           v-model="title"
           type="text"
-          placeholder="アイテム名を入力"
+          :placeholder="$t('アイテム名を入力')"
           required
         />
       </div>
 
       <!-- 備考 -->
       <div class="form-group">
-        <label for="edit-notes">備考</label>
+        <label for="edit-notes">{{ $t('備考') }}</label>
         <textarea
           id="edit-notes"
           v-model="notes"
           class="form-control textarea"
-          placeholder="備考を入力"
+          :placeholder="$t('備考（任意）')"
           rows="2"
         />
       </div>
 
       <div class="form-group">
-        <label for="edit-amount">金額</label>
+        <label for="edit-amount">{{ $t('金額') }}</label>
         <UiInput
           id="edit-amount"
           v-model="amount"
           type="number"
           :min="0"
-          placeholder="金額を入力"
+          :placeholder="$t('金額を入力')"
           :disabled="type === 'todo'"
         />
       </div>
@@ -231,13 +231,13 @@ function clearExecutedTime() {
         @click="handleDelete"
       >
         <Icon name="mdi:delete" />
-        削除
+        {{ $t('削除') }}
       </UiButton>
       <UiButton
         variant="secondary"
         @click="emit('close')"
       >
-        キャンセル
+        {{ $t('キャンセル') }}
       </UiButton>
       <UiButton
         variant="primary"
@@ -245,7 +245,7 @@ function clearExecutedTime() {
         @click="handleSubmit"
       >
         <Icon name="mdi:content-save" />
-        保存
+        {{ $t('保存') }}
       </UiButton>
     </template>
   </UiModal>

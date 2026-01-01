@@ -6,8 +6,31 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@pinia/nuxt', '@vite-pwa/nuxt', '@nuxt/icon'],
+  modules: ['@nuxt/eslint', '@pinia/nuxt', '@vite-pwa/nuxt', '@nuxt/icon', '@nuxtjs/i18n'],
   devtools: { enabled: true },
+  i18n: {
+    locales: [
+      {
+        code: 'ja',
+        name: '日本語',
+        file: 'ja.js',
+      },
+      {
+        code: 'en',
+        name: 'English',
+        file: 'en.js',
+      },
+    ],
+    lazy: true,
+    langDir: 'locales',
+    defaultLocale: 'ja',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: false,
+    compilation: {
+      strictMessage: false,
+      escapeHtml: false,
+    },
+  },
   app: {
     head: {
       title: 'Tasket',

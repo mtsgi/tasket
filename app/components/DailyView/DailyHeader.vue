@@ -24,19 +24,19 @@ const emit = defineEmits<{
         @click="emit('goToMonth')"
       >
         <Icon name="mdi:calendar-month" />
-        月表示へ
+        {{ $t('月表示へ') }}
       </button>
       <hr>
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="検索"
+        :aria-label="$t('検索')"
         @click="emit('goToSearch')"
       >
         <Icon name="mdi:magnify" />
       </button>
       <button
         class="btn btn-secondary btn-icon menu-btn"
-        aria-label="メニュー"
+        :aria-label="$t('メニュー')"
         @click="emit('goToMenu')"
       >
         <Icon name="mdi:menu" />
@@ -45,7 +45,7 @@ const emit = defineEmits<{
     <div class="nav-row">
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="前日へ"
+        :aria-label="$t('前日へ')"
         @click="emit('previous')"
       >
         <Icon name="mdi:chevron-left" />
@@ -53,7 +53,7 @@ const emit = defineEmits<{
       <h1>{{ displayDate }}</h1>
       <button
         class="btn btn-secondary btn-icon"
-        aria-label="翌日へ"
+        :aria-label="$t('翌日へ')"
         @click="emit('next')"
       >
         <Icon name="mdi:chevron-right" />

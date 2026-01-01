@@ -15,7 +15,7 @@ defineProps<{
   <section class="expense-ranking card">
     <h2>
       <Icon name="mdi:podium" />
-      支出ランキング
+      {{ $t('支出ランキング') }}
     </h2>
     <div
       v-if="ranking.length === 0"
@@ -25,7 +25,7 @@ defineProps<{
         name="mdi:chart-timeline-variant-shimmer"
         class="empty-icon"
       />
-      <p>支出データがありません</p>
+      <p>{{ $t('支出データがありません') }}</p>
     </div>
     <ol
       v-else
@@ -39,7 +39,7 @@ defineProps<{
         <span class="rank">{{ index + 1 }}</span>
         <div class="item-info">
           <span class="title">{{ item.title }}</span>
-          <span class="count">{{ item.count }}回</span>
+          <span class="count">{{ item.count }}{{ $t('回') }}</span>
         </div>
         <span class="amount amount-expense">{{ formatCurrency(item.totalAmount) }}</span>
       </li>
