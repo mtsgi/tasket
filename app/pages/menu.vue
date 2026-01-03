@@ -436,10 +436,11 @@ onMounted(() => {
       </h2>
       <div class="app-info">
         <div class="app-logo">
-          <Icon
-            name="mdi:checkbox-marked-circle-plus-outline"
+          <img
+            alt="Tasket"
+            src="/icon_with_shadow.png"
             class="logo-icon"
-          />
+          >
         </div>
         <h3 class="app-name">
           Tasket
@@ -569,13 +570,10 @@ onMounted(() => {
   text-align: center;
   padding: 16px 0;
 
-  .app-logo {
-    margin-bottom: 12px;
-  }
-
   .logo-icon {
-    font-size: 64px;
-    color: #4a90d9;
+    width: 128px;
+    height: 128px;
+    object-fit: contain;
   }
 
   .app-name {

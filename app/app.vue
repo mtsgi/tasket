@@ -12,6 +12,31 @@ const lockStore = useLockStore()
 const tutorialStore = useTutorialStore()
 const { setLocale } = useI18n()
 
+// Service Workerの登録（本番環境のみ）
+if (import.meta.client && import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/sw.js')
+    .then((registration) => {
+      console.log('Service Worker registered:', registration.scope)
+
+      // 更新チェック
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // 新しいService Workerが利用可能
+              console.log('New Service Worker available')
+            }
+          })
+        }
+      })
+    })
+    .catch((error) => {
+      console.error('Service Worker registration failed:', error)
+    })
+}
+
 // 初期化時に設定を読み込む
 onMounted(async () => {
   await settingsStore.loadSettings()
