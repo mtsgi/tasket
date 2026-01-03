@@ -262,7 +262,7 @@ export default {
   'チュートリアルをスキップしますか？\nメニュー画面からいつでも見直すことができます。': 'Skip tutorial?\nYou can review it anytime from the menu.',
   'ステップ {step}: {title}': 'Step {step}: {title}',
   '次へ': 'Next',
-  
+
   // Lock Screen
   'PINコードを入力してください': 'Enter PIN code',
   '新しいPINコードを設定してください（{length}桁）': 'Set new PIN code ({length} digits)',
@@ -346,28 +346,28 @@ export default {
   // Tutorial Steps
   'tutorial.welcome.title': 'Welcome to Tasket!',
   'tutorial.welcome.description': '<p>Tasket is an all-in-one life management app that integrates TODO, expense tracking, and calendar.</p><p>This tutorial will introduce the main features and how to use them.</p><p>You can skip at any time and review from the menu.</p>',
-  
+
   'tutorial.datamodel.title': 'Unified Data Model',
   'tutorial.datamodel.description': '<p>Tasket\'s unique feature is <strong>managing TODOs, income, and expenses all as unified "items"</strong>.</p><p>All items have a "scheduled date/time" and are placed on the calendar.</p><ul><li><strong>TODO</strong>: For task management (amount is 0)</li><li><strong>Income</strong>: For recording salary and extra income</li><li><strong>Expense</strong>: For recording daily expenditures</li></ul>',
-  
+
   'tutorial.monthview.title': 'Monthly View',
   'tutorial.monthview.description': '<p>The <strong>Monthly View</strong> gives you an overview of the entire month.</p><ul><li><strong>Calendar</strong>: Displays item count and amount for each day</li><li><strong>Balance Trend Chart</strong>: Visualizes daily balance changes</li><li><strong>Monthly Summary</strong>: Aggregates monthly balance and task counts</li><li><strong>Expense Ranking</strong>: See where your money goes at a glance</li><li><strong>Routine Achievement Grid</strong>: Check your daily habit progress</li></ul><p>Click on a date to navigate to the detailed view for that day.</p>',
-  
+
   'tutorial.dayview.title': 'Daily View',
   'tutorial.dayview.description': '<p>The <strong>Daily View</strong> allows detailed management of tasks and balance for a specific day.</p><ul><li><strong>Day Title</strong>: Set the main task for the day</li><li><strong>Week View Calendar</strong>: Quickly navigate to nearby dates</li><li><strong>Routine Checklist</strong>: Check off daily habits</li><li><strong>Daily Summary</strong>: Shows balance and task count for the day</li><li><strong>Item List</strong>: Manage items in chronological order</li></ul><p>Tap an item to edit details.</p>',
-  
+
   'tutorial.routines.title': 'Routine Feature',
   'tutorial.routines.description': '<p><strong>Routines</strong> manage habits and tasks that are repeated daily.</p><ul><li>Set routines per month</li><li>Record achievement status in 3 levels (unchecked, not achieved, achieved)</li><li>Visually check progress with achievement grid</li></ul><p>Configure from "Routine Manager" in the menu.</p>',
-  
+
   'tutorial.presets.title': 'Preset Feature',
   'tutorial.presets.description': '<p><strong>Presets</strong> save frequently used items as templates.</p><ul><li>Register recurring items (regular expenses, etc.)</li><li>Quickly recall when adding items</li><li>Time and amount are also saved, reducing input effort</li></ul><p>Save as preset from the item edit screen.</p>',
-  
+
   'tutorial.data.title': 'Data Management',
   'tutorial.data.description': '<p>Tasket data is stored in the browser\'s <strong>IndexedDB</strong>.</p><ul><li><strong>Export</strong>: Backup data as JSON file</li><li><strong>Import</strong>: Restore data from backup</li><li><strong>Sample Data</strong>: Add samples for first-time users</li></ul><p>Access from "Data Management" in the menu.</p><p><strong>※Note</strong>: Deleting browser data will also delete app data. Regular backups are recommended.</p>',
-  
+
   'tutorial.features.title': 'Other Features',
   'tutorial.features.description': '<ul><li><strong>Search</strong>: Cross-search all items</li><li><strong>Dark Mode</strong>: Switch from settings</li><li><strong>Background Image</strong>: Set your preferred image</li><li><strong>Date Change Line</strong>: Settings for late-night workers</li><li><strong>Calendar Display Settings</strong>: Customize monthly view display items</li><li><strong>Lock Feature</strong>: Protect app with PIN code</li></ul><p>Various customizations available from settings screen.</p>',
-  
+
   'tutorial.start.title': 'Let\'s Get Started!',
   'tutorial.start.description': '<p>That concludes the tutorial.</p><p>We recommend <strong>adding sample data</strong> first to try out the features.</p><p>Sample data includes examples of TODOs, income, expenses, routines, and presets.</p><p>You can add from the "Add Sample Data" button on the menu screen.</p><br><p>This tutorial can be reviewed anytime from the "Tutorial" button on the menu screen.</p><p><strong>Enjoy life management!</strong></p>',
 }

@@ -50,7 +50,7 @@ const emit = defineEmits<{
   gap: 4px;
   padding: 8px 16px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -71,7 +71,7 @@ const emit = defineEmits<{
   }
 
   &--secondary {
-    background-color: transparent;
+    background-color: white;
     color: #333;
     border: 1px solid #e0e0e0;
 

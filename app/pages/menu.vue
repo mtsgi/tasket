@@ -3,18 +3,12 @@
  * メニュー画面
  * アプリ設定、データ管理（エクスポート・インポート）、日課管理、権利表記を提供します。
  */
-import { useItemsStore } from '~/stores/items'
-import { useDayTitlesStore } from '~/stores/dayTitles'
-import { usePresetsStore } from '~/stores/presets'
-import { useTutorialStore } from '~/stores/tutorial'
-import { useSettingsStore } from '~/stores/settings'
-import { useLockStore } from '~/stores/lock'
-import { getAllRoutines, getAllRoutineLogs, getAllDayTitles, getAllAppSettings } from '~/utils/db'
 import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
 
 const itemsStore = useItemsStore()
+const routinesStore = useRoutinesStore()
 const dayTitlesStore = useDayTitlesStore()
 const presetsStore = usePresetsStore()
 const tutorialStore = useTutorialStore()
@@ -442,10 +436,11 @@ onMounted(() => {
       </h2>
       <div class="app-info">
         <div class="app-logo">
-          <Icon
-            name="mdi:checkbox-marked-circle-plus-outline"
+          <img
+            alt="Tasket"
+            src="/icon_with_shadow.png"
             class="logo-icon"
-          />
+          >
         </div>
         <h3 class="app-name">
           Tasket
@@ -524,6 +519,11 @@ onMounted(() => {
     font-weight: 600;
     color: #666;
     margin-bottom: 12px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -532,6 +532,11 @@ onMounted(() => {
   color: #666;
   margin-bottom: 16px;
   line-height: 1.5;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+  }
 }
 
 .menu-buttons {
@@ -544,6 +549,11 @@ onMounted(() => {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #f0f0f0;
+
+  // ダークモード対応
+  .dark-mode & {
+    border-color: #444;
+  }
 
   h3 {
     display: flex;
@@ -560,13 +570,10 @@ onMounted(() => {
   text-align: center;
   padding: 16px 0;
 
-  .app-logo {
-    margin-bottom: 12px;
-  }
-
   .logo-icon {
-    font-size: 64px;
-    color: #4a90d9;
+    width: 128px;
+    height: 128px;
+    object-fit: contain;
   }
 
   .app-name {
@@ -579,12 +586,22 @@ onMounted(() => {
     font-size: 14px;
     color: #666;
     margin-bottom: 12px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 
   .app-description {
     font-size: 14px;
     color: #666;
     line-height: 1.5;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -592,6 +609,11 @@ onMounted(() => {
   .credit-item {
     padding: 12px 0;
     border-bottom: 1px solid #f0f0f0;
+
+    // ダークモード対応
+    .dark-mode & {
+      border-color: #444;
+    }
 
     &:last-child {
       border-bottom: none;
@@ -602,17 +624,32 @@ onMounted(() => {
       font-weight: 600;
       color: #666;
       margin-bottom: 4px;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
 
     p {
       font-size: 14px;
       color: #333;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #e0e0e0;
+      }
     }
 
     .oss-description {
       font-size: 14px;
       color: #666;
       margin-bottom: 12px;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
   }
 
@@ -630,6 +667,12 @@ onMounted(() => {
       border-radius: 12px;
       font-size: 12px;
       color: #666;
+
+      // ダークモード対応
+      .dark-mode & {
+        background-color: #333;
+        color: #b0b0b0;
+      }
     }
   }
 }
@@ -672,6 +715,7 @@ onMounted(() => {
   .dark-mode & {
     background-color: rgba(74, 144, 217, 0.15);
     color: #b0b0b0;
+    border-color: rgba(74, 144, 217, 0.4);
   }
 }
 

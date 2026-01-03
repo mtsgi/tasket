@@ -256,6 +256,11 @@ const chartOptions = {
     align-items: center;
     gap: 6px;
     margin: 0;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 
   .chart-controls {
@@ -274,6 +279,11 @@ const chartOptions = {
     background: #f5f5f5;
     border-radius: 6px;
     padding: 3px;
+
+    // ダークモード対応
+    .dark-mode & {
+      background: #333;
+    }
   }
 
   .control-btn {
@@ -293,6 +303,15 @@ const chartOptions = {
     justify-content: center;
     gap: 4px;
 
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+
+      &:hover {
+        background: #444;
+      }
+    }
+
     &:hover {
       background: #e0e0e0;
     }
@@ -301,6 +320,12 @@ const chartOptions = {
       background: #fff;
       color: #333;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+      // ダークモード対応
+      .dark-mode & {
+        background: #2a2a2a;
+        color: #e0e0e0;
+      }
     }
 
     @media (max-width: 380px) {

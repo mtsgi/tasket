@@ -281,6 +281,11 @@ onMounted(() => {
       font-weight: 600;
       color: #666;
       margin-bottom: 8px;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
   }
 
@@ -334,6 +339,11 @@ onMounted(() => {
       font-size: 14px;
       font-weight: 500;
       flex-shrink: 0;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
 
     @media (max-width: 600px) {
@@ -361,6 +371,11 @@ onMounted(() => {
       font-size: 16px;
       font-weight: 600;
       color: #666;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
 
     .result-count {
@@ -381,12 +396,22 @@ onMounted(() => {
       font-size: 64px;
       color: #ccc;
       margin-bottom: 16px;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #555;
+      }
     }
 
     p {
       font-size: 14px;
       color: #666;
       line-height: 1.5;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
   }
 
@@ -418,12 +443,22 @@ onMounted(() => {
     font-size: 80px;
     color: #ddd;
     margin-bottom: 16px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #555;
+    }
   }
 
   p {
     font-size: 14px;
     color: #999;
     line-height: 1.6;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #888;
+    }
   }
 }
 

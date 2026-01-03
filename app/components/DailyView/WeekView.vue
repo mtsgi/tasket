@@ -4,9 +4,6 @@
  * 選択した日を含む週のカレンダーを表示し、各日をクリックすることで
  * その日の詳細ビューに遷移できます。
  */
-import { formatDate, addDays, isToday } from '~/utils/dateHelpers'
-import { useStatistics } from '~/composables/useStatistics'
-import { useItemsStore } from '~/stores/items'
 import dayjs from 'dayjs'
 
 // Props: 現在選択されている日付
@@ -61,8 +58,8 @@ const weekDays = computed(() => {
  * 週の表示ラベルを生成（例: 12月1日〜7日）
  */
 const weekLabel = computed(() => {
-  const firstDay = weekDays.value[0]
-  const lastDay = weekDays.value[6]
+  const firstDay = weekDays.value[0]!
+  const lastDay = weekDays.value[6]!
   const firstDate = dayjs(firstDay.date)
   const lastDate = dayjs(lastDay.date)
 
@@ -151,11 +148,6 @@ function handleDayClick(dateString: string) {
 </template>
 
 <style lang="scss" scoped>
-/* 週表示のカードコンテナ */
-.week-view {
-  margin-bottom: 16px;
-}
-
 /* 週ナビゲーションヘッダー */
 .week-header {
   display: flex;
@@ -170,6 +162,11 @@ function handleDayClick(dateString: string) {
   font-size: 14px;
   font-weight: 500;
   color: #666;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+  }
 }
 
 /* 週カレンダーグリッド */
@@ -192,6 +189,11 @@ function handleDayClick(dateString: string) {
 
   &:hover {
     background-color: #f5f7fa;
+
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #333;
+    }
   }
 
   /* 今日のハイライト */
@@ -247,6 +249,11 @@ function handleDayClick(dateString: string) {
   font-weight: 600;
   color: #999;
   margin-bottom: 4px;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #888;
+  }
 }
 
 /* 日付の数字 */
@@ -254,6 +261,11 @@ function handleDayClick(dateString: string) {
   font-size: 16px;
   font-weight: 500;
   color: #333;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #e0e0e0;
+  }
 }
 
 /* アイテム数インジケーター */

@@ -274,6 +274,11 @@ async function handleSubmit() {
     margin-bottom: 16px;
     color: #666;
 
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
+
     @media (max-width: 600px) {
       font-size: 14px;
       margin-bottom: 12px;

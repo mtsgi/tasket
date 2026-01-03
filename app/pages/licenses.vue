@@ -103,6 +103,17 @@ onMounted(async () => {
     text-decoration: none;
     transition: all 0.2s ease;
 
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #333;
+      color: #b0b0b0;
+
+      &:hover {
+        background-color: #444;
+        color: #e0e0e0;
+      }
+    }
+
     &:hover {
       background-color: #e8ecf1;
       color: #333;
@@ -127,6 +138,11 @@ onMounted(async () => {
     color: #666;
     line-height: 1.5;
     margin: 0;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -144,6 +160,11 @@ onMounted(async () => {
       margin-top: 12px;
       font-size: 14px;
       color: #666;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
   }
 
@@ -170,6 +191,11 @@ onMounted(async () => {
       white-space: pre-wrap;
       word-wrap: break-word;
       margin: 0;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #e0e0e0;
+      }
     }
   }
 }

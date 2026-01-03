@@ -75,6 +75,7 @@ const emit = defineEmits<{
   justify-content: flex-end;
   width: 100%;
   margin-bottom: 8px;
+  gap: 8px;
 
   hr {
     flex-grow: 1;

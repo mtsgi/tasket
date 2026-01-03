@@ -10,8 +10,18 @@ $background-color: #f5f7fa;
 $card-background: #ffffff;
 $text-color: #333333;
 $text-secondary: #666666;
+$text-tertiary: #999999;
 $border-color: #e0e0e0;
 $shadow-color: rgba(0, 0, 0, 0.1);
+
+// ダークモードカラー
+$dark-background: #1a1a1a;
+$dark-card-background: #2a2a2a;
+$dark-text-color: #e0e0e0;
+$dark-text-secondary: #b0b0b0;
+$dark-text-tertiary: #888888;
+$dark-border-color: #444444;
+$dark-shadow-color: rgba(0, 0, 0, 0.3);
 
 // Type colors
 $todo-color: #2196f3;
@@ -90,8 +100,9 @@ a {
 
 // Card component
 .card {
-  background: $card-background;
-  border-radius: $border-radius-md;
+  background: rgba($card-background, 0.75);
+  backdrop-filter: blur(10px);
+  border-radius: $border-radius-lg;
   box-shadow: 0 2px 8px $shadow-color;
   padding: $spacing-md;
   margin-bottom: $spacing-md;
@@ -105,7 +116,7 @@ a {
   gap: $spacing-xs;
   padding: $spacing-sm $spacing-md;
   border: none;
-  border-radius: $border-radius-sm;
+  border-radius: $border-radius-md;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -126,7 +137,7 @@ a {
   }
   
   &-secondary {
-    background-color: transparent;
+    background-color: white;
     color: $text-color;
     border: 1px solid $border-color;
     
@@ -372,7 +383,7 @@ a {
   
   .card {
     padding: $spacing-sm;
-    border-radius: $border-radius-sm;
+    border-radius: $border-radius-lg;
     margin-bottom: $spacing-sm;
   }
 
@@ -444,17 +455,18 @@ a {
 
 // Dark mode styles
 .dark-mode {
-  background-color: #1a1a1a;
-  color: #e0e0e0;
+  background-color: $dark-background;
+  color: $dark-text-color;
 
   .page {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+    background-color: $dark-background;
+    color: $dark-text-color;
   }
 
   .card {
-    background-color: #2a2a2a;
-    color: #e0e0e0;
+    background-color: $dark-card-background;
+    color: $dark-text-color;
+    box-shadow: 0 2px 8px $dark-shadow-color;
   }
 
   // フォーム要素（汎用）
@@ -464,43 +476,49 @@ a {
   input[type="time"],
   input[type="date"],
   textarea {
-    background-color: #2a2a2a;
-    color: #e0e0e0;
-    border-color: #444;
+    background-color: $dark-card-background;
+    color: $dark-text-color;
+    border-color: $dark-border-color;
 
     &::placeholder {
-      color: #888;
+      color: $dark-text-tertiary;
+    }
+
+    &:focus {
+      border-color: $primary-color;
     }
   }
+
+  // セカンダリボタンのダークモード対応は各コンポーネントで対応済み
 
   // ページ固有のスタイル
   .section-description,
   .setting-info p,
   .background-label {
-    color: #b0b0b0;
+    color: $dark-text-secondary;
   }
 
   .setting-info h3 {
-    color: #e0e0e0;
+    color: $dark-text-color;
   }
 
   h1, h2, h3, h4 {
-    color: #b0b0b0;
+    color: $dark-text-secondary;
   }
 
   .background-preview {
-    border-color: #444;
+    border-color: $dark-border-color;
     background-color: #333;
   }
 
   .notification.success {
     background-color: rgba(76, 175, 80, 0.2);
-    border-color: #4caf50;
+    border-color: $success-color;
   }
 
   .notification.error {
     background-color: rgba(244, 67, 54, 0.2);
-    border-color: #f44336;
+    border-color: $danger-color;
   }
 
   .toggle-switch .slider {
@@ -509,10 +527,20 @@ a {
 
   // 設定画面のテキスト要素
   .settings-header h1 {
-    color: #e0e0e0;
+    color: $dark-text-color;
   }
 
   .settings-section h2 {
-    color: #b0b0b0;
+    color: $dark-text-secondary;
+  }
+
+  // モバイル版モーダルの背景色調整
+  @media (max-width: 600px) {
+    .modal {
+      &-header,
+      &-footer {
+        background: $dark-card-background;
+      }
+    }
   }
 }

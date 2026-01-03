@@ -57,6 +57,11 @@ defineProps<{
     display: flex;
     align-items: center;
     gap: 6px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -72,6 +77,11 @@ defineProps<{
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
+
+  // ダークモード対応
+  .dark-mode & {
+    border-color: #444;
+  }
 
   &:last-child {
     border-bottom: none;
@@ -90,6 +100,12 @@ defineProps<{
   font-weight: 600;
   color: #666;
   flex-shrink: 0;
+
+  // ダークモード対応
+  .dark-mode & {
+    background-color: #333;
+    color: #b0b0b0;
+  }
 
   .ranking-item:nth-child(1) & {
     background-color: #ffd700;
@@ -122,6 +138,11 @@ defineProps<{
   .count {
     font-size: 12px;
     color: #666;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -137,6 +158,11 @@ defineProps<{
     font-size: 48px;
     color: #ccc;
     margin-bottom: 8px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #555;
+    }
   }
 }
 

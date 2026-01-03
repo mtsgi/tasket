@@ -181,7 +181,7 @@ function handleClick() {
 
   // モバイル対応
   @media (max-width: 600px) {
-    padding: 12px 8px;
+    padding: 4px;
 
     &__icon {
       font-size: 28px;

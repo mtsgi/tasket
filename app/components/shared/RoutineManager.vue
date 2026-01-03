@@ -3,12 +3,9 @@
  * 日課管理コンポーネント
  * 月ごとの日課の追加・編集・削除を行うコンポーネント
  */
-import { useRoutinesStore } from '~/stores/routines'
-import { formatYearMonth, formatDisplayYearMonth, addMonths } from '~/utils/dateHelpers'
 import type { Routine } from '~/types/item'
 
 const routinesStore = useRoutinesStore()
-const { t } = useI18n()
 
 // 現在選択中の年月
 const currentYearMonth = ref(formatYearMonth(new Date()))

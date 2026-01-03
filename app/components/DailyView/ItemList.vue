@@ -54,6 +54,11 @@ const { t } = useI18n()
     display: flex;
     align-items: center;
     gap: 6px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -67,6 +72,11 @@ const { t } = useI18n()
     font-size: 48px;
     color: #ccc;
     margin-bottom: 8px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #555;
+    }
   }
 }
 </style>

@@ -227,6 +227,11 @@ onMounted(() => {
     color: #666;
     margin-bottom: 16px;
 
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
+
     @media (max-width: 600px) {
       font-size: 14px;
       margin-bottom: 12px;
@@ -272,6 +277,12 @@ onMounted(() => {
   &--unconfirmed {
     background-color: #ebedf0;
     border: 1px solid #d0d7de;
+
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #3a3a3a;
+      border-color: #555;
+    }
   }
 
   // 達成状態（緑系のグラデーション）
@@ -296,6 +307,12 @@ onMounted(() => {
   color: #666;
   padding-top: 8px;
   border-top: 1px solid #e0e0e0;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+    border-color: #444;
+  }
 
   @media (max-width: 600px) {
     font-size: 11px;

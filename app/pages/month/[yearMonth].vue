@@ -3,11 +3,6 @@
  * 月ごとのビューページ
  * 月間カレンダー、収支サマリー、支出チャート、支出ランキングを表示します。
  */
-import { useItemsStore } from '~/stores/items'
-import { useDayTitlesStore } from '~/stores/dayTitles'
-import { useRoutinesStore } from '~/stores/routines'
-import { useStatistics } from '~/composables/useStatistics'
-import { formatDisplayYearMonth, formatYearMonth, addMonths, formatDate, getDaysInMonth, getStartOfMonth, addDays } from '~/utils/dateHelpers'
 import Calendar from '~/components/MonthlyView/Calendar.vue'
 import CalendarSettings from '~/components/MonthlyView/CalendarSettings.vue'
 import ExpenseChart from '~/components/MonthlyView/ExpenseChart.vue'
@@ -22,7 +17,6 @@ const itemsStore = useItemsStore()
 const dayTitlesStore = useDayTitlesStore()
 const routinesStore = useRoutinesStore()
 const { calculateMonthlySummary, calculateExpenseRanking, calculateDailyTotals, getItemCountByDate } = useStatistics()
-const { t } = useI18n()
 
 const showCalendarSettings = ref(false)
 const monthRoutineLogs = ref<RoutineLog[]>([])
@@ -200,6 +194,7 @@ watch(yearMonthParam, async () => {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 8px;
+  gap: 8px;
 
   hr {
     flex-grow: 1;

@@ -4,9 +4,6 @@
  * 設定（ダークモード、背景画像）を全体に適用します
  * ロック機能を統合し、認証されるまでコンテンツをブロックします
  */
-import { useSettingsStore } from '~/stores/settings'
-import { useLockStore } from '~/stores/lock'
-import { useTutorialStore } from '~/stores/tutorial'
 import LockScreen from '~/components/shared/LockScreen.vue'
 import TutorialModal from '~/components/shared/TutorialModal.vue'
 
@@ -14,6 +11,31 @@ const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const tutorialStore = useTutorialStore()
 const { setLocale } = useI18n()
+
+// Service Workerの登録（本番環境のみ）
+if (import.meta.client && import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/sw.js')
+    .then((registration) => {
+      console.log('Service Worker registered:', registration.scope)
+
+      // 更新チェック
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // 新しいService Workerが利用可能
+              console.log('New Service Worker available')
+            }
+          })
+        }
+      })
+    })
+    .catch((error) => {
+      console.error('Service Worker registration failed:', error)
+    })
+}
 
 // 初期化時に設定を読み込む
 onMounted(async () => {
@@ -23,6 +45,7 @@ onMounted(async () => {
 
   // 言語設定を適用
   if (settingsStore.language) {
+    // @ts-expect-error languageは定義済みの言語コード
     await setLocale(settingsStore.language)
   }
 
