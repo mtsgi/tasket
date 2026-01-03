@@ -42,6 +42,8 @@ export default {
   'エクスポート': 'Export',
   'インポート': 'Import',
   'インポート中': 'Importing...',
+  'インストール': 'Install',
+  'インストール中': 'Installing...',
   'サンプルデータを追加': 'Add Sample Data',
   'サンプルデータ追加中': 'Adding Sample Data...',
   '既にデータが存在するため、サンプルデータを追加できません':
