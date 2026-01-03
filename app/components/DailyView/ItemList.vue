@@ -9,8 +9,6 @@ import ItemCard from '~/components/shared/ItemCard.vue'
 defineProps<{
   items: Item[]
 }>()
-
-const { t } = useI18n()
 </script>
 
 <template>

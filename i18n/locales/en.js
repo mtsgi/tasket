@@ -227,10 +227,7 @@ export default {
   '棒グラフ': 'Bar Chart',
 
   // Routines
-  '日課': 'Routines',
   '日課達成状況': 'Routine Achievement Status',
-  '達成': 'Achieved',
-  '未達成': 'Not Achieved',
   '前の週': 'Previous Week',
   '次の週': 'Next Week',
 
@@ -269,25 +266,20 @@ export default {
   'PINコードを入力してください': 'Enter PIN code',
   '新しいPINコードを設定してください（{length}桁）': 'Set new PIN code ({length} digits)',
   'PINコードを再入力してください': 'Re-enter PIN code',
-  'PINコードが一致しません': 'PIN codes do not match',
   '数字を入力...': 'Enter digits...',
   'PINコードが正しくありません（残り{count}回）': 'Incorrect PIN ({count} attempts remaining)',
   '試行回数が上限に達しました': 'Maximum attempts reached',
   '認証エラーが発生しました': 'Authentication error occurred',
 
   // Item Form
-  'プリセットから選択': 'Select from presets',
   'TODOのプリセットがありません': 'No TODO presets available',
   '支出のプリセットがありません': 'No expense presets available',
   '収入のプリセットがありません': 'No income presets available',
   'アイテム名を入力': 'Enter item name',
   '備考（任意）': 'Notes (optional)',
-  '金額': 'Amount',
   '金額を入力': 'Enter amount',
-  '追加': 'Add',
 
   // Routine Manager
-  '日課のタイトル': 'Routine title',
   'この月の日課はありません': 'No routines for this month',
   '新しい日課を追加...': 'Add new routine...',
   '前月の日課をコピー': 'Copy routines from previous month',
@@ -311,12 +303,10 @@ export default {
   // Item Edit
   'アイテムを編集': 'Edit Item',
   'このアイテムを削除しますか？': 'Are you sure you want to delete this item?',
-  '予定時刻': 'Scheduled Time',
   '実行時刻（任意）': 'Execution Time (Optional)',
   '実行時刻をクリア': 'Clear Execution Time',
 
   // Preset Manager
-  'プリセット管理': 'Preset Management',
   '新規プリセット': 'New Preset',
   'よく使うタスクをプリセットとして保存できます。時刻とタイトルを設定して、簡単にタスクを作成しましょう。':
     'Save frequently used tasks as presets. Set time and title to create tasks easily.',
@@ -327,19 +317,7 @@ export default {
   'プリセットの削除に失敗しました': 'Failed to delete preset',
   '「{title}」を削除しますか？': 'Delete "{title}"?',
   'プリセットを編集': 'Edit Preset',
-  'プリセット名': 'Preset Name',
   'プリセット名を入力': 'Enter preset name',
-  '時刻': 'Time',
-
-  // Background Settings
-  'なし': 'None',
-  'グラデーション 1': 'Gradient 1',
-  'グラデーション 2': 'Gradient 2',
-  'グラデーション 3': 'Gradient 3',
-  '自然 1': 'Nature 1',
-  '自然 2': 'Nature 2',
-  '画像ファイルを選択してください': 'Please select an image file',
-  'ファイルサイズは5MB以下にしてください': 'File size must be 5MB or less',
 
   // Error messages
   'エラーが発生しました': 'An error occurred',

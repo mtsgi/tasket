@@ -10,7 +10,6 @@ import type { Item, ItemType } from '~/types/item'
 
 const router = useRouter()
 const itemsStore = useItemsStore()
-const { t } = useI18n()
 
 // 検索キーワード
 const searchKeyword = ref('')

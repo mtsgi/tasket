@@ -20,7 +20,6 @@ const route = useRoute()
 const router = useRouter()
 const itemsStore = useItemsStore()
 const { calculateDailySummary } = useStatistics()
-const { t } = useI18n()
 
 // URLパラメータから日付を取得
 const dateParam = computed(() => route.params.date as string)

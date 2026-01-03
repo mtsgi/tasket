@@ -4,8 +4,7 @@
  * メニュー画面でPWAのインストール状態を表示し、インストールを促します
  */
 
-const { t } = useI18n()
-const { canInstall, isInstalled, isStandalone, promptInstall } = usePWAInstall()
+const { canInstall, isStandalone, promptInstall } = usePWAInstall()
 
 // インストール中フラグ
 const installing = ref(false)
@@ -21,7 +20,7 @@ const showInstallSection = computed(() => {
  */
 async function handleInstall() {
   installing.value = true
-  
+
   try {
     await promptInstall()
   }
@@ -33,7 +32,7 @@ async function handleInstall() {
 // iOS判定
 const isIOS = computed(() => {
   if (!import.meta.client) return false
-  
+
   const userAgent = window.navigator.userAgent.toLowerCase()
   return /iphone|ipad|ipod/.test(userAgent)
 })
@@ -41,7 +40,7 @@ const isIOS = computed(() => {
 // iOS Safari判定（スタンドアロンモードでない場合）
 const isIOSSafari = computed(() => {
   if (!import.meta.client || isStandalone.value) return false
-  
+
   return isIOS.value && !window.navigator.userAgent.includes('CriOS') && !window.navigator.userAgent.includes('FxiOS')
 })
 </script>
@@ -151,32 +150,32 @@ const isIOSSafari = computed(() => {
   gap: 12px;
   padding: 16px;
   border-radius: 8px;
-  
+
   &.installed {
     background-color: rgba(76, 175, 80, 0.1);
     border: 1px solid #4caf50;
-    
+
     .status-icon {
       font-size: 32px;
       color: #4caf50;
     }
   }
-  
+
   .status-text {
     flex: 1;
-    
+
     h3 {
       font-size: 16px;
       font-weight: 600;
       margin: 0 0 4px 0;
       color: #4caf50;
     }
-    
+
     p {
       font-size: 14px;
       margin: 0;
       color: #666;
-      
+
       // ダークモード対応
       .dark-mode & {
         color: #b0b0b0;
@@ -193,7 +192,7 @@ const isIOSSafari = computed(() => {
       color: #4a90d9;
       margin-bottom: 16px;
     }
-    
+
     .guide-text {
       h3 {
         font-size: 18px;
@@ -201,31 +200,31 @@ const isIOSSafari = computed(() => {
         margin: 0 0 12px 0;
         text-align: center;
         color: #333;
-        
+
         // ダークモード対応
         .dark-mode & {
           color: #e0e0e0;
         }
       }
-      
+
       p {
         font-size: 14px;
         color: #666;
         margin: 0 0 16px 0;
         text-align: center;
-        
+
         // ダークモード対応
         .dark-mode & {
           color: #b0b0b0;
         }
       }
     }
-    
+
     .install-steps {
       list-style: none;
       padding: 0;
       margin: 0;
-      
+
       li {
         display: flex;
         align-items: center;
@@ -236,17 +235,17 @@ const isIOSSafari = computed(() => {
         border-radius: 8px;
         font-size: 14px;
         color: #333;
-        
+
         // ダークモード対応
         .dark-mode & {
           background-color: #333;
           color: #e0e0e0;
         }
-        
+
         &:last-child {
           margin-bottom: 0;
         }
-        
+
         svg {
           font-size: 20px;
           color: #4a90d9;
@@ -264,7 +263,7 @@ const isIOSSafari = computed(() => {
     color: #4a90d9;
     margin-bottom: 16px;
   }
-  
+
   .available-text {
     h3 {
       font-size: 18px;
@@ -272,48 +271,48 @@ const isIOSSafari = computed(() => {
       margin: 0 0 12px 0;
       text-align: center;
       color: #333;
-      
+
       // ダークモード対応
       .dark-mode & {
         color: #e0e0e0;
       }
     }
-    
+
     p {
       font-size: 14px;
       color: #666;
       margin: 0 0 16px 0;
       line-height: 1.6;
-      
+
       // ダークモード対応
       .dark-mode & {
         color: #b0b0b0;
       }
     }
   }
-  
+
   .install-features {
     display: flex;
     justify-content: center;
     gap: 16px;
     margin-bottom: 20px;
     flex-wrap: wrap;
-    
+
     .feature-item {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 6px;
-      
+
       svg {
         font-size: 28px;
         color: #4a90d9;
       }
-      
+
       span {
         font-size: 12px;
         color: #666;
-        
+
         // ダークモード対応
         .dark-mode & {
           color: #b0b0b0;
@@ -342,51 +341,51 @@ const isIOSSafari = computed(() => {
       font-size: 40px;
       margin-bottom: 12px;
     }
-    
+
     .guide-text {
       h3 {
         font-size: 16px;
       }
-      
+
       p {
         font-size: 13px;
       }
     }
-    
+
     .install-steps li {
       font-size: 13px;
       padding: 10px;
-      
+
       svg {
         font-size: 18px;
       }
     }
   }
-  
+
   .install-available {
     .available-icon {
       font-size: 40px;
       margin-bottom: 12px;
     }
-    
+
     .available-text {
       h3 {
         font-size: 16px;
       }
-      
+
       p {
         font-size: 13px;
       }
     }
-    
+
     .install-features {
       gap: 12px;
-      
+
       .feature-item {
         svg {
           font-size: 24px;
         }
-        
+
         span {
           font-size: 11px;
         }

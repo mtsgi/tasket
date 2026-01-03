@@ -11,7 +11,6 @@ const props = defineProps<{
 }>()
 
 const dayTitlesStore = useDayTitlesStore()
-const { t } = useI18n()
 
 // 編集モード状態
 const isEditing = ref(false)

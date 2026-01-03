@@ -14,7 +14,6 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const { t } = useI18n()
 const settingsStore = useSettingsStore()
 
 // ローカルコピーで設定を管理
