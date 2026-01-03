@@ -524,6 +524,11 @@ onMounted(() => {
     font-weight: 600;
     color: #666;
     margin-bottom: 12px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -532,6 +537,11 @@ onMounted(() => {
   color: #666;
   margin-bottom: 16px;
   line-height: 1.5;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+  }
 }
 
 .menu-buttons {
@@ -544,6 +554,11 @@ onMounted(() => {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #f0f0f0;
+
+  // ダークモード対応
+  .dark-mode & {
+    border-color: #444;
+  }
 
   h3 {
     display: flex;
@@ -579,12 +594,22 @@ onMounted(() => {
     font-size: 14px;
     color: #666;
     margin-bottom: 12px;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 
   .app-description {
     font-size: 14px;
     color: #666;
     line-height: 1.5;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 
@@ -592,6 +617,11 @@ onMounted(() => {
   .credit-item {
     padding: 12px 0;
     border-bottom: 1px solid #f0f0f0;
+
+    // ダークモード対応
+    .dark-mode & {
+      border-color: #444;
+    }
 
     &:last-child {
       border-bottom: none;
@@ -602,17 +632,32 @@ onMounted(() => {
       font-weight: 600;
       color: #666;
       margin-bottom: 4px;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
 
     p {
       font-size: 14px;
       color: #333;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #e0e0e0;
+      }
     }
 
     .oss-description {
       font-size: 14px;
       color: #666;
       margin-bottom: 12px;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
   }
 
@@ -630,6 +675,12 @@ onMounted(() => {
       border-radius: 12px;
       font-size: 12px;
       color: #666;
+
+      // ダークモード対応
+      .dark-mode & {
+        background-color: #333;
+        color: #b0b0b0;
+      }
     }
   }
 }
@@ -672,6 +723,7 @@ onMounted(() => {
   .dark-mode & {
     background-color: rgba(74, 144, 217, 0.15);
     color: #b0b0b0;
+    border-color: rgba(74, 144, 217, 0.4);
   }
 }
 
