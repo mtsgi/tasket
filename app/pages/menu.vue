@@ -5,6 +5,7 @@
  */
 import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
+import PWAInstallSection from '~/components/shared/PWAInstallSection.vue'
 import { loadSampleData } from '~/utils/sampleData'
 
 const itemsStore = useItemsStore()
@@ -328,6 +329,18 @@ onMounted(() => {
         <Icon name="mdi:play-circle" />
         {{ $t('チュートリアルを見る') }}
       </UiButton>
+    </section>
+
+    <!-- PWAインストール -->
+    <section class="menu-section card">
+      <h2>
+        <Icon name="mdi:application-import" />
+        {{ $t('アプリとしてインストール') }}
+      </h2>
+      <p class="section-description">
+        {{ $t('Tasketをホーム画面に追加して、アプリのように使えます。オフラインでも動作し、起動が高速になります。') }}
+      </p>
+      <PWAInstallSection />
     </section>
 
     <!-- アプリ設定 -->

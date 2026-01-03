@@ -6,6 +6,7 @@
  */
 import LockScreen from '~/components/shared/LockScreen.vue'
 import TutorialModal from '~/components/shared/TutorialModal.vue'
+import PWAInstallBanner from '~/components/shared/PWAInstallBanner.vue'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
@@ -95,6 +96,9 @@ const showLockScreen = computed(() => {
     :class="{ 'dark-mode': settingsStore.darkMode }"
     :style="backgroundStyle"
   >
+    <!-- PWAインストールバナー -->
+    <PWAInstallBanner />
+
     <!-- ロック画面 -->
     <LockScreen v-if="showLockScreen" />
 

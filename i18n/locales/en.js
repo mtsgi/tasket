@@ -370,4 +370,21 @@ export default {
 
   'tutorial.start.title': 'Let\'s Get Started!',
   'tutorial.start.description': '<p>That concludes the tutorial.</p><p>We recommend <strong>adding sample data</strong> first to try out the features.</p><p>Sample data includes examples of TODOs, income, expenses, routines, and presets.</p><p>You can add from the "Add Sample Data" button on the menu screen.</p><br><p>This tutorial can be reviewed anytime from the "Tutorial" button on the menu screen.</p><p><strong>Enjoy life management!</strong></p>',
+
+  // PWA related
+  'ホーム画面に追加': 'Add to Home Screen',
+  'Tasketをホーム画面に追加して、アプリのように使えます': 'Add Tasket to your home screen and use it like an app',
+  'アプリとしてインストール': 'Install as App',
+  'アプリとしてインストール済み': 'Installed as App',
+  'Tasketをアプリとして使用しています': 'You are using Tasket as an app',
+  'Tasketをホーム画面に追加して、アプリのように使えます。オフラインでも動作し、起動が高速になります。':
+    'Add Tasket to your home screen and use it like an app. It works offline and launches faster.',
+  'iOS/iPadOSでホーム画面に追加するには:': 'To add to home screen on iOS/iPadOS:',
+  '画面下部の共有ボタンをタップ': 'Tap the share button at the bottom',
+  '「ホーム画面に追加」を選択': 'Select "Add to Home Screen"',
+  '「追加」をタップして完了': 'Tap "Add" to complete',
+  'オフライン対応': 'Offline Support',
+  '高速起動': 'Fast Launch',
+  'フルスクリーン': 'Fullscreen',
+  '今すぐインストール': 'Install Now',
 }
