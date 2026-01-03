@@ -93,6 +93,11 @@ const totalCount = computed(() => routines.value.length)
     color: #666;
     margin-bottom: 12px;
 
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
+
     @media (max-width: 600px) {
       font-size: 14px;
       margin-bottom: 8px;

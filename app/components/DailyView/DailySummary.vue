@@ -71,6 +71,11 @@ defineProps<{
     @media (min-width: 500px) {
       font-size: 12px;
     }
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 
   .amount {
@@ -96,6 +101,11 @@ defineProps<{
 
     .total {
       color: #666;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
   }
 }

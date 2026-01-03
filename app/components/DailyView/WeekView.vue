@@ -170,6 +170,11 @@ function handleDayClick(dateString: string) {
   font-size: 14px;
   font-weight: 500;
   color: #666;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+  }
 }
 
 /* 週カレンダーグリッド */
@@ -192,6 +197,11 @@ function handleDayClick(dateString: string) {
 
   &:hover {
     background-color: #f5f7fa;
+
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #333;
+    }
   }
 
   /* 今日のハイライト */
@@ -247,6 +257,11 @@ function handleDayClick(dateString: string) {
   font-weight: 600;
   color: #999;
   margin-bottom: 4px;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #888;
+  }
 }
 
 /* 日付の数字 */
@@ -254,6 +269,11 @@ function handleDayClick(dateString: string) {
   font-size: 16px;
   font-weight: 500;
   color: #333;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #e0e0e0;
+  }
 }
 
 /* アイテム数インジケーター */

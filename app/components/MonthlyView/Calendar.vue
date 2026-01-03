@@ -137,6 +137,11 @@ function handleDayClick(dateString: string | null) {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   border-bottom: 1px solid #e0e0e0;
+
+  // ダークモード対応
+  .dark-mode & {
+    border-color: #444;
+  }
 }
 
 .weekday {
@@ -145,6 +150,11 @@ function handleDayClick(dateString: string | null) {
   font-size: 12px;
   font-weight: 600;
   color: #666;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+  }
 
   &.sunday {
     color: #f44336;
@@ -169,17 +179,32 @@ function handleDayClick(dateString: string | null) {
   cursor: pointer;
   transition: background-color 0.15s ease;
 
+  // ダークモード対応
+  .dark-mode & {
+    border-color: #444;
+  }
+
   &:nth-child(7n) {
     border-right: none;
   }
 
   &:hover:not(.empty) {
     background-color: #f5f7fa;
+
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #333;
+    }
   }
 
   &.empty {
     cursor: default;
     background-color: #fafafa;
+
+    // ダークモード対応
+    .dark-mode & {
+      background-color: #222;
+    }
   }
 
   &.today {
@@ -225,11 +250,21 @@ function handleDayClick(dateString: string | null) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #e0e0e0;
+  }
 }
 
 .item-count {
   font-size: 10px;
   color: #666;
+
+  // ダークモード対応
+  .dark-mode & {
+    color: #b0b0b0;
+  }
 }
 
 .income {

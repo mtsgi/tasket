@@ -241,6 +241,11 @@ const executionStatus = computed(() => {
 
     &.scheduled {
       color: #666;
+
+      // ダークモード対応
+      .dark-mode & {
+        color: #b0b0b0;
+      }
     }
 
     &.executed {
@@ -279,6 +284,11 @@ const executionStatus = computed(() => {
     margin: 4px 0;
     word-break: break-word;
     line-height: 1.4;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 

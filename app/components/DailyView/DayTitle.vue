@@ -143,6 +143,11 @@ function handleKeydown(event: KeyboardEvent) {
 
     &:hover {
       background-color: #f5f7fa;
+
+      // ダークモード対応
+      .dark-mode & {
+        background-color: #333;
+      }
     }
   }
 
@@ -156,6 +161,11 @@ function handleKeydown(event: KeyboardEvent) {
     font-size: 16px;
     font-weight: 600;
     color: #333;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #e0e0e0;
+    }
   }
 
   &__placeholder {
@@ -163,6 +173,11 @@ function handleKeydown(event: KeyboardEvent) {
     font-size: 14px;
     color: #999;
     font-style: italic;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #888;
+    }
   }
 
   &__edit-icon {
@@ -173,6 +188,11 @@ function handleKeydown(event: KeyboardEvent) {
 
     .day-title__display:hover & {
       opacity: 1;
+    }
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #888;
     }
   }
 

@@ -64,6 +64,11 @@ defineProps<{
   background-color: #f5f7fa;
   border-radius: 8px;
 
+  // ダークモード対応
+  .dark-mode & {
+    background-color: #333;
+  }
+
   &.large {
     grid-column: span 2;
 
@@ -76,6 +81,11 @@ defineProps<{
     font-size: 11px;
     color: #666;
     text-align: center;
+
+    // ダークモード対応
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 
   .amount {
