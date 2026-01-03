@@ -385,8 +385,6 @@ onMounted(() => {
       background-color: rgba(74, 144, 217, 0.1);
       padding: 4px 12px;
       border-radius: 12px;
-
-      // ダークモード対応 (already added in existing dark-mode block)
     }
   }
 
