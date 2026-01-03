@@ -140,7 +140,7 @@ export interface AppSettings {
   darkMode: boolean // ダークモードの有効/無効
   backgroundImage: string | File // 背景画像（パスまたはFileオブジェクト）
   dateChangeLine: number // 日付変更線の時刻（0-23時）
-  language: string // 表示言語（'ja' | 'en'）
+  language: 'ja' | 'en' // 表示言語
   calendarDisplay: {
     showExpense: boolean // 支出合計の表示/非表示
     showIncome: boolean // 収入合計の表示/非表示

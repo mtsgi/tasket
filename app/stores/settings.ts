@@ -27,7 +27,7 @@ export const useSettingsStore = defineStore('settings', {
     darkMode: false,
     backgroundImage: 'none' as string | File,
     dateChangeLine: 0, // デフォルトは0時（通常の日付変更）
-    language: 'ja', // デフォルトは日本語
+    language: 'ja' as 'ja' | 'en', // デフォルトは日本語
     calendarDisplay: {
       showExpense: true,
       showIncome: true,

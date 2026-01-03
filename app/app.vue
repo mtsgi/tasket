@@ -46,7 +46,6 @@ onMounted(async () => {
 
   // 言語設定を適用
   if (settingsStore.language) {
-    // @ts-expect-error languageは定義済みの言語コード
     await setLocale(settingsStore.language)
   }
 

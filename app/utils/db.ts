@@ -11,6 +11,7 @@ import type { Item, DayTitle, Routine, RoutineLog, Preset, AppSettings } from '~
  * itemsストア、dayTitlesストア、routinesストア、routineLogsストア、presetsストア、appSettingsストアを定義
  */
 interface TasketDB extends DBSchema {
+  // @ts-expect-error idbライブラリの型定義との互換性の問題
   items: {
     key: string
     value: Item
@@ -105,13 +106,17 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
             const routineLogsStore = transaction.objectStore('routineLogs')
             const request = routineLogsStore.getAll()
 
+            // @ts-expect-error トランザクション内でのgetAll()はIDBRequestを返す
             request.onsuccess = () => {
+              // @ts-expect-error トランザクション内でのgetAll()はIDBRequestを返す
               const logs = request.result as RoutineLog[]
               logs.forEach((log) => {
                 // is_completedからstatusに変換
                 if ('is_completed' in log && !('status' in log)) {
                   const migratedLog = {
+                    // @ts-expect-error 旧データ形式との互換性のため無視
                     ...log,
+                    // @ts-expect-error 旧データ形式との互換性のため無視
                     status: log.is_completed ? ('achieved' as const) : ('not_achieved' as const),
                   }
                   // 後方互換性のためis_completedは保持
@@ -227,7 +232,7 @@ export async function getItemsByDateRange(startDate: Date, endDate: Date): Promi
 export async function getDayTitleByDate(date: string): Promise<DayTitle | undefined> {
   const db = await getDB()
   const titles = await db.getAllFromIndex('dayTitles', 'by-date', date)
-  if (titles.length > 0) {
+  if (titles.length > 0 && titles[0]) {
     return {
       ...titles[0],
       created_at: new Date(titles[0].created_at),
