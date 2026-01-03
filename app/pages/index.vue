@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { formatYearMonth } from '~/utils/dateHelpers'
-
 const router = useRouter()
-const { t } = useI18n()
 
 onMounted(() => {
   const today = new Date()

@@ -100,8 +100,9 @@ a {
 
 // Card component
 .card {
-  background: $card-background;
-  border-radius: $border-radius-md;
+  background: rgba($card-background, 0.75);
+  backdrop-filter: blur(10px);
+  border-radius: $border-radius-lg;
   box-shadow: 0 2px 8px $shadow-color;
   padding: $spacing-md;
   margin-bottom: $spacing-md;
@@ -115,7 +116,7 @@ a {
   gap: $spacing-xs;
   padding: $spacing-sm $spacing-md;
   border: none;
-  border-radius: $border-radius-sm;
+  border-radius: $border-radius-md;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -136,7 +137,7 @@ a {
   }
   
   &-secondary {
-    background-color: transparent;
+    background-color: white;
     color: $text-color;
     border: 1px solid $border-color;
     
@@ -382,7 +383,7 @@ a {
   
   .card {
     padding: $spacing-sm;
-    border-radius: $border-radius-sm;
+    border-radius: $border-radius-lg;
     margin-bottom: $spacing-sm;
   }
 

@@ -3,18 +3,12 @@
  * メニュー画面
  * アプリ設定、データ管理（エクスポート・インポート）、日課管理、権利表記を提供します。
  */
-import { useItemsStore } from '~/stores/items'
-import { useDayTitlesStore } from '~/stores/dayTitles'
-import { usePresetsStore } from '~/stores/presets'
-import { useTutorialStore } from '~/stores/tutorial'
-import { useSettingsStore } from '~/stores/settings'
-import { useLockStore } from '~/stores/lock'
-import { getAllRoutines, getAllRoutineLogs, getAllDayTitles, getAllAppSettings } from '~/utils/db'
 import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
 
 const itemsStore = useItemsStore()
+const routinesStore = useRoutinesStore()
 const dayTitlesStore = useDayTitlesStore()
 const presetsStore = usePresetsStore()
 const tutorialStore = useTutorialStore()

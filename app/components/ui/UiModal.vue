@@ -152,7 +152,7 @@ function handleOverlayClick(event: MouseEvent) {
 
 @media (max-width: 600px) {
   .ui-modal-overlay {
-    padding: 8px;
+    padding: 0;
     align-items: flex-end;
   }
 

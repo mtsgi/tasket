@@ -222,11 +222,11 @@ function handleDayClick(dateString: string | null) {
     }
   }
 
-  &.sunday .day-number {
+  &.sunday:not(.today) .day-number {
     color: #f44336;
   }
 
-  &.saturday .day-number {
+  &.saturday:not(.today) .day-number {
     color: #2196f3;
   }
 }

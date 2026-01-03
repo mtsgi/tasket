@@ -4,9 +4,6 @@
  * 設定（ダークモード、背景画像）を全体に適用します
  * ロック機能を統合し、認証されるまでコンテンツをブロックします
  */
-import { useSettingsStore } from '~/stores/settings'
-import { useLockStore } from '~/stores/lock'
-import { useTutorialStore } from '~/stores/tutorial'
 import LockScreen from '~/components/shared/LockScreen.vue'
 import TutorialModal from '~/components/shared/TutorialModal.vue'
 
@@ -23,6 +20,7 @@ onMounted(async () => {
 
   // 言語設定を適用
   if (settingsStore.language) {
+    // @ts-expect-error languageは定義済みの言語コード
     await setLocale(settingsStore.language)
   }
 

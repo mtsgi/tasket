@@ -3,15 +3,12 @@
  * チュートリアルモーダルコンポーネント
  * アプリの機能説明をステップバイステップで表示します。
  */
-import { useTutorialStore } from '~/stores/tutorial'
-import { tutorialSteps } from '~/utils/tutorialSteps'
-
 const tutorialStore = useTutorialStore()
 const { t } = useI18n()
 
 // 現在のステップ情報
 const currentStepData = computed(() => {
-  const step = tutorialSteps[tutorialStore.currentStep] || tutorialSteps[0]
+  const step = tutorialSteps[tutorialStore.currentStep] || tutorialSteps[0]!
   return {
     title: t(step.titleKey),
     description: t(step.descriptionKey),
@@ -124,13 +121,19 @@ function goToStep(index: number) {
           <!-- フッター -->
           <div class="tutorial-footer">
             <button
-              v-if="!isFirstStep"
+              :aria-disabled="isFirstStep"
+              :disabled="isFirstStep"
               class="btn btn-secondary"
               @click="handlePrevious"
             >
               <Icon name="mdi:chevron-left" />
               {{ $t('戻る') }}
             </button>
+            <div class="spacer" />
+            <!-- ステップカウンター -->
+            <div class="tutorial-counter">
+              {{ tutorialStore.currentStep + 1 }} / {{ tutorialSteps.length }}
+            </div>
             <div class="spacer" />
             <button
               class="btn btn-primary"
@@ -146,11 +149,6 @@ function goToStep(index: number) {
                 name="mdi:check"
               />
             </button>
-          </div>
-
-          <!-- ステップカウンター -->
-          <div class="tutorial-counter">
-            {{ tutorialStore.currentStep + 1 }} / {{ tutorialSteps.length }}
           </div>
         </div>
       </div>
@@ -348,59 +346,7 @@ function goToStep(index: number) {
   flex: 1;
 }
 
-.btn {
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-  min-height: 44px;
-
-  &.btn-primary {
-    background-color: #4a90d9;
-    color: #ffffff;
-
-    &:hover {
-      background-color: #3d7bbf;
-    }
-
-    &:active {
-      transform: scale(0.98);
-    }
-  }
-
-  &.btn-secondary {
-    background-color: #e0e0e0;
-    color: #333;
-
-    &:hover {
-      background-color: #d0d0d0;
-    }
-
-    &:active {
-      transform: scale(0.98);
-    }
-
-    .dark-mode & {
-      background-color: #444;
-      color: #e0e0e0;
-
-      &:hover {
-        background-color: #555;
-      }
-    }
-  }
-}
-
 .tutorial-counter {
-  position: absolute;
-  bottom: 32px;
-  left: 24px;
   font-size: 13px;
   color: #999;
   font-weight: 500;

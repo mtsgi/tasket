@@ -3,8 +3,6 @@
  * 日課チェックリストコンポーネント
  * その日の日課の達成状況を表示・記録するコンポーネント
  */
-import { useRoutinesStore } from '~/stores/routines'
-import { formatYearMonth } from '~/utils/dateHelpers'
 import type { RoutineStatus } from '~/types/item'
 
 const props = defineProps<{
@@ -13,7 +11,6 @@ const props = defineProps<{
 }>()
 
 const routinesStore = useRoutinesStore()
-const { t } = useI18n()
 
 // 現在の月の日課リスト
 const routines = computed(() => routinesStore.routines)
