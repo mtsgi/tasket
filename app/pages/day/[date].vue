@@ -113,12 +113,6 @@ onMounted(() => {
     <!-- 日課チェックリスト -->
     <RoutineChecklist :date="dateParam" />
 
-    <!-- 健康データサマリー -->
-    <HealthSummary :date="dateParam" />
-
-    <!-- 健康データ入力フォーム -->
-    <HealthDataForm :date="dateParam" />
-
     <!-- アイテム一覧 -->
     <ItemList :items="items" />
 
@@ -127,5 +121,11 @@ onMounted(() => {
 
     <!-- 日次収支サマリー -->
     <DailySummaryComponent :summary="summary" />
+
+    <!-- 健康データサマリー -->
+    <HealthSummary :date="dateParam" />
+
+    <!-- 健康データ入力フォーム -->
+    <HealthDataForm :date="dateParam" />
   </div>
 </template>

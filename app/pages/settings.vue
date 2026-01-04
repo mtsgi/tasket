@@ -7,10 +7,12 @@ import { useSettingsStore } from '~/stores/settings'
 import { useLockStore } from '~/stores/lock'
 import PinInput from '~/components/shared/PinInput.vue'
 import PresetManager from '~/components/settings/PresetManager.vue'
+import { useRouter } from 'vue-router'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const { t, setLocale } = useI18n()
+const router = useRouter()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -294,12 +296,23 @@ onMounted(async () => {
     await setLocale(settingsStore.language)
   }
 })
+
+function goBack() {
+  router.back()
+}
 </script>
 
 <template>
   <div class="container">
     <!-- ヘッダー -->
     <header class="settings-header">
+      <button
+        class="btn btn-secondary btn-icon"
+        :aria-label="$t('戻る')"
+        @click="goBack"
+      >
+        <Icon name="mdi:arrow-left" />
+      </button>
       <h1>
         <Icon name="mdi:cog" />
         {{ $t('設定') }}
@@ -592,16 +605,17 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .settings-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
 
   h1 {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 8px;
     font-size: 24px;
     font-weight: 600;
-    text-align: center;
 
     // ダークモード対応
     .dark-mode & {

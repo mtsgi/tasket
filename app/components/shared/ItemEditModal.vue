@@ -270,7 +270,7 @@ function handlePhotoUpload(event: Event) {
           <div class="form-row">
             <div class="form-group">
               <label>{{ $t('カロリー') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealCalories"
                 type="number"
                 :placeholder="$t('{value}kcal', { value: '0' })"
@@ -281,7 +281,7 @@ function handlePhotoUpload(event: Event) {
           <div class="form-row">
             <div class="form-group">
               <label>{{ $t('タンパク質') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealProtein"
                 type="number"
                 step="0.1"
@@ -290,7 +290,7 @@ function handlePhotoUpload(event: Event) {
             </div>
             <div class="form-group">
               <label>{{ $t('炭水化物') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealCarbs"
                 type="number"
                 step="0.1"
@@ -299,7 +299,7 @@ function handlePhotoUpload(event: Event) {
             </div>
             <div class="form-group">
               <label>{{ $t('脂質') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealFat"
                 type="number"
                 step="0.1"
@@ -461,9 +461,7 @@ function handlePhotoUpload(event: Event) {
 
 /* 食事ログセクション */
 .meal-log-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
+  margin-bottom: 12px;
 
   .dark-mode & {
     border-color: #444;
@@ -499,7 +497,7 @@ function handlePhotoUpload(event: Event) {
 
 .meal-log-form {
   margin-top: 12px;
-  padding: 12px;
+  padding: 8px;
   background: #f9fafb;
   border-radius: 8px;
 
@@ -511,7 +509,6 @@ function handlePhotoUpload(event: Event) {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
-    margin-bottom: 12px;
 
     @media (max-width: 480px) {
       grid-template-columns: 1fr;
@@ -529,29 +526,24 @@ function handlePhotoUpload(event: Event) {
         color: #b0b0b0;
       }
     }
-
-    input,
     textarea {
       width: 100%;
       padding: 6px 10px;
       border: 1px solid #e0e0e0;
       border-radius: 6px;
       font-size: 14px;
+      resize: vertical;
 
       .dark-mode & {
-        background: #333;
-        border-color: #444;
+        background: #333333;
+        border-color: #444444;
         color: #e0e0e0;
       }
 
       &:focus {
         outline: none;
-        border-color: var(--primary-color);
+        border-color: #4a90d9;
       }
-    }
-
-    textarea {
-      resize: vertical;
     }
   }
 
@@ -562,13 +554,13 @@ function handlePhotoUpload(event: Event) {
 
     .photo-preview {
       margin-top: 8px;
-      border-radius: 8px;
-      overflow: hidden;
 
       img {
         width: 100%;
         max-height: 200px;
         object-fit: cover;
+        border-radius: 8px;
+        overflow: hidden;
       }
     }
   }

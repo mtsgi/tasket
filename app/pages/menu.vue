@@ -7,6 +7,7 @@ import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 import PWAInstallSection from '~/components/shared/PWAInstallSection.vue'
 import { loadSampleData } from '~/utils/sampleData'
+import { useRouter } from 'vue-router'
 
 const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
@@ -16,6 +17,7 @@ const tutorialStore = useTutorialStore()
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const { t } = useI18n()
+const router = useRouter()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -316,12 +318,23 @@ async function addSampleData() {
 onMounted(() => {
   itemsStore.fetchItems()
 })
+
+function goBack() {
+  router.back()
+}
 </script>
 
 <template>
   <div class="container">
     <!-- ヘッダー -->
     <header class="menu-header">
+      <button
+        class="btn btn-secondary btn-icon"
+        :aria-label="$t('戻る')"
+        @click="goBack"
+      >
+        <Icon name="mdi:arrow-left" />
+      </button>
       <h1>
         <Icon name="mdi:menu" />
         {{ $t('メニュー') }}
@@ -538,16 +551,17 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
 
   h1 {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 8px;
     font-size: 24px;
     font-weight: 600;
-    text-align: center;
   }
 }
 

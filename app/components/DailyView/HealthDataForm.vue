@@ -3,15 +3,11 @@
  * 健康データ入力フォームコンポーネント
  * 日ごとのビューで健康データを入力・編集するためのフォーム
  */
-import { useHealthDataStore } from '~/stores/healthData'
-import type { HealthData } from '~/types/item'
-
 const props = defineProps<{
   date: string // YYYY-MM-DD形式
 }>()
 
 const healthDataStore = useHealthDataStore()
-const { $t } = useI18n()
 
 // フォームの状態
 const isExpanded = ref(false)
@@ -120,29 +116,52 @@ function toggleExpand() {
 </script>
 
 <template>
-  <div class="health-data-form">
-    <div class="health-data-header" @click="toggleExpand">
-      <h3>{{ $t('健康データ') }}</h3>
-      <button class="toggle-btn" :class="{ expanded: isExpanded }">
+  <div class="health-data-form card">
+    <div
+      class="health-data-header"
+      @click="toggleExpand"
+    >
+      <h3>
+        <Icon name="mdi:heart-pulse" />
+        {{ $t('健康データ') }}
+      </h3>
+      <button
+        class="toggle-btn"
+        :class="{ expanded: isExpanded }"
+      >
         <Icon name="mdi:chevron-down" />
       </button>
     </div>
 
-    <div v-if="isExpanded" class="health-data-body">
+    <div
+      v-if="isExpanded"
+      class="health-data-body"
+    >
       <!-- 基本測定値 -->
       <div class="form-section">
         <h4>{{ $t('体重') }}・{{ $t('体脂肪率') }}</h4>
         <div class="form-row">
           <div class="form-group">
             <label>{{ $t('体重') }}</label>
-            <input v-model.number="weight" type="number" step="0.1" :placeholder="$t('{value}kg', { value: '0.0' })" />
+            <UiInput
+              v-model.number="weight"
+              type="number"
+              :placeholder="$t('{value}kg', { value: '0.0' })"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('体脂肪率') }}</label>
-            <input v-model.number="bodyFatPercentage" type="number" step="0.1" :placeholder="$t('{value}%', { value: '0.0' })" />
+            <UiInput
+              v-model.number="bodyFatPercentage"
+              type="number"
+              :placeholder="$t('{value}%', { value: '0.0' })"
+            />
           </div>
         </div>
-        <div v-if="bmi" class="bmi-display">
+        <div
+          v-if="bmi"
+          class="bmi-display"
+        >
           {{ $t('BMI') }}: {{ bmi }}
         </div>
       </div>
@@ -153,11 +172,19 @@ function toggleExpand() {
         <div class="form-row">
           <div class="form-group">
             <label>{{ $t('筋肉量') }}</label>
-            <input v-model.number="muscleMass" type="number" step="0.1" :placeholder="$t('{value}kg', { value: '0.0' })" />
+            <UiInput
+              v-model.number="muscleMass"
+              type="number"
+              :placeholder="$t('{value}kg', { value: '0.0' })"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('内臓脂肪レベル') }}</label>
-            <input v-model.number="visceralFatLevel" type="number" step="1" placeholder="0" />
+            <UiInput
+              v-model="visceralFatLevel"
+              type="number"
+              placeholder="0"
+            />
           </div>
         </div>
       </div>
@@ -168,17 +195,29 @@ function toggleExpand() {
         <div class="form-row">
           <div class="form-group">
             <label>{{ $t('最高血圧') }}</label>
-            <input v-model.number="systolicBloodPressure" type="number" :placeholder="$t('{value}mmHg', { value: '0' })" />
+            <UiInput
+              v-model="systolicBloodPressure"
+              type="number"
+              :placeholder="$t('{value}mmHg', { value: '0' })"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('最低血圧') }}</label>
-            <input v-model.number="diastolicBloodPressure" type="number" :placeholder="$t('{value}mmHg', { value: '0' })" />
+            <UiInput
+              v-model="diastolicBloodPressure"
+              type="number"
+              :placeholder="$t('{value}mmHg', { value: '0' })"
+            />
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>{{ $t('心拍数') }}</label>
-            <input v-model.number="heartRate" type="number" :placeholder="$t('{value}bpm', { value: '0' })" />
+            <UiInput
+              v-model="heartRate"
+              type="number"
+              :placeholder="$t('{value}bpm', { value: '0' })"
+            />
           </div>
         </div>
       </div>
@@ -189,21 +228,37 @@ function toggleExpand() {
         <div class="form-row">
           <div class="form-group">
             <label>{{ $t('歩数') }}</label>
-            <input v-model.number="steps" type="number" :placeholder="$t('{value}歩', { value: '0' })" />
+            <UiInput
+              v-model="steps"
+              type="number"
+              :placeholder="$t('{value}歩', { value: '0' })"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('運動時間') }}</label>
-            <input v-model.number="exerciseMinutes" type="number" :placeholder="$t('{value}分', { value: '0' })" />
+            <UiInput
+              v-model="exerciseMinutes"
+              type="number"
+              :placeholder="$t('{value}分', { value: '0' })"
+            />
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>{{ $t('睡眠時間') }}</label>
-            <input v-model.number="sleepHours" type="number" step="0.5" :placeholder="$t('{value}時間', { value: '0.0' })" />
+            <UiInput
+              v-model="sleepHours"
+              type="number"
+              :placeholder="$t('{value}時間', { value: '0.0' })"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('水分摂取量') }}</label>
-            <input v-model.number="waterIntake" type="number" :placeholder="$t('{value}ml', { value: '0' })" />
+            <UiInput
+              v-model="waterIntake"
+              type="number"
+              :placeholder="$t('{value}ml', { value: '0' })"
+            />
           </div>
         </div>
       </div>
@@ -211,22 +266,28 @@ function toggleExpand() {
       <!-- メモ -->
       <div class="form-section">
         <h4>{{ $t('体調メモ') }}</h4>
-        <textarea v-model="healthMemo" :placeholder="$t('体調メモ')" rows="3" />
+        <textarea
+          v-model="healthMemo"
+          :placeholder="$t('体調メモ')"
+          rows="3"
+        />
       </div>
 
       <!-- 保存ボタン -->
-      <button class="save-btn" :disabled="isSaving" @click="saveHealthData">
+      <UiButton
+        variant="primary"
+        block
+        :disabled="isSaving"
+        @click="saveHealthData"
+      >
         {{ isSaving ? $t('保存') + '...' : $t('保存') }}
-      </button>
+      </UiButton>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
 .health-data-form {
-  background: var(--card-bg);
-  border-radius: 12px;
-  margin-bottom: 16px;
   overflow: hidden;
 }
 
@@ -234,14 +295,14 @@ function toggleExpand() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
   cursor: pointer;
   user-select: none;
 
   h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
+    color: #666666;
   }
 
   .toggle-btn {
@@ -266,17 +327,20 @@ function toggleExpand() {
 }
 
 .health-data-body {
-  padding: 0 16px 16px;
+  margin-top: 16px;
+  padding: 0 8px 16px;
+
+  .ui-btn {
+    margin-top: 16px;
+  }
 }
 
 .form-section {
-  margin-bottom: 20px;
-
   h4 {
     margin: 0 0 12px 0;
     font-size: 14px;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: #666666;
   }
 }
 
@@ -284,11 +348,7 @@ function toggleExpand() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 12px;
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-  }
 }
 
 .form-group {
@@ -296,70 +356,32 @@ function toggleExpand() {
     display: block;
     margin-bottom: 4px;
     font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  input,
-  select {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 14px;
-    background: var(--input-bg);
-    color: var(--text-primary);
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary-color);
-    }
+    color: #666666;
   }
 }
 
 textarea {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #E0E0E0;
   border-radius: 8px;
   font-size: 14px;
-  background: var(--input-bg);
-  color: var(--text-primary);
+  background: #FFFFFF;
+  color: #333333;
   resize: vertical;
 
   &:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: #4A90D9;
   }
 }
 
 .bmi-display {
-  margin-top: 8px;
+  margin-bottom: 8px;
   padding: 8px 12px;
-  background: var(--bg-secondary);
+  background: #F5F5F5;
   border-radius: 8px;
   font-size: 14px;
-  color: var(--text-primary);
-}
-
-.save-btn {
-  width: 100%;
-  padding: 12px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-
-  &:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  color: #333333;
 }
 </style>

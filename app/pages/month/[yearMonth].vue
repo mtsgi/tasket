@@ -186,15 +186,15 @@ watch(yearMonthParam, async () => {
       :routine-logs="monthRoutineLogs"
     />
 
-    <HealthChart :year-month="yearMonthParam" />
-
-    <MonthlyHealthSummary :year-month="yearMonthParam" />
-
     <ExpenseChart :daily-totals="dailyTotals" />
 
     <ExpenseRanking :ranking="expenseRanking" />
 
     <MonthlySummaryComponent :summary="summary" />
+
+    <HealthChart :year-month="yearMonthParam" />
+
+    <MonthlyHealthSummary :year-month="yearMonthParam" />
   </div>
 </template>
 

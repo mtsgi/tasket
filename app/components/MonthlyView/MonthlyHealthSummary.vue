@@ -12,7 +12,6 @@ const props = defineProps<{
 
 const healthDataStore = useHealthDataStore()
 const itemsStore = useItemsStore()
-const { $t } = useI18n()
 
 // 月次健康サマリー
 const monthlySummary = computed(() => {
@@ -55,52 +54,104 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="hasData" class="monthly-health-summary">
-    <h3>{{ $t('月次健康サマリー') }}</h3>
+  <div
+    v-if="hasData"
+    class="monthly-health-summary card"
+  >
+    <h3>
+      <Icon name="mdi:heart-pulse" />
+      {{ $t('月次健康サマリー') }}
+    </h3>
 
     <div class="summary-grid">
       <!-- 記録日数 -->
       <div class="summary-item">
-        <div class="label">{{ $t('記録日数') }}</div>
-        <div class="value">{{ monthlySummary.recordCount }}{{ $t('日') }}</div>
+        <div class="label">
+          {{ $t('記録日数') }}
+        </div>
+        <div class="value">
+          {{ monthlySummary.recordCount }}{{ $t('日') }}
+        </div>
       </div>
 
       <!-- 平均体重 -->
-      <div v-if="monthlySummary.avgWeight" class="summary-item">
-        <div class="label">{{ $t('平均体重') }}</div>
-        <div class="value">{{ $t('{value}kg', { value: monthlySummary.avgWeight.toFixed(1) }) }}</div>
+      <div
+        v-if="monthlySummary.avgWeight"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('平均体重') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}kg', { value: monthlySummary.avgWeight.toFixed(1) }) }}
+        </div>
       </div>
 
       <!-- 平均体脂肪率 -->
-      <div v-if="monthlySummary.avgBodyFatPercentage" class="summary-item">
-        <div class="label">{{ $t('平均体脂肪率') }}</div>
-        <div class="value">{{ $t('{value}%', { value: monthlySummary.avgBodyFatPercentage.toFixed(1) }) }}</div>
+      <div
+        v-if="monthlySummary.avgBodyFatPercentage"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('平均体脂肪率') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}%', { value: monthlySummary.avgBodyFatPercentage.toFixed(1) }) }}
+        </div>
       </div>
 
       <!-- 合計歩数 -->
-      <div v-if="monthlySummary.totalSteps" class="summary-item">
-        <div class="label">{{ $t('合計歩数') }}</div>
-        <div class="value">{{ $t('{value}歩', { value: monthlySummary.totalSteps.toLocaleString() }) }}</div>
+      <div
+        v-if="monthlySummary.totalSteps"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('合計歩数') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}歩', { value: monthlySummary.totalSteps.toLocaleString() }) }}
+        </div>
       </div>
 
       <!-- 合計運動時間 -->
-      <div v-if="monthlySummary.totalExerciseMinutes" class="summary-item">
-        <div class="label">{{ $t('合計運動時間') }}</div>
-        <div class="value">{{ $t('{value}分', { value: monthlySummary.totalExerciseMinutes }) }}</div>
+      <div
+        v-if="monthlySummary.totalExerciseMinutes"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('合計運動時間') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}分', { value: monthlySummary.totalExerciseMinutes }) }}
+        </div>
       </div>
 
       <!-- 合計摂取カロリー -->
-      <div v-if="totalCalories > 0" class="summary-item highlight">
-        <div class="label">{{ $t('合計摂取カロリー') }}</div>
-        <div class="value">{{ $t('{value}kcal', { value: totalCalories.toLocaleString() }) }}</div>
+      <div
+        v-if="totalCalories > 0"
+        class="summary-item highlight"
+      >
+        <div class="label">
+          {{ $t('合計摂取カロリー') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}kcal', { value: totalCalories.toLocaleString() }) }}
+        </div>
       </div>
     </div>
 
     <!-- 先月との比較 -->
-    <div v-if="healthComments.length > 0" class="comparison-section">
+    <div
+      v-if="healthComments.length > 0"
+      class="comparison-section"
+    >
       <h4>{{ $t('先月との比較') }}</h4>
       <div class="comments">
-        <p v-for="(comment, index) in healthComments" :key="index" class="comment">
+        <p
+          v-for="(comment, index) in healthComments"
+          :key="index"
+          class="comment"
+        >
           {{ comment }}
         </p>
       </div>
@@ -110,10 +161,7 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .monthly-health-summary {
-  background: var(--card-bg);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
+  color: #666666;
 
   h3 {
     margin: 0 0 16px 0;
@@ -122,10 +170,9 @@ onMounted(async () => {
   }
 
   h4 {
-    margin: 20px 0 12px 0;
+    margin: 12px 0 12px 0;
     font-size: 14px;
     font-weight: 500;
-    color: var(--text-secondary);
   }
 }
 
@@ -136,13 +183,13 @@ onMounted(async () => {
 }
 
 .summary-item {
-  background: var(--bg-secondary);
+  background: #F5F5F5;
   border-radius: 8px;
   padding: 12px;
   text-align: center;
 
   &.highlight {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    background: linear-gradient(135deg, #4A90D9 0%, #6BA3E3 100%);
     color: white;
 
     .label,
@@ -153,31 +200,25 @@ onMounted(async () => {
 
   .label {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: #666666;
     margin-bottom: 4px;
   }
 
   .value {
     font-size: 18px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #333333;
   }
-}
-
-.comparison-section {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-color);
 }
 
 .comments {
   .comment {
     margin: 8px 0;
     padding: 8px 12px;
-    background: var(--bg-secondary);
+    background: #F5F5F5;
     border-radius: 8px;
     font-size: 13px;
-    color: var(--text-primary);
+    color: #333333;
   }
 }
 

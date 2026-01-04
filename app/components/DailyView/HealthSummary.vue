@@ -3,16 +3,12 @@
  * 日次健康サマリーコンポーネント
  * 日ごとのビューで健康データと摂取カロリーを表示
  */
-import { useHealthDataStore } from '~/stores/healthData'
-import { useItemsStore } from '~/stores/items'
-
 const props = defineProps<{
   date: string // YYYY-MM-DD形式
 }>()
 
 const healthDataStore = useHealthDataStore()
 const itemsStore = useItemsStore()
-const { $t } = useI18n()
 
 // その日の健康データ
 const healthData = computed(() => {
@@ -36,45 +32,98 @@ const hasData = computed(() => {
 </script>
 
 <template>
-  <div v-if="hasData" class="health-summary">
-    <h3>{{ $t('本日の健康データ') }}</h3>
-    
+  <div
+    v-if="hasData"
+    class="health-summary card"
+  >
+    <h3>
+      <Icon name="mdi:heart-pulse" />
+      {{ $t('本日の健康データ') }}
+    </h3>
+
     <div class="summary-grid">
       <!-- 体重 -->
-      <div v-if="healthData?.weight" class="summary-item">
-        <div class="label">{{ $t('体重') }}</div>
-        <div class="value">{{ $t('{value}kg', { value: healthData.weight.toFixed(1) }) }}</div>
+      <div
+        v-if="healthData?.weight"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('体重') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}kg', { value: healthData.weight.toFixed(1) }) }}
+        </div>
       </div>
 
       <!-- 体脂肪率 -->
-      <div v-if="healthData?.bodyFatPercentage" class="summary-item">
-        <div class="label">{{ $t('体脂肪率') }}</div>
-        <div class="value">{{ $t('{value}%', { value: healthData.bodyFatPercentage.toFixed(1) }) }}</div>
+      <div
+        v-if="healthData?.bodyFatPercentage"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('体脂肪率') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}%', { value: healthData.bodyFatPercentage.toFixed(1) }) }}
+        </div>
       </div>
 
       <!-- 摂取カロリー -->
-      <div v-if="totalCalories > 0" class="summary-item highlight">
-        <div class="label">{{ $t('摂取カロリー') }}</div>
-        <div class="value">{{ $t('{value}kcal', { value: totalCalories }) }}</div>
-        <div v-if="mealCount > 0" class="sub-text">{{ mealCount }}回の食事</div>
+      <div
+        v-if="totalCalories > 0"
+        class="summary-item highlight"
+      >
+        <div class="label">
+          {{ $t('摂取カロリー') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}kcal', { value: totalCalories }) }}
+        </div>
+        <div
+          v-if="mealCount > 0"
+          class="sub-text"
+        >
+          {{ mealCount }}回の食事
+        </div>
       </div>
 
       <!-- 歩数 -->
-      <div v-if="healthData?.steps" class="summary-item">
-        <div class="label">{{ $t('歩数') }}</div>
-        <div class="value">{{ $t('{value}歩', { value: healthData.steps.toLocaleString() }) }}</div>
+      <div
+        v-if="healthData?.steps"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('歩数') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}歩', { value: healthData.steps.toLocaleString() }) }}
+        </div>
       </div>
 
       <!-- 睡眠時間 -->
-      <div v-if="healthData?.sleepHours" class="summary-item">
-        <div class="label">{{ $t('睡眠時間') }}</div>
-        <div class="value">{{ $t('{value}時間', { value: healthData.sleepHours.toFixed(1) }) }}</div>
+      <div
+        v-if="healthData?.sleepHours"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('睡眠時間') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}時間', { value: healthData.sleepHours.toFixed(1) }) }}
+        </div>
       </div>
 
       <!-- 運動時間 -->
-      <div v-if="healthData?.exerciseMinutes" class="summary-item">
-        <div class="label">{{ $t('運動時間') }}</div>
-        <div class="value">{{ $t('{value}分', { value: healthData.exerciseMinutes }) }}</div>
+      <div
+        v-if="healthData?.exerciseMinutes"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('運動時間') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}分', { value: healthData.exerciseMinutes }) }}
+        </div>
       </div>
     </div>
   </div>
@@ -82,14 +131,11 @@ const hasData = computed(() => {
 
 <style lang="scss" scoped>
 .health-summary {
-  background: var(--card-bg);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
+  color: #666666;
 
   h3 {
     margin: 0 0 16px 0;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
   }
 }
@@ -101,13 +147,13 @@ const hasData = computed(() => {
 }
 
 .summary-item {
-  background: var(--bg-secondary);
+  background: #F5F5F5;
   border-radius: 8px;
-  padding: 12px;
+  padding: 8px;
   text-align: center;
 
   &.highlight {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    background: linear-gradient(135deg, #4A90D9 0%, #6BA3E3 100%);
     color: white;
 
     .label,
@@ -119,14 +165,11 @@ const hasData = computed(() => {
 
   .label {
     font-size: 11px;
-    color: var(--text-secondary);
     margin-bottom: 4px;
   }
 
   .value {
-    font-size: 20px;
     font-weight: 700;
-    color: var(--text-primary);
   }
 
   .sub-text {

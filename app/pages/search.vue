@@ -3,8 +3,6 @@
  * 検索ページ
  * アイテムをキーワードや種別で検索できます。
  */
-import { useItemsStore } from '~/stores/items'
-import { formatDate } from '~/utils/dateHelpers'
 import ItemCard from '~/components/shared/ItemCard.vue'
 import type { Item, ItemType } from '~/types/item'
 

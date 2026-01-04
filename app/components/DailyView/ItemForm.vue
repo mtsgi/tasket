@@ -3,10 +3,6 @@
  * アイテム追加フォームコンポーネント
  * 新規アイテム（TODO、支出、収入）を作成するためのフォームを提供
  */
-import { useItemsStore } from '~/stores/items'
-import { usePresetsStore } from '~/stores/presets'
-import { useSettingsStore } from '~/stores/settings'
-import { formatYearMonth } from '~/utils/dateHelpers'
 import type { ItemType } from '~/types/item'
 
 const props = defineProps<{
@@ -137,14 +133,16 @@ async function handleSubmit() {
     scheduledAt.setHours(hours, minutes, 0, 0)
 
     // 食事ログデータ
-    const mealLogData = showMealLog.value ? {
-      calories: mealCalories.value,
-      protein: mealProtein.value,
-      carbs: mealCarbs.value,
-      fat: mealFat.value,
-      photo: mealPhoto.value,
-      memo: mealMemo.value,
-    } : undefined
+    const mealLogData = showMealLog.value
+      ? {
+          calories: mealCalories.value,
+          protein: mealProtein.value,
+          carbs: mealCarbs.value,
+          fat: mealFat.value,
+          photo: mealPhoto.value,
+          memo: mealMemo.value,
+        }
+      : undefined
 
     await itemsStore.createItem({
       title: title.value.trim(),
@@ -292,7 +290,10 @@ async function handleSubmit() {
       </div>
 
       <!-- 食事ログセクション（TODOまたは支出の場合のみ表示） -->
-      <div v-if="type === 'todo' || type === 'expense'" class="meal-log-section">
+      <div
+        v-if="type === 'todo' || type === 'expense'"
+        class="meal-log-section"
+      >
         <button
           type="button"
           class="meal-log-toggle"
@@ -302,11 +303,14 @@ async function handleSubmit() {
           {{ $t('食事ログを追加') }}
         </button>
 
-        <div v-if="showMealLog" class="meal-log-form">
+        <div
+          v-if="showMealLog"
+          class="meal-log-form"
+        >
           <div class="form-row">
             <div class="form-group">
               <label>{{ $t('カロリー') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealCalories"
                 type="number"
                 :placeholder="$t('{value}kcal', { value: '0' })"
@@ -317,7 +321,7 @@ async function handleSubmit() {
           <div class="form-row">
             <div class="form-group">
               <label>{{ $t('タンパク質') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealProtein"
                 type="number"
                 step="0.1"
@@ -326,7 +330,7 @@ async function handleSubmit() {
             </div>
             <div class="form-group">
               <label>{{ $t('炭水化物') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealCarbs"
                 type="number"
                 step="0.1"
@@ -335,7 +339,7 @@ async function handleSubmit() {
             </div>
             <div class="form-group">
               <label>{{ $t('脂質') }}</label>
-              <input
+              <UiInput
                 v-model.number="mealFat"
                 type="number"
                 step="0.1"
@@ -351,9 +355,15 @@ async function handleSubmit() {
                 type="file"
                 accept="image/*"
                 @change="handlePhotoUpload"
-              />
-              <div v-if="mealPhoto" class="photo-preview">
-                <img :src="mealPhoto" alt="Meal photo" />
+              >
+              <div
+                v-if="mealPhoto"
+                class="photo-preview"
+              >
+                <img
+                  :src="mealPhoto"
+                  alt="Meal photo"
+                >
               </div>
             </div>
           </div>
@@ -508,9 +518,7 @@ async function handleSubmit() {
 
 /* 食事ログセクション */
 .meal-log-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
+  margin-bottom: 12px;
 
   .dark-mode & {
     border-color: #444;
@@ -546,8 +554,8 @@ async function handleSubmit() {
 
 .meal-log-form {
   margin-top: 12px;
-  padding: 12px;
-  background: #f9fafb;
+  padding: 8px;
+  background: #f5f7fa;
   border-radius: 8px;
 
   .dark-mode & {
@@ -566,9 +574,10 @@ async function handleSubmit() {
   }
 
   .form-group {
+    margin: 0;
+
     label {
       display: block;
-      margin-bottom: 4px;
       font-size: 12px;
       color: #666;
 
@@ -577,13 +586,13 @@ async function handleSubmit() {
       }
     }
 
-    input,
     textarea {
       width: 100%;
       padding: 6px 10px;
       border: 1px solid #e0e0e0;
       border-radius: 6px;
       font-size: 14px;
+      resize: vertical;
 
       .dark-mode & {
         background: #333;
@@ -593,12 +602,8 @@ async function handleSubmit() {
 
       &:focus {
         outline: none;
-        border-color: var(--primary-color);
+        border-color: #4a90d9;
       }
-    }
-
-    textarea {
-      resize: vertical;
     }
   }
 
@@ -609,13 +614,13 @@ async function handleSubmit() {
 
     .photo-preview {
       margin-top: 8px;
-      border-radius: 8px;
-      overflow: hidden;
 
       img {
         width: 100%;
         max-height: 200px;
         object-fit: cover;
+        border-radius: 8px;
+        overflow: hidden;
       }
     }
   }

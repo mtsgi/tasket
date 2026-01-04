@@ -15,7 +15,6 @@ import {
   Legend,
   type ChartOptions,
 } from 'chart.js'
-import { useHealthDataStore } from '~/stores/healthData'
 import dayjs from 'dayjs'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
@@ -25,7 +24,6 @@ const props = defineProps<{
 }>()
 
 const healthDataStore = useHealthDataStore()
-const { $t } = useI18n()
 
 // その月の健康データ
 const monthHealthData = computed(() => {
@@ -130,29 +128,31 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="health-chart">
-    <div v-if="hasData" class="chart-container">
-      <Line :data="chartData" :options="chartOptions" />
+  <div class="health-chart card">
+    <div
+      v-if="hasData"
+      class="chart-container"
+    >
+      <Line
+        :data="chartData"
+        :options="chartOptions"
+      />
     </div>
-    <div v-else class="no-data">
+    <div
+      v-else
+      class="no-data"
+    >
       <p>{{ $t('健康データが記録されていません') }}</p>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.health-chart {
-  background: var(--card-bg);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
 .chart-container {
   height: 300px;
   position: relative;
 
-  @media (max-width: 768px) {
+  @media (max-width: 600px) {
     height: 250px;
   }
 }
