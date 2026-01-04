@@ -73,6 +73,8 @@ export default {
   'データの削除に失敗しました': 'Failed to delete data',
   'サンプルデータを追加しました（アイテム: {itemsCount}件、日課: {routinesCount}件、プリセット: {presetsCount}件）':
     'Sample data added (Items: {itemsCount}, Routines: {routinesCount}, Presets: {presetsCount})',
+  'サンプルデータを追加しました\nアイテム: {items}件\n日課: {routines}件\nプリセット: {presets}件\n健康データ: {health}件':
+    'Sample data added\nItems: {items}\nRoutines: {routines}\nPresets: {presets}\nHealth Data: {health}',
   'サンプルデータの追加に失敗しました': 'Failed to add sample data',
 
   // Confirmation dialogs

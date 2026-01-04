@@ -73,6 +73,8 @@ export default {
   'データの削除に失敗しました': 'データの削除に失敗しました',
   'サンプルデータを追加しました（アイテム: {itemsCount}件、日課: {routinesCount}件、プリセット: {presetsCount}件）':
     'サンプルデータを追加しました（アイテム: {itemsCount}件、日課: {routinesCount}件、プリセット: {presetsCount}件）',
+  'サンプルデータを追加しました\nアイテム: {items}件\n日課: {routines}件\nプリセット: {presets}件\n健康データ: {health}件':
+    'サンプルデータを追加しました\nアイテム: {items}件\n日課: {routines}件\nプリセット: {presets}件\n健康データ: {health}件',
   'サンプルデータの追加に失敗しました': 'サンプルデータの追加に失敗しました',
 
   // 確認ダイアログ

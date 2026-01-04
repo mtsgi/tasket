@@ -288,14 +288,18 @@ async function addSampleData() {
 
     // データを再読み込み
     await itemsStore.fetchItems()
+    await routinesStore.fetchRoutines()
     await presetsStore.fetchPresets()
+    const healthDataStore = useHealthDataStore()
+    await healthDataStore.fetchHealthData()
 
     showNotification(
       'success',
-      t('サンプルデータを追加しました（アイテム: {itemsCount}件、日課: {routinesCount}件、プリセット: {presetsCount}件）', {
-        itemsCount: result.itemsCount,
-        routinesCount: result.routinesCount,
-        presetsCount: result.presetsCount,
+      t('サンプルデータを追加しました\nアイテム: {items}件\n日課: {routines}件\nプリセット: {presets}件\n健康データ: {health}件', {
+        items: result.itemsCount,
+        routines: result.routinesCount,
+        presets: result.presetsCount,
+        health: result.healthDataCount,
       }),
     )
   }
