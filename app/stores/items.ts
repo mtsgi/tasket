@@ -123,6 +123,69 @@ export const useItemsStore = defineStore('items', {
         })
       }
     },
+
+    /**
+     * 特定の日の摂取カロリー合計を取得
+     * @param dateString - 日付文字列（YYYY-MM-DD）
+     * @returns 摂取カロリー合計
+     */
+    getTotalCaloriesByDate: (state) => {
+      return (dateString: string) => {
+        const settingsStore = useSettingsStore()
+        const dateChangeLine = settingsStore.dateChangeLine
+
+        const startOfDay = getStartOfEffectiveDay(dateString, dateChangeLine)
+        const endOfDay = getEndOfEffectiveDay(dateString, dateChangeLine)
+
+        return state.items
+          .filter((item) => {
+            const scheduledAt = new Date(item.scheduled_at)
+            return scheduledAt >= startOfDay && scheduledAt <= endOfDay && item.mealLog?.calories
+          })
+          .reduce((sum, item) => sum + (item.mealLog?.calories || 0), 0)
+      }
+    },
+
+    /**
+     * 特定の月の摂取カロリー合計を取得
+     * @param yearMonth - 年月文字列（YYYY-MM）
+     * @returns 摂取カロリー合計
+     */
+    getTotalCaloriesByMonth: (state) => {
+      return (yearMonth: string) => {
+        const startOfMonth = getStartOfMonth(yearMonth + '-01')
+        const endOfMonth = getEndOfMonth(yearMonth + '-01')
+
+        return state.items
+          .filter((item) => {
+            const scheduledAt = new Date(item.scheduled_at)
+            return scheduledAt >= startOfMonth && scheduledAt <= endOfMonth && item.mealLog?.calories
+          })
+          .reduce((sum, item) => sum + (item.mealLog?.calories || 0), 0)
+      }
+    },
+
+    /**
+     * 特定の日の食事ログ付きアイテムを取得
+     * @param dateString - 日付文字列（YYYY-MM-DD）
+     * @returns 食事ログ付きアイテムリスト（時刻順）
+     */
+    getMealItemsByDate: (state) => {
+      return (dateString: string) => {
+        const settingsStore = useSettingsStore()
+        const dateChangeLine = settingsStore.dateChangeLine
+
+        const startOfDay = getStartOfEffectiveDay(dateString, dateChangeLine)
+        const endOfDay = getEndOfEffectiveDay(dateString, dateChangeLine)
+
+        return state.items
+          .filter((item) => {
+            const scheduledAt = new Date(item.scheduled_at)
+            return scheduledAt >= startOfDay && scheduledAt <= endOfDay && item.mealLog
+          })
+          .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+      }
+    },
   },
 
   /**
@@ -157,6 +220,7 @@ export const useItemsStore = defineStore('items', {
       type: ItemType
       scheduled_at: Date
       notes?: string
+      mealLog?: import('~/types/item').MealLog
     }) {
       const newItem: Item = {
         id: uuidv4(),
@@ -168,6 +232,7 @@ export const useItemsStore = defineStore('items', {
         executed_at: null,
         created_at: new Date(),
         notes: data.notes || '',
+        mealLog: data.mealLog,
       }
       await addItem(newItem)
       this.items.push(newItem)
