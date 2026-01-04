@@ -33,10 +33,14 @@ const menstrualCycle = ref<'menstruation' | 'follicular' | 'ovulation' | 'luteal
 const medicationRecord = ref('')
 const healthMemo = ref('')
 
-// BMIの計算（身長は設定から取得する想定だが、ここでは簡易的に170cmと仮定）
+// 設定から身長を取得
+const settingsStore = useSettingsStore()
+
+// BMIの計算（設定された身長を使用、設定がない場合は170cmをデフォルトとする）
 const bmi = computed(() => {
   if (weight.value) {
-    const heightInMeters = 1.7 // 170cm
+    const heightCm = settingsStore.height || 170
+    const heightInMeters = heightCm / 100
     return (weight.value / (heightInMeters * heightInMeters)).toFixed(1)
   }
   return undefined

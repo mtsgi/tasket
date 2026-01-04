@@ -35,6 +35,16 @@ export const tutorialSteps: TutorialStep[] = [
     icon: 'mdi:calendar-today',
   },
   {
+    titleKey: 'tutorial.health.title',
+    descriptionKey: 'tutorial.health.description',
+    icon: 'mdi:heart-pulse',
+  },
+  {
+    titleKey: 'tutorial.meallog.title',
+    descriptionKey: 'tutorial.meallog.description',
+    icon: 'mdi:food',
+  },
+  {
     titleKey: 'tutorial.routines.title',
     descriptionKey: 'tutorial.routines.description',
     icon: 'mdi:checkbox-multiple-marked',

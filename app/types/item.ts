@@ -233,5 +233,8 @@ export interface AppSettings {
     showTaskCount: boolean // タスクの合計数の表示/非表示
   }
 
+  // 健康管理設定
+  height?: number // 身長（cm）- BMI計算に使用
+
   updated_at: Date // 更新日時
 }

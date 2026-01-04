@@ -338,6 +338,12 @@ export default {
   'tutorial.dayview.title': 'Daily View',
   'tutorial.dayview.description': '<p>The <strong>Daily View</strong> allows detailed management of tasks and balance for a specific day.</p><ul><li><strong>Day Title</strong>: Set the main task for the day</li><li><strong>Week View Calendar</strong>: Quickly navigate to nearby dates</li><li><strong>Routine Checklist</strong>: Check off daily habits</li><li><strong>Daily Summary</strong>: Shows balance and task count for the day</li><li><strong>Item List</strong>: Manage items in chronological order</li></ul><p>Tap an item to edit details.</p>',
 
+  'tutorial.health.title': 'Health Management',
+  'tutorial.health.description': '<p><strong>Health Management</strong> helps you track and manage your daily health status.</p><ul><li><strong>Health Data Input</strong>: Record weight, body fat %, blood pressure, steps, etc. in daily view</li><li><strong>Auto BMI Calculation</strong>: Set your height in settings for automatic BMI calculation from weight</li><li><strong>Trend Charts</strong>: View weight and body fat changes in monthly view graphs</li><li><strong>Monthly Summary</strong>: See monthly averages and comparison with previous month</li></ul><p>Register your height in settings for more accurate health tracking.</p>',
+
+  'tutorial.meallog.title': 'Meal Logging',
+  'tutorial.meallog.description': '<p><strong>Meal Logging</strong> lets you record nutritional information with TODO and expense items.</p><ul><li><strong>Calories & Nutrients</strong>: Track calories, protein, carbs, and fat</li><li><strong>Meal Photos</strong>: Attach photos for visual meal management</li><li><strong>Calorie Totals</strong>: Automatic daily and monthly calorie aggregation</li><li><strong>Budget Integration</strong>: Add meal logs to expense items to track food costs and nutrition together</li></ul><p>Use "Add Meal Log" in item creation/editing screens.</p>',
+
   'tutorial.routines.title': 'Routine Feature',
   'tutorial.routines.description': '<p><strong>Routines</strong> manage habits and tasks that are repeated daily.</p><ul><li>Set routines per month</li><li>Record achievement status in 3 levels (unchecked, not achieved, achieved)</li><li>Visually check progress with achievement grid</li></ul><p>Configure from "Routine Manager" in the menu.</p>',
 
@@ -436,6 +442,11 @@ export default {
   '食事ログが記録されていません': 'No meal logs recorded',
   '今月のデータがありません': 'No data for this month',
   '健康データを保存しました': 'Health data saved',
+  '健康データの保存に失敗しました': 'Failed to save health data',
+  '健康管理': 'Health Management',
+  '健康データの管理に必要な情報を設定します': 'Configure information needed for health data management',
+  '身長': 'Height',
+  'BMI計算に使用されます': 'Used for BMI calculation',
   '健康データの保存に失敗しました': 'Failed to save health data',
   '食事ログを保存しました': 'Meal log saved',
   '食事ログの保存に失敗しました': 'Failed to save meal log',
