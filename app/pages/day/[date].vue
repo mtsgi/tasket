@@ -5,12 +5,15 @@
  * 日タイトル、週表示カレンダー、日課チェックリスト、収支サマリー、アイテム追加フォーム、アイテム一覧を表示します。
  */
 import { useItemsStore } from '~/stores/items'
+import { useHealthDataStore } from '~/stores/healthData'
 import { useStatistics } from '~/composables/useStatistics'
 import { formatDate, formatDisplayDate, addDays, formatYearMonth } from '~/utils/dateHelpers'
 import DailyHeader from '~/components/DailyView/DailyHeader.vue'
 import DayTitle from '~/components/DailyView/DayTitle.vue'
 import WeekView from '~/components/DailyView/WeekView.vue'
 import RoutineChecklist from '~/components/DailyView/RoutineChecklist.vue'
+import HealthDataForm from '~/components/DailyView/HealthDataForm.vue'
+import HealthSummary from '~/components/DailyView/HealthSummary.vue'
 import ItemList from '~/components/DailyView/ItemList.vue'
 import ItemForm from '~/components/DailyView/ItemForm.vue'
 import DailySummaryComponent from '~/components/DailyView/DailySummary.vue'
@@ -19,6 +22,7 @@ import DailySummaryComponent from '~/components/DailyView/DailySummary.vue'
 const route = useRoute()
 const router = useRouter()
 const itemsStore = useItemsStore()
+const healthDataStore = useHealthDataStore()
 const { calculateDailySummary } = useStatistics()
 
 // URLパラメータから日付を取得
@@ -78,9 +82,10 @@ function handleDateSelect(dateString: string) {
   router.push(`/day/${dateString}`)
 }
 
-// コンポーネントマウント時にアイテムを取得
+// コンポーネントマウント時にアイテムと健康データを取得
 onMounted(() => {
   itemsStore.fetchItems()
+  healthDataStore.fetchHealthData()
 })
 </script>
 
@@ -107,6 +112,12 @@ onMounted(() => {
 
     <!-- 日課チェックリスト -->
     <RoutineChecklist :date="dateParam" />
+
+    <!-- 健康データサマリー -->
+    <HealthSummary :date="dateParam" />
+
+    <!-- 健康データ入力フォーム -->
+    <HealthDataForm :date="dateParam" />
 
     <!-- アイテム一覧 -->
     <ItemList :items="items" />

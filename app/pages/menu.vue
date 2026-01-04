@@ -47,7 +47,7 @@ function showNotification(type: 'success' | 'error', message: string) {
 }
 
 /**
- * データをJSON形式でエクスポート（日課、日課ログ、日タイトル、アプリ設定を含む）
+ * データをJSON形式でエクスポート（日課、日課ログ、日タイトル、アプリ設定、健康データを含む）
  */
 async function exportData() {
   try {
@@ -56,15 +56,21 @@ async function exportData() {
     const routineLogs = await getAllRoutineLogs()
     const dayTitles = await getAllDayTitles()
     const appSettings = await getAllAppSettings()
+    const healthData = await getAllHealthData()
 
     const exportPayload = {
-      version: 5, // バージョン5: アプリ設定をIndexedDBに統合
+      version: 6, // バージョン6: 健康データを追加
       exportedAt: new Date().toISOString(),
       items: itemsStore.items.map(item => ({
         ...item,
         scheduled_at: item.scheduled_at.toISOString(),
         executed_at: item.executed_at ? item.executed_at.toISOString() : null,
         created_at: item.created_at.toISOString(),
+        // 食事ログの写真はBase64文字列として保存
+        mealLog: item.mealLog ? {
+          ...item.mealLog,
+          photo: item.mealLog.photo, // 既にBase64文字列として保存されている
+        } : undefined,
       })),
       routines: routines.map(routine => ({
         ...routine,
@@ -81,6 +87,11 @@ async function exportData() {
       appSettings: appSettings.map(settings => ({
         ...settings,
         updated_at: settings.updated_at.toISOString(),
+      })),
+      healthData: healthData.map(data => ({
+        ...data,
+        created_at: data.created_at.toISOString(),
+        updated_at: data.updated_at.toISOString(),
       })),
     }
 
@@ -151,6 +162,7 @@ async function importData(event: Event) {
         type: itemData.type,
         scheduled_at: new Date(itemData.scheduled_at),
         notes: itemData.notes || '',
+        mealLog: itemData.mealLog, // 食事ログデータをインポート
       })
     }
 
@@ -209,6 +221,18 @@ async function importData(event: Event) {
       await settingsStore.loadSettings()
       await lockStore.loadSettings()
       await tutorialStore.loadTutorialState()
+    }
+
+    // 健康データをインポート（バージョン6以降）
+    if (data.version >= 6 && Array.isArray(data.healthData)) {
+      const { saveHealthData } = await import('~/utils/db')
+      for (const healthDataItem of data.healthData) {
+        await saveHealthData({
+          ...healthDataItem,
+          created_at: new Date(healthDataItem.created_at),
+          updated_at: new Date(healthDataItem.updated_at),
+        })
+      }
     }
 
     showNotification('success', t('{count}件のアイテムをインポートしました', { count: data.items.length }))
