@@ -137,7 +137,7 @@ async function handleSubmit() {
     scheduledAt.setHours(hours, minutes, 0, 0)
 
     // 食事ログデータ
-    const mealLogData = (showMealLog.value && type.value === 'todo') ? {
+    const mealLogData = showMealLog.value ? {
       calories: mealCalories.value,
       protein: mealProtein.value,
       carbs: mealCarbs.value,
@@ -291,8 +291,8 @@ async function handleSubmit() {
         />
       </div>
 
-      <!-- 食事ログセクション（TODOの場合のみ表示） -->
-      <div v-if="type === 'todo'" class="meal-log-section">
+      <!-- 食事ログセクション（TODOまたは支出の場合のみ表示） -->
+      <div v-if="type === 'todo' || type === 'expense'" class="meal-log-section">
         <button
           type="button"
           class="meal-log-toggle"

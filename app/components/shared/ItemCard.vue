@@ -152,6 +152,30 @@ const executionStatus = computed(() => {
       >
         {{ item.notes }}
       </p>
+      <!-- 食事ログサマリー -->
+      <div
+        v-if="item.mealLog"
+        class="meal-log-summary"
+      >
+        <div class="meal-log-info">
+          <Icon name="mdi:food" class="meal-icon" />
+          <span v-if="item.mealLog.calories" class="calories">
+            {{ item.mealLog.calories }}kcal
+          </span>
+          <span v-if="item.mealLog.protein" class="nutrient">
+            P: {{ item.mealLog.protein }}g
+          </span>
+          <span v-if="item.mealLog.carbs" class="nutrient">
+            C: {{ item.mealLog.carbs }}g
+          </span>
+          <span v-if="item.mealLog.fat" class="nutrient">
+            F: {{ item.mealLog.fat }}g
+          </span>
+        </div>
+        <div v-if="item.mealLog.photo" class="meal-photo-thumb">
+          <img :src="item.mealLog.photo" alt="Meal" />
+        </div>
+      </div>
       <div
         v-if="item.amount > 0"
         class="amount-display"
@@ -288,6 +312,62 @@ const executionStatus = computed(() => {
     // ダークモード対応
     .dark-mode & {
       color: #b0b0b0;
+    }
+  }
+
+  .meal-log-summary {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: #f5f7fa;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .dark-mode & {
+      background: #2a2a2a;
+    }
+
+    .meal-log-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 11px;
+
+      .meal-icon {
+        color: #ff9800;
+        font-size: 14px;
+      }
+
+      .calories {
+        font-weight: 600;
+        color: #ff9800;
+      }
+
+      .nutrient {
+        color: #666;
+        font-size: 10px;
+
+        .dark-mode & {
+          color: #999;
+        }
+      }
+    }
+
+    .meal-photo-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      overflow: hidden;
+      flex-shrink: 0;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
     }
   }
 }
