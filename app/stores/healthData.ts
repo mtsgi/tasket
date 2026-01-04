@@ -82,15 +82,27 @@ export const useHealthDataStore = defineStore('healthData', {
         // 平均値の計算
         const weights = monthData.filter(d => d.weight).map(d => d.weight!)
         const bodyFats = monthData.filter(d => d.bodyFatPercentage).map(d => d.bodyFatPercentage!)
+        const muscleMasses = monthData.filter(d => d.muscleMass).map(d => d.muscleMass!)
+        const visceralFatLevels = monthData.filter(d => d.visceralFatLevel).map(d => d.visceralFatLevel!)
         const systolics = monthData.filter(d => d.systolicBloodPressure).map(d => d.systolicBloodPressure!)
         const diastolics = monthData.filter(d => d.diastolicBloodPressure).map(d => d.diastolicBloodPressure!)
         const heartRates = monthData.filter(d => d.heartRate).map(d => d.heartRate!)
+        const sleepHours = monthData.filter(d => d.sleepHours).map(d => d.sleepHours!)
+        const bodyWaterPercentages = monthData.filter(d => d.bodyWaterPercentage).map(d => d.bodyWaterPercentage!)
+        const boneMasses = monthData.filter(d => d.boneMass).map(d => d.boneMass!)
+        const proteinPercentages = monthData.filter(d => d.proteinPercentage).map(d => d.proteinPercentage!)
 
         if (weights.length > 0) {
           summary.avgWeight = weights.reduce((a, b) => a + b, 0) / weights.length
         }
         if (bodyFats.length > 0) {
           summary.avgBodyFatPercentage = bodyFats.reduce((a, b) => a + b, 0) / bodyFats.length
+        }
+        if (muscleMasses.length > 0) {
+          summary.avgMuscleMass = muscleMasses.reduce((a, b) => a + b, 0) / muscleMasses.length
+        }
+        if (visceralFatLevels.length > 0) {
+          summary.avgVisceralFatLevel = visceralFatLevels.reduce((a, b) => a + b, 0) / visceralFatLevels.length
         }
         if (systolics.length > 0) {
           summary.avgSystolicBloodPressure = systolics.reduce((a, b) => a + b, 0) / systolics.length
@@ -100,6 +112,18 @@ export const useHealthDataStore = defineStore('healthData', {
         }
         if (heartRates.length > 0) {
           summary.avgHeartRate = heartRates.reduce((a, b) => a + b, 0) / heartRates.length
+        }
+        if (sleepHours.length > 0) {
+          summary.avgSleepHours = sleepHours.reduce((a, b) => a + b, 0) / sleepHours.length
+        }
+        if (bodyWaterPercentages.length > 0) {
+          summary.avgBodyWaterPercentage = bodyWaterPercentages.reduce((a, b) => a + b, 0) / bodyWaterPercentages.length
+        }
+        if (boneMasses.length > 0) {
+          summary.avgBoneMass = boneMasses.reduce((a, b) => a + b, 0) / boneMasses.length
+        }
+        if (proteinPercentages.length > 0) {
+          summary.avgProteinPercentage = proteinPercentages.reduce((a, b) => a + b, 0) / proteinPercentages.length
         }
 
         // 合計値の計算
@@ -111,6 +135,11 @@ export const useHealthDataStore = defineStore('healthData', {
         if (prevMonthData.length > 0) {
           const prevWeights = prevMonthData.filter(d => d.weight).map(d => d.weight!)
           const prevBodyFats = prevMonthData.filter(d => d.bodyFatPercentage).map(d => d.bodyFatPercentage!)
+          const prevMuscleMasses = prevMonthData.filter(d => d.muscleMass).map(d => d.muscleMass!)
+          const prevVisceralFatLevels = prevMonthData.filter(d => d.visceralFatLevel).map(d => d.visceralFatLevel!)
+          const prevHeartRates = prevMonthData.filter(d => d.heartRate).map(d => d.heartRate!)
+          const prevSleepHours = prevMonthData.filter(d => d.sleepHours).map(d => d.sleepHours!)
+          const prevSteps = prevMonthData.reduce((sum, d) => sum + (d.steps || 0), 0)
 
           if (summary.avgWeight && prevWeights.length > 0) {
             const prevAvgWeight = prevWeights.reduce((a, b) => a + b, 0) / prevWeights.length
@@ -119,6 +148,25 @@ export const useHealthDataStore = defineStore('healthData', {
           if (summary.avgBodyFatPercentage && prevBodyFats.length > 0) {
             const prevAvgBodyFat = prevBodyFats.reduce((a, b) => a + b, 0) / prevBodyFats.length
             summary.bodyFatChange = summary.avgBodyFatPercentage - prevAvgBodyFat
+          }
+          if (summary.avgMuscleMass && prevMuscleMasses.length > 0) {
+            const prevAvgMuscleMass = prevMuscleMasses.reduce((a, b) => a + b, 0) / prevMuscleMasses.length
+            summary.muscleMassChange = summary.avgMuscleMass - prevAvgMuscleMass
+          }
+          if (summary.avgVisceralFatLevel && prevVisceralFatLevels.length > 0) {
+            const prevAvgVisceralFatLevel = prevVisceralFatLevels.reduce((a, b) => a + b, 0) / prevVisceralFatLevels.length
+            summary.visceralFatLevelChange = summary.avgVisceralFatLevel - prevAvgVisceralFatLevel
+          }
+          if (summary.avgHeartRate && prevHeartRates.length > 0) {
+            const prevAvgHeartRate = prevHeartRates.reduce((a, b) => a + b, 0) / prevHeartRates.length
+            summary.heartRateChange = summary.avgHeartRate - prevAvgHeartRate
+          }
+          if (summary.avgSleepHours && prevSleepHours.length > 0) {
+            const prevAvgSleepHours = prevSleepHours.reduce((a, b) => a + b, 0) / prevSleepHours.length
+            summary.sleepHoursChange = summary.avgSleepHours - prevAvgSleepHours
+          }
+          if (summary.totalSteps && prevSteps > 0) {
+            summary.stepsChange = summary.totalSteps - prevSteps
           }
         }
 

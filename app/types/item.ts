@@ -148,6 +148,9 @@ export interface HealthData {
   muscleMass?: number // 筋肉量（kg）
   visceralFatLevel?: number // 内臓脂肪レベル
   basalMetabolicRate?: number // 基礎代謝量（kcal）
+  bodyWaterPercentage?: number // 体内水分率（%）
+  boneMass?: number // 骨塩量（kg）
+  proteinPercentage?: number // タンパク質（%）
 
   // 循環器系
   systolicBloodPressure?: number // 最高血圧（mmHg）
@@ -186,9 +189,15 @@ export interface MonthlyHealthSummary {
   // 平均値
   avgWeight?: number // 平均体重
   avgBodyFatPercentage?: number // 平均体脂肪率
+  avgMuscleMass?: number // 平均筋肉量
+  avgVisceralFatLevel?: number // 平均内臓脂肪レベル
   avgSystolicBloodPressure?: number // 平均最高血圧
   avgDiastolicBloodPressure?: number // 平均最低血圧
   avgHeartRate?: number // 平均心拍数
+  avgSleepHours?: number // 平均睡眠時間
+  avgBodyWaterPercentage?: number // 平均体内水分率
+  avgBoneMass?: number // 平均骨塩量
+  avgProteinPercentage?: number // 平均タンパク質
 
   // 合計値
   totalSteps?: number // 合計歩数
@@ -199,6 +208,11 @@ export interface MonthlyHealthSummary {
   // 先月との比較
   weightChange?: number // 体重変化（kg）
   bodyFatChange?: number // 体脂肪率変化（%）
+  muscleMassChange?: number // 筋肉量変化（kg）
+  visceralFatLevelChange?: number // 内臓脂肪レベル変化
+  heartRateChange?: number // 心拍数変化（bpm）
+  sleepHoursChange?: number // 睡眠時間変化（時間）
+  stepsChange?: number // 歩数変化
 
   recordCount: number // 記録日数
 }

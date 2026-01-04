@@ -28,16 +28,74 @@ const healthComments = computed(() => {
   const summary = monthlySummary.value
   const comments: string[] = []
 
+  // 体重の変化
   if (summary.weightChange !== undefined) {
     const direction = summary.weightChange > 0 ? $t('増加') : $t('減少')
     const absChange = Math.abs(summary.weightChange)
     comments.push($t('体重が先月比で{value}kg{direction}しました', { value: absChange.toFixed(1), direction }))
   }
 
+  // 体脂肪率の変化
   if (summary.bodyFatChange !== undefined) {
     const direction = summary.bodyFatChange > 0 ? $t('増加') : $t('減少')
     const absChange = Math.abs(summary.bodyFatChange)
     comments.push($t('体脂肪率が先月比で{value}%{direction}しました', { value: absChange.toFixed(1), direction }))
+  }
+
+  // 筋肉量の変化
+  if (summary.muscleMassChange !== undefined && Math.abs(summary.muscleMassChange) > 0.1) {
+    const direction = summary.muscleMassChange > 0 ? $t('増加') : $t('減少')
+    const absChange = Math.abs(summary.muscleMassChange)
+    comments.push($t('筋肉量が先月比で{value}kg{direction}しました', { value: absChange.toFixed(1), direction }))
+  }
+
+  // 内臓脂肪レベルの変化
+  if (summary.visceralFatLevelChange !== undefined && Math.abs(summary.visceralFatLevelChange) > 0.5) {
+    const direction = summary.visceralFatLevelChange > 0 ? $t('増加') : $t('減少')
+    const absChange = Math.abs(summary.visceralFatLevelChange)
+    comments.push($t('内臓脂肪レベルが先月比で{value}{direction}しました', { value: absChange.toFixed(1), direction }))
+  }
+
+  // 心拍数の変化
+  if (summary.heartRateChange !== undefined && Math.abs(summary.heartRateChange) > 2) {
+    const direction = summary.heartRateChange > 0 ? $t('上昇') : $t('低下')
+    const absChange = Math.abs(summary.heartRateChange)
+    comments.push($t('平均心拍数が先月比で{value}bpm{direction}しました', { value: absChange.toFixed(0), direction }))
+  }
+
+  // 睡眠時間の変化
+  if (summary.sleepHoursChange !== undefined && Math.abs(summary.sleepHoursChange) > 0.3) {
+    const direction = summary.sleepHoursChange > 0 ? $t('増加') : $t('減少')
+    const absChange = Math.abs(summary.sleepHoursChange)
+    comments.push($t('平均睡眠時間が先月比で{value}時間{direction}しました', { value: absChange.toFixed(1), direction }))
+  }
+
+  // 歩数の変化
+  if (summary.stepsChange !== undefined && Math.abs(summary.stepsChange) > 1000) {
+    const direction = summary.stepsChange > 0 ? $t('増加') : $t('減少')
+    const absChange = Math.abs(summary.stepsChange)
+    comments.push($t('総歩数が先月比で{value}歩{direction}しました', { value: absChange.toFixed(0), direction }))
+  }
+
+  // 平均睡眠時間の評価
+  if (summary.avgSleepHours !== undefined) {
+    if (summary.avgSleepHours < 6) {
+      comments.push($t('睡眠時間が不足気味です。健康のため、7-8時間の睡眠を心がけましょう'))
+    }
+    else if (summary.avgSleepHours >= 7 && summary.avgSleepHours <= 8) {
+      comments.push($t('理想的な睡眠時間を確保できています'))
+    }
+  }
+
+  // 歩数の評価
+  if (summary.totalSteps !== undefined) {
+    const avgStepsPerDay = summary.totalSteps / (summary.recordCount || 1)
+    if (avgStepsPerDay >= 10000) {
+      comments.push($t('1日平均{value}歩と、健康的な活動量を維持できています', { value: avgStepsPerDay.toFixed(0) }))
+    }
+    else if (avgStepsPerDay < 5000) {
+      comments.push($t('歩数が少なめです。1日1万歩を目標に歩くことを心がけましょう'))
+    }
   }
 
   return comments
@@ -97,6 +155,58 @@ onMounted(async () => {
         </div>
         <div class="value">
           {{ $t('{value}%', { value: monthlySummary.avgBodyFatPercentage.toFixed(1) }) }}
+        </div>
+      </div>
+
+      <!-- 平均筋肉量 -->
+      <div
+        v-if="monthlySummary.avgMuscleMass"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('平均筋肉量') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}kg', { value: monthlySummary.avgMuscleMass.toFixed(1) }) }}
+        </div>
+      </div>
+
+      <!-- 平均内臓脂肪レベル -->
+      <div
+        v-if="monthlySummary.avgVisceralFatLevel"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('平均内臓脂肪レベル') }}
+        </div>
+        <div class="value">
+          {{ monthlySummary.avgVisceralFatLevel.toFixed(1) }}
+        </div>
+      </div>
+
+      <!-- 平均心拍数 -->
+      <div
+        v-if="monthlySummary.avgHeartRate"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('平均心拍数') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}bpm', { value: monthlySummary.avgHeartRate.toFixed(0) }) }}
+        </div>
+      </div>
+
+      <!-- 平均睡眠時間 -->
+      <div
+        v-if="monthlySummary.avgSleepHours"
+        class="summary-item"
+      >
+        <div class="label">
+          {{ $t('平均睡眠時間') }}
+        </div>
+        <div class="value">
+          {{ $t('{value}時間', { value: monthlySummary.avgSleepHours.toFixed(1) }) }}
         </div>
       </div>
 

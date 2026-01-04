@@ -19,6 +19,9 @@ const bodyFatPercentage = ref<number | undefined>()
 const muscleMass = ref<number | undefined>()
 const visceralFatLevel = ref<number | undefined>()
 const basalMetabolicRate = ref<number | undefined>()
+const bodyWaterPercentage = ref<number | undefined>()
+const boneMass = ref<number | undefined>()
+const proteinPercentage = ref<number | undefined>()
 const systolicBloodPressure = ref<number | undefined>()
 const diastolicBloodPressure = ref<number | undefined>()
 const heartRate = ref<number | undefined>()
@@ -61,6 +64,9 @@ function loadHealthData() {
     muscleMass.value = data.muscleMass
     visceralFatLevel.value = data.visceralFatLevel
     basalMetabolicRate.value = data.basalMetabolicRate
+    bodyWaterPercentage.value = data.bodyWaterPercentage
+    boneMass.value = data.boneMass
+    proteinPercentage.value = data.proteinPercentage
     systolicBloodPressure.value = data.systolicBloodPressure
     diastolicBloodPressure.value = data.diastolicBloodPressure
     heartRate.value = data.heartRate
@@ -88,6 +94,9 @@ async function saveHealthData() {
       muscleMass: muscleMass.value,
       visceralFatLevel: visceralFatLevel.value,
       basalMetabolicRate: basalMetabolicRate.value,
+      bodyWaterPercentage: bodyWaterPercentage.value,
+      boneMass: boneMass.value,
+      proteinPercentage: proteinPercentage.value,
       systolicBloodPressure: systolicBloodPressure.value,
       diastolicBloodPressure: diastolicBloodPressure.value,
       heartRate: heartRate.value,
@@ -188,6 +197,49 @@ function toggleExpand() {
               v-model="visceralFatLevel"
               type="number"
               placeholder="0"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ $t('基礎代謝率') }}</label>
+            <UiInput
+              v-model="basalMetabolicRate"
+              type="number"
+              :placeholder="$t('{value}kcal/日', { value: '0' })"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 体組成 -->
+      <div class="form-section">
+        <h4>{{ $t('体組成') }}</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ $t('体内水分率') }}</label>
+            <UiInput
+              v-model.number="bodyWaterPercentage"
+              type="number"
+              :placeholder="$t('{value}%', { value: '0.0' })"
+            />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('骨塩量') }}</label>
+            <UiInput
+              v-model.number="boneMass"
+              type="number"
+              :placeholder="$t('{value}kg', { value: '0.0' })"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ $t('タンパク質') }}</label>
+            <UiInput
+              v-model.number="proteinPercentage"
+              type="number"
+              :placeholder="$t('{value}%', { value: '0.0' })"
             />
           </div>
         </div>
