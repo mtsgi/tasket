@@ -142,8 +142,9 @@ export const useRoutinesStore = defineStore('routines', {
       try {
         // 月の最初の日と最後の日を計算
         const startDate = `${yearMonth}-01`
-        const year = Number.parseInt(yearMonth.split('-')[0])
-        const month = Number.parseInt(yearMonth.split('-')[1])
+        const dateParts = yearMonth.split('-')
+        const year = Number.parseInt(dateParts[0] ?? '0')
+        const month = Number.parseInt(dateParts[1] ?? '0')
         const lastDay = new Date(year, month, 0).getDate()
         const endDate = `${yearMonth}-${String(lastDay).padStart(2, '0')}`
 
@@ -185,7 +186,9 @@ export const useRoutinesStore = defineStore('routines', {
     async updateRoutineById(id: string, data: Partial<Omit<Routine, 'id' | 'created_at'>>) {
       const index = this.routines.findIndex(r => r.id === id)
       if (index !== -1) {
-        const updatedRoutine = { ...this.routines[index], ...data }
+        const existingRoutine = this.routines[index]
+        if (!existingRoutine) return null
+        const updatedRoutine: Routine = { ...existingRoutine, ...data }
         await updateRoutine(updatedRoutine)
         this.routines[index] = updatedRoutine
         return updatedRoutine

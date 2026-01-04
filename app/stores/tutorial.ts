@@ -61,6 +61,7 @@ export const useTutorialStore = defineStore('tutorial', {
             darkMode: false,
             backgroundImage: 'none',
             dateChangeLine: 0,
+            language: 'ja' as const,
             calendarDisplay: {
               showExpense: true,
               showIncome: true,

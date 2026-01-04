@@ -84,8 +84,11 @@ export function useStatistics() {
       if (!acc[item.title]) {
         acc[item.title] = { totalAmount: 0, count: 0 }
       }
-      acc[item.title].totalAmount += item.amount
-      acc[item.title].count += 1
+      const group = acc[item.title]
+      if (group) {
+        group.totalAmount += item.amount
+        group.count += 1
+      }
       return acc
     }, {} as Record<string, { totalAmount: number, count: number }>)
 

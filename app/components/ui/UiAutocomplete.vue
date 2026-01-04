@@ -104,9 +104,9 @@ function handleKeydown(event: KeyboardEvent) {
       selectedIndex.value = Math.max(selectedIndex.value - 1, -1)
       break
     case 'Enter':
-      if (selectedIndex.value >= 0) {
+      if (selectedIndex.value >= 0 && filteredSuggestions.value[selectedIndex.value]) {
         event.preventDefault()
-        selectSuggestion(filteredSuggestions.value[selectedIndex.value])
+        selectSuggestion(filteredSuggestions.value[selectedIndex.value]!)
       }
       break
     case 'Escape':

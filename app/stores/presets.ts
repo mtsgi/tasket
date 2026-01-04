@@ -89,7 +89,7 @@ export const usePresetsStore = defineStore('presets', {
     async updatePresetById(id: string, data: Partial<Omit<Preset, 'id' | 'created_at'>>) {
       const index = this.presets.findIndex(preset => preset.id === id)
       if (index !== -1) {
-        const updatedPreset = { ...this.presets[index], ...data }
+        const updatedPreset = { ...this.presets[index], ...data } as Preset
         await updatePreset(updatedPreset)
         this.presets[index] = updatedPreset
         return updatedPreset

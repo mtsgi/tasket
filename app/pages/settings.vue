@@ -10,7 +10,7 @@ import PresetManager from '~/components/settings/PresetManager.vue'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
-const { locale, t, setLocale } = useI18n()
+const { t, setLocale } = useI18n()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)

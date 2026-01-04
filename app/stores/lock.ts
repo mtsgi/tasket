@@ -122,6 +122,7 @@ export const useLockStore = defineStore('lock', {
             darkMode: false,
             backgroundImage: 'none',
             dateChangeLine: 0,
+            language: 'ja' as const,
             calendarDisplay: {
               showExpense: true,
               showIncome: true,

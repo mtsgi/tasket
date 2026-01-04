@@ -10,6 +10,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  type TooltipItem,
 } from 'chart.js'
 
 ChartJS.register(
@@ -128,9 +129,9 @@ const chartOptions = {
       mode: 'index' as const,
       intersect: false,
       callbacks: {
-        label: function (context: { dataset: { label: string }, parsed: { y: number } }) {
+        label: function (context: TooltipItem<'line' | 'bar'>) {
           const label = context.dataset.label || ''
-          const value = context.parsed.y
+          const value = context.parsed.y ?? 0
           return `${label}: ¥${value.toLocaleString()}`
         },
       },
@@ -217,15 +218,17 @@ const chartOptions = {
       </div>
     </div>
     <div class="chart-container">
+      <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
       <Line
         v-if="chartType === 'line'"
         :data="chartData"
-        :options="chartOptions"
+        :options="chartOptions as any"
       />
+      <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
       <Bar
         v-else
         :data="chartData"
-        :options="chartOptions"
+        :options="chartOptions as any"
       />
     </div>
   </section>

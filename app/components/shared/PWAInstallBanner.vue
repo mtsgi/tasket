@@ -4,7 +4,6 @@
  * アプリをホーム画面に追加するための案内を表示します
  */
 
-const { t } = useI18n()
 const { canInstall, isInstalled, isStandalone, promptInstall } = usePWAInstall()
 
 // バナーを閉じたかどうか（セッションストレージで管理）
@@ -23,10 +22,10 @@ const shouldShow = computed(() => {
  */
 async function handleInstall() {
   installing.value = true
-  
+
   try {
     const result = await promptInstall()
-    
+
     if (result === 'accepted') {
       // インストールが受け入れられた
       dismissed.value = true
@@ -46,7 +45,7 @@ async function handleInstall() {
  */
 function handleDismiss() {
   dismissed.value = true
-  
+
   // セッションストレージに保存（ページをリロードするまで再表示しない）
   if (import.meta.client) {
     sessionStorage.setItem('pwa-banner-dismissed', 'true')
@@ -123,7 +122,7 @@ onMounted(() => {
   padding: 12px 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  
+
   .banner-content {
     max-width: 1200px;
     margin: 0 auto;
@@ -131,36 +130,36 @@ onMounted(() => {
     align-items: center;
     gap: 12px;
   }
-  
+
   .banner-icon {
     font-size: 32px;
     flex-shrink: 0;
   }
-  
+
   .banner-text {
     flex: 1;
     min-width: 0;
-    
+
     .banner-title {
       font-size: 14px;
       font-weight: 600;
       margin: 0 0 4px 0;
     }
-    
+
     .banner-description {
       font-size: 12px;
       margin: 0;
       opacity: 0.9;
     }
   }
-  
+
   .banner-actions {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
   }
-  
+
   .install-button {
     display: flex;
     align-items: center;
@@ -175,27 +174,27 @@ onMounted(() => {
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
-    
+
     &:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.9);
       transform: translateY(-1px);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
+
     &:active:not(:disabled) {
       transform: translateY(0);
     }
-    
+
     &:disabled {
       opacity: 0.7;
       cursor: not-allowed;
     }
-    
+
     .spinning {
       animation: spin 1s linear infinite;
     }
   }
-  
+
   .dismiss-button {
     display: flex;
     align-items: center;
@@ -209,11 +208,11 @@ onMounted(() => {
     font-size: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
-    
+
     &:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.3);
     }
-    
+
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -250,30 +249,30 @@ onMounted(() => {
 @media (max-width: 600px) {
   .pwa-install-banner {
     padding: 10px 12px;
-    
+
     .banner-content {
       gap: 8px;
     }
-    
+
     .banner-icon {
       font-size: 28px;
     }
-    
+
     .banner-text {
       .banner-title {
         font-size: 13px;
       }
-      
+
       .banner-description {
         font-size: 11px;
       }
     }
-    
+
     .install-button {
       padding: 6px 12px;
       font-size: 13px;
     }
-    
+
     .dismiss-button {
       width: 28px;
       height: 28px;

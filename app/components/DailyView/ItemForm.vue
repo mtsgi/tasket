@@ -90,7 +90,9 @@ async function handleSubmit() {
 
   isSubmitting.value = true
   try {
-    const [hours, minutes] = time.value.split(':').map(Number)
+    const timeParts = time.value.split(':').map(Number)
+    const hours = timeParts[0] ?? 0
+    const minutes = timeParts[1] ?? 0
     const dateChangeLine = settingsStore.dateChangeLine
 
     // 日付変更線より前の時刻の場合、翌日の日付を使用

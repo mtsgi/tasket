@@ -183,7 +183,7 @@ export const useItemsStore = defineStore('items', {
     async updateItemById(id: string, data: Partial<Omit<Item, 'id' | 'created_at'>>) {
       const index = this.items.findIndex(item => item.id === id)
       if (index !== -1) {
-        const updatedItem = { ...this.items[index], ...data }
+        const updatedItem = { ...this.items[index], ...data } as Item
         await updateItem(updatedItem)
         this.items[index] = updatedItem
         return updatedItem
