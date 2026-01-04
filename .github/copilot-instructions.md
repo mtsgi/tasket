@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-Tasketは、TODO・家計簿・カレンダー機能を統合したオールインワンの生活管理PWAアプリケーションです。
+Tasketは、TODO・家計簿・カレンダー・健康管理機能を統合したオールインワンの生活管理PWAアプリケーションです。
 
 ## 技術スタック
 
@@ -53,6 +53,65 @@ interface Item {
   scheduled_at: Date   // 予定日時
   executed_at: Date | null  // 実行日時
   created_at: Date     // 作成日時
+  notes: string        // 備考
+  mealLog?: MealLog    // 食事ログデータ（TODOの場合のみ）
+}
+```
+
+### MealLog (食事ログ)
+
+TODOアイテムに紐づけて食事内容を記録します。
+
+```typescript
+interface MealLog {
+  calories?: number    // カロリー（kcal）
+  protein?: number     // タンパク質（g）
+  carbs?: number       // 炭水化物（g）
+  fat?: number         // 脂質（g）
+  photo?: string       // 写真（Base64エンコード）
+  memo?: string        // 自由メモ
+}
+```
+
+### HealthData (健康データ)
+
+日ごとの健康状態を記録します。
+
+```typescript
+interface HealthData {
+  id: string           // UUID
+  date: string         // 記録日（YYYY-MM-DD形式）
+  
+  // 基本測定値
+  weight?: number      // 体重（kg）
+  bodyFatPercentage?: number // 体脂肪率（%）
+  muscleMass?: number  // 筋肉量（kg）
+  visceralFatLevel?: number // 内臓脂肪レベル
+  basalMetabolicRate?: number // 基礎代謝量（kcal）
+  
+  // 循環器系
+  systolicBloodPressure?: number // 最高血圧（mmHg）
+  diastolicBloodPressure?: number // 最低血圧（mmHg）
+  heartRate?: number   // 心拍数（bpm）
+  
+  // その他のバイタル
+  bodyTemperature?: number // 体温（℃）
+  spo2?: number        // 血中酸素濃度（%）
+  
+  // 活動量
+  sleepHours?: number  // 睡眠時間（時間）
+  steps?: number       // 歩数
+  exerciseMinutes?: number // 運動時間（分）
+  caloriesBurned?: number // 消費カロリー（kcal）
+  waterIntake?: number // 水分摂取量（ml）
+  
+  // その他
+  menstrualCycle?: 'menstruation' | 'follicular' | 'ovulation' | 'luteal' | null
+  medicationRecord?: string // 服薬記録
+  healthMemo?: string  // 体調メモ
+  
+  created_at: Date     // 作成日時
+  updated_at: Date     // 更新日時
 }
 ```
 

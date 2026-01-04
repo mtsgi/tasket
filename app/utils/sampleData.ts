@@ -4,8 +4,8 @@
  */
 import { v4 as uuidv4 } from 'uuid'
 import dayjs from 'dayjs'
-import type { Item, Routine, Preset } from '~/types/item'
-import { addItem, addRoutine, addPreset } from '~/utils/db'
+import type { Item, Routine, Preset, HealthData } from '~/types/item'
+import { addItem, addRoutine, addPreset, saveHealthData } from '~/utils/db'
 
 /**
  * サンプルデータ定義
@@ -15,6 +15,7 @@ export interface SampleDataSet {
   items: Omit<Item, 'id' | 'created_at'>[]
   routines: Omit<Routine, 'id' | 'created_at'>[]
   presets: Omit<Preset, 'id' | 'created_at'>[]
+  healthData: Omit<HealthData, 'id' | 'created_at' | 'updated_at'>[]
 }
 
 /**
@@ -46,6 +47,22 @@ export function generateSampleData(): SampleDataSet {
       notes: '重要な取引先への返信',
     },
     {
+      title: '朝食',
+      amount: 0,
+      type: 'todo',
+      is_completed: true,
+      scheduled_at: today.subtract(1, 'day').hour(7).minute(30).toDate(),
+      executed_at: today.subtract(1, 'day').hour(7).minute(45).toDate(),
+      notes: '健康的な朝食',
+      mealLog: {
+        calories: 450,
+        protein: 20,
+        carbs: 55,
+        fat: 12,
+        memo: 'オートミール、バナナ、ヨーグルト',
+      },
+    },
+    {
       title: '週次ミーティング',
       amount: 0,
       type: 'todo',
@@ -53,6 +70,22 @@ export function generateSampleData(): SampleDataSet {
       scheduled_at: today.hour(10).minute(0).toDate(),
       executed_at: today.hour(11).minute(0).toDate(),
       notes: 'チーム全体での進捗確認',
+    },
+    {
+      title: 'ランチ',
+      amount: 0,
+      type: 'todo',
+      is_completed: true,
+      scheduled_at: today.hour(12).minute(30).toDate(),
+      executed_at: today.hour(12).minute(45).toDate(),
+      notes: '定食',
+      mealLog: {
+        calories: 680,
+        protein: 32,
+        carbs: 75,
+        fat: 18,
+        memo: 'チキン定食、サラダ付き',
+      },
     },
     {
       title: '書類整理',
@@ -102,6 +135,13 @@ export function generateSampleData(): SampleDataSet {
       scheduled_at: today.subtract(3, 'day').hour(12).minute(0).toDate(),
       executed_at: today.subtract(3, 'day').hour(12).minute(30).toDate(),
       notes: '定食屋でランチ',
+      mealLog: {
+        calories: 720,
+        protein: 28,
+        carbs: 82,
+        fat: 22,
+        memo: '日替わり定食',
+      },
     },
     {
       title: '交通費',
@@ -321,7 +361,84 @@ export function generateSampleData(): SampleDataSet {
     },
   ]
 
-  return { items, routines, presets }
+  // 健康データサンプル
+  const healthDataSamples: Omit<HealthData, 'id' | 'created_at' | 'updated_at'>[] = [
+    {
+      date: today.subtract(7, 'day').format('YYYY-MM-DD'),
+      weight: 68.5,
+      bodyFatPercentage: 18.2,
+      steps: 8200,
+      sleepHours: 7.5,
+      waterIntake: 2000,
+      healthMemo: '体調良好',
+    },
+    {
+      date: today.subtract(6, 'day').format('YYYY-MM-DD'),
+      weight: 68.3,
+      bodyFatPercentage: 18.1,
+      steps: 9500,
+      sleepHours: 7,
+      exerciseMinutes: 45,
+      waterIntake: 2200,
+    },
+    {
+      date: today.subtract(5, 'day').format('YYYY-MM-DD'),
+      weight: 68.4,
+      bodyFatPercentage: 18.0,
+      steps: 7800,
+      sleepHours: 6.5,
+      waterIntake: 1800,
+    },
+    {
+      date: today.subtract(4, 'day').format('YYYY-MM-DD'),
+      weight: 68.2,
+      bodyFatPercentage: 17.9,
+      steps: 10200,
+      sleepHours: 8,
+      exerciseMinutes: 60,
+      waterIntake: 2500,
+      healthMemo: 'ジムでトレーニング',
+    },
+    {
+      date: today.subtract(3, 'day').format('YYYY-MM-DD'),
+      weight: 68.0,
+      bodyFatPercentage: 17.8,
+      steps: 8900,
+      sleepHours: 7.5,
+      waterIntake: 2100,
+    },
+    {
+      date: today.subtract(2, 'day').format('YYYY-MM-DD'),
+      weight: 67.9,
+      bodyFatPercentage: 17.7,
+      systolicBloodPressure: 118,
+      diastolicBloodPressure: 75,
+      heartRate: 68,
+      steps: 9200,
+      sleepHours: 7,
+      waterIntake: 2000,
+    },
+    {
+      date: today.subtract(1, 'day').format('YYYY-MM-DD'),
+      weight: 67.8,
+      bodyFatPercentage: 17.6,
+      steps: 11000,
+      sleepHours: 7.5,
+      exerciseMinutes: 50,
+      waterIntake: 2300,
+      healthMemo: '朝ランニング',
+    },
+    {
+      date: today.format('YYYY-MM-DD'),
+      weight: 67.7,
+      bodyFatPercentage: 17.5,
+      steps: 5200,
+      sleepHours: 8,
+      waterIntake: 1500,
+    },
+  ]
+
+  return { items, routines, presets, healthData: healthDataSamples }
 }
 
 /**
@@ -332,6 +449,7 @@ export async function loadSampleData(): Promise<{
   itemsCount: number
   routinesCount: number
   presetsCount: number
+  healthDataCount: number
 }> {
   const sampleData = generateSampleData()
 
@@ -365,9 +483,21 @@ export async function loadSampleData(): Promise<{
     await addPreset(preset)
   }
 
+  // 健康データを追加
+  for (const healthDataItem of sampleData.healthData) {
+    const healthData: HealthData = {
+      id: uuidv4(),
+      ...healthDataItem,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }
+    await saveHealthData(healthData)
+  }
+
   return {
     itemsCount: sampleData.items.length,
     routinesCount: sampleData.routines.length,
     presetsCount: sampleData.presets.length,
+    healthDataCount: sampleData.healthData.length,
   }
 }

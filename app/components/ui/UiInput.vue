@@ -5,7 +5,7 @@
  */
 const props = defineProps<{
   /** v-modelで使用する値 */
-  modelValue: string | number
+  modelValue: string | number | undefined
   /** 入力タイプ */
   type?: 'text' | 'number' | 'time' | 'date' | 'email' | 'password'
   /** プレースホルダー */

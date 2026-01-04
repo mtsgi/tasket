@@ -3,9 +3,12 @@
  * 月ごとのビューページ
  * 月間カレンダー、収支サマリー、支出チャート、支出ランキングを表示します。
  */
+import { formatDate, formatYearMonth, formatDisplayYearMonth, addMonths, addDays, getStartOfMonth, getDaysInMonth } from '~/utils/dateHelpers'
 import Calendar from '~/components/MonthlyView/Calendar.vue'
 import CalendarSettings from '~/components/MonthlyView/CalendarSettings.vue'
 import ExpenseChart from '~/components/MonthlyView/ExpenseChart.vue'
+import HealthChart from '~/components/MonthlyView/HealthChart.vue'
+import MonthlyHealthSummary from '~/components/MonthlyView/MonthlyHealthSummary.vue'
 import MonthlySummaryComponent from '~/components/MonthlyView/MonthlySummary.vue'
 import ExpenseRanking from '~/components/MonthlyView/ExpenseRanking.vue'
 import RoutineAchievementGrid from '~/components/MonthlyView/RoutineAchievementGrid.vue'
@@ -14,6 +17,7 @@ import type { RoutineLog } from '~/types/item'
 const route = useRoute()
 const router = useRouter()
 const itemsStore = useItemsStore()
+const healthDataStore = useHealthDataStore()
 const dayTitlesStore = useDayTitlesStore()
 const routinesStore = useRoutinesStore()
 const { calculateMonthlySummary, calculateExpenseRanking, calculateDailyTotals, getItemCountByDate } = useStatistics()
@@ -97,6 +101,7 @@ async function fetchMonthRoutines() {
 
 onMounted(async () => {
   itemsStore.fetchItems()
+  healthDataStore.fetchHealthData()
   await fetchMonthDayTitles()
   await fetchMonthRoutines()
 })
@@ -186,6 +191,10 @@ watch(yearMonthParam, async () => {
     <ExpenseRanking :ranking="expenseRanking" />
 
     <MonthlySummaryComponent :summary="summary" />
+
+    <HealthChart :year-month="yearMonthParam" />
+
+    <MonthlyHealthSummary :year-month="yearMonthParam" />
   </div>
 </template>
 

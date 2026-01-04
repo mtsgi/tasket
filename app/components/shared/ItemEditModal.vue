@@ -35,6 +35,15 @@ const executedTime = ref(
     : '',
 )
 
+// 食事ログの状態
+const showMealLog = ref(!!props.item.mealLog)
+const mealCalories = ref<number | undefined>(props.item.mealLog?.calories)
+const mealProtein = ref<number | undefined>(props.item.mealLog?.protein)
+const mealCarbs = ref<number | undefined>(props.item.mealLog?.carbs)
+const mealFat = ref<number | undefined>(props.item.mealLog?.fat)
+const mealPhoto = ref<string | undefined>(props.item.mealLog?.photo)
+const mealMemo = ref(props.item.mealLog?.memo || '')
+
 const isSubmitting = ref(false)
 
 /**
@@ -69,6 +78,18 @@ async function handleSubmit() {
       executedAt.setHours(execHours, execMinutes, 0, 0)
     }
 
+    // 食事ログデータ
+    const mealLogData = showMealLog.value
+      ? {
+          calories: mealCalories.value,
+          protein: mealProtein.value,
+          carbs: mealCarbs.value,
+          fat: mealFat.value,
+          photo: mealPhoto.value,
+          memo: mealMemo.value,
+        }
+      : undefined
+
     await itemsStore.updateItemById(props.item.id, {
       title: title.value.trim(),
       amount: type.value === 'todo' ? 0 : amount.value,
@@ -76,6 +97,7 @@ async function handleSubmit() {
       scheduled_at: scheduledAt,
       executed_at: executedAt,
       notes: notes.value.trim(),
+      mealLog: mealLogData,
     })
 
     emit('close')
@@ -100,6 +122,28 @@ async function handleDelete() {
  */
 function clearExecutedTime() {
   executedTime.value = ''
+}
+
+/**
+ * 食事ログセクションの表示切り替え
+ */
+function toggleMealLog() {
+  showMealLog.value = !showMealLog.value
+}
+
+/**
+ * 画像ファイルを選択
+ */
+function handlePhotoUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      mealPhoto.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
 }
 </script>
 
@@ -211,6 +255,96 @@ function clearExecutedTime() {
           :placeholder="$t('備考（任意）')"
           rows="2"
         />
+      </div>
+
+      <!-- 食事ログセクション（TODOまたは支出の場合のみ表示） -->
+      <div
+        v-if="type === 'todo' || type === 'expense'"
+        class="meal-log-section"
+      >
+        <button
+          type="button"
+          class="meal-log-toggle"
+          @click="toggleMealLog"
+        >
+          <Icon :name="showMealLog ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
+          {{ $t('食事ログを追加') }}
+        </button>
+
+        <div
+          v-if="showMealLog"
+          class="meal-log-form"
+        >
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ $t('カロリー') }}</label>
+              <UiInput
+                v-model.number="mealCalories"
+                type="number"
+                :placeholder="$t('{value}kcal', { value: '0' })"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ $t('タンパク質') }}</label>
+              <UiInput
+                v-model.number="mealProtein"
+                type="number"
+                step="0.1"
+                :placeholder="$t('{value}g', { value: '0' })"
+              />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('炭水化物') }}</label>
+              <UiInput
+                v-model.number="mealCarbs"
+                type="number"
+                step="0.1"
+                :placeholder="$t('{value}g', { value: '0' })"
+              />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('脂質') }}</label>
+              <UiInput
+                v-model.number="mealFat"
+                type="number"
+                step="0.1"
+                :placeholder="$t('{value}g', { value: '0' })"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>{{ $t('食事写真') }}</label>
+            <div class="photo-upload">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handlePhotoUpload"
+              >
+              <div
+                v-if="mealPhoto"
+                class="photo-preview"
+              >
+                <img
+                  :src="mealPhoto"
+                  alt="Meal photo"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>{{ $t('食事メモ') }}</label>
+            <textarea
+              v-model="mealMemo"
+              :placeholder="$t('食事メモ')"
+              rows="2"
+            />
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -336,6 +470,113 @@ function clearExecutedTime() {
   @media (max-width: 600px) {
     min-height: 44px;
     font-size: 16px;
+  }
+}
+
+/* 食事ログセクション */
+.meal-log-section {
+  margin-bottom: 12px;
+
+  .dark-mode & {
+    border-color: #444;
+  }
+}
+
+.meal-log-toggle {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: none;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f5f7fa;
+  }
+
+  .dark-mode & {
+    border-color: #444;
+    color: #e0e0e0;
+
+    &:hover {
+      background: #333;
+    }
+  }
+}
+
+.meal-log-form {
+  margin-top: 12px;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 8px;
+
+  .dark-mode & {
+    background: #2a2a2a;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-group {
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: #666;
+
+      .dark-mode & {
+        color: #b0b0b0;
+      }
+    }
+    textarea {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      resize: vertical;
+
+      .dark-mode & {
+        background: #333333;
+        border-color: #444444;
+        color: #e0e0e0;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: #4a90d9;
+      }
+    }
+  }
+
+  .photo-upload {
+    input[type="file"] {
+      font-size: 13px;
+    }
+
+    .photo-preview {
+      margin-top: 8px;
+
+      img {
+        width: 100%;
+        max-height: 200px;
+        object-fit: cover;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+    }
   }
 }
 </style>

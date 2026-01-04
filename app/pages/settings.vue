@@ -7,10 +7,12 @@ import { useSettingsStore } from '~/stores/settings'
 import { useLockStore } from '~/stores/lock'
 import PinInput from '~/components/shared/PinInput.vue'
 import PresetManager from '~/components/settings/PresetManager.vue'
+import { useRouter } from 'vue-router'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const { t, setLocale } = useI18n()
+const router = useRouter()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -98,6 +100,14 @@ async function handleDarkModeChange() {
  * 日付変更線変更ハンドラ
  */
 async function handleDateChangeLineChange() {
+  await nextTick()
+  await settingsStore.saveSettings()
+}
+
+/**
+ * 身長変更ハンドラ
+ */
+async function handleHeightChange() {
   await nextTick()
   await settingsStore.saveSettings()
 }
@@ -294,12 +304,23 @@ onMounted(async () => {
     await setLocale(settingsStore.language)
   }
 })
+
+function goBack() {
+  router.back()
+}
 </script>
 
 <template>
   <div class="container">
     <!-- ヘッダー -->
     <header class="settings-header">
+      <button
+        class="btn btn-secondary btn-icon"
+        :aria-label="$t('戻る')"
+        @click="goBack"
+      >
+        <Icon name="mdi:arrow-left" />
+      </button>
       <h1>
         <Icon name="mdi:cog" />
         {{ $t('設定') }}
@@ -396,6 +417,35 @@ onMounted(async () => {
         <span>
           {{ $t('例: 4時に設定した場合、12月12日は当日4:00から翌日3:59までを指します') }}
         </span>
+      </div>
+    </section>
+
+    <!-- 健康管理設定 -->
+    <section class="settings-section card">
+      <h2>
+        <Icon name="mdi:heart-pulse" />
+        {{ $t('健康管理') }}
+      </h2>
+      <p class="section-description">
+        {{ $t('健康データの管理に必要な情報を設定します') }}
+      </p>
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>{{ $t('身長') }}</h3>
+          <p>{{ $t('BMI計算に使用されます') }}</p>
+        </div>
+        <div class="height-input">
+          <input
+            v-model.number="settingsStore.height"
+            type="number"
+            min="100"
+            max="250"
+            step="0.1"
+            :placeholder="$t('170')"
+            @change="handleHeightChange"
+          >
+          <span class="unit">cm</span>
+        </div>
       </div>
     </section>
 
@@ -592,16 +642,17 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .settings-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
 
   h1 {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 8px;
     font-size: 24px;
     font-weight: 600;
-    text-align: center;
 
     // ダークモード対応
     .dark-mode & {
@@ -917,6 +968,42 @@ onMounted(async () => {
   .dark-mode & {
     background-color: rgba(74, 144, 217, 0.15);
     color: #b0b0b0;
+  }
+}
+
+// 身長入力
+.height-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input[type="number"] {
+    width: 100px;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: right;
+
+    &:focus {
+      outline: none;
+      border-color: #4a90d9;
+    }
+
+    .dark-mode & {
+      background-color: #333;
+      border-color: #444;
+      color: #e0e0e0;
+    }
+  }
+
+  .unit {
+    font-size: 14px;
+    color: #666;
+
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 

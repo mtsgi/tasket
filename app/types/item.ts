@@ -20,6 +20,9 @@ export interface Item {
   executed_at: Date | null // 実行日時（完了時に設定）
   created_at: Date // 作成日時
   notes: string // 備考
+
+  // 食事ログ関連（type='todo'で食事の場合に使用）
+  mealLog?: MealLog // 食事ログデータ
 }
 
 /**
@@ -119,6 +122,102 @@ export interface Preset {
 }
 
 /**
+ * 食事ログのデータ構造
+ * TODOアイテムに紐づけて食事内容を記録
+ */
+export interface MealLog {
+  calories?: number // カロリー（kcal）
+  protein?: number // タンパク質（g）
+  carbs?: number // 炭水化物（g）
+  fat?: number // 脂質（g）
+  photo?: string // 写真（Base64エンコードされた画像データ）
+  memo?: string // 自由メモ
+}
+
+/**
+ * 健康データのデータ構造
+ * 日ごとの健康状態を記録
+ */
+export interface HealthData {
+  id: string // 一意のID（UUID）
+  date: string // 記録日（YYYY-MM-DD形式）
+
+  // 基本測定値
+  weight?: number // 体重（kg）
+  bodyFatPercentage?: number // 体脂肪率（%）
+  muscleMass?: number // 筋肉量（kg）
+  visceralFatLevel?: number // 内臓脂肪レベル
+  basalMetabolicRate?: number // 基礎代謝量（kcal）
+  bodyWaterPercentage?: number // 体内水分率（%）
+  boneMass?: number // 骨塩量（kg）
+  proteinPercentage?: number // タンパク質（%）
+
+  // 循環器系
+  systolicBloodPressure?: number // 最高血圧（mmHg）
+  diastolicBloodPressure?: number // 最低血圧（mmHg）
+  heartRate?: number // 脈拍/心拍数（bpm）
+
+  // その他のバイタル
+  bodyTemperature?: number // 体温（℃）
+  spo2?: number // 血中酸素濃度（%）
+
+  // 活動量
+  sleepHours?: number // 睡眠時間（時間）
+  steps?: number // 歩数
+  exerciseMinutes?: number // 運動時間（分）
+  caloriesBurned?: number // 消費カロリー（kcal）
+  waterIntake?: number // 水分摂取量（ml）
+
+  // 女性向け
+  menstrualCycle?: 'menstruation' | 'follicular' | 'ovulation' | 'luteal' | null // 生理周期
+
+  // その他
+  medicationRecord?: string // 服薬記録
+  healthMemo?: string // 体調に関する自由記録メモ
+
+  created_at: Date // 作成日時
+  updated_at: Date // 更新日時
+}
+
+/**
+ * 月次健康サマリーのデータ構造
+ * 特定の月の健康データをまとめたもの
+ */
+export interface MonthlyHealthSummary {
+  yearMonth: string // 対象年月（YYYY-MM形式）
+
+  // 平均値
+  avgWeight?: number // 平均体重
+  avgBodyFatPercentage?: number // 平均体脂肪率
+  avgMuscleMass?: number // 平均筋肉量
+  avgVisceralFatLevel?: number // 平均内臓脂肪レベル
+  avgSystolicBloodPressure?: number // 平均最高血圧
+  avgDiastolicBloodPressure?: number // 平均最低血圧
+  avgHeartRate?: number // 平均心拍数
+  avgSleepHours?: number // 平均睡眠時間
+  avgBodyWaterPercentage?: number // 平均体内水分率
+  avgBoneMass?: number // 平均骨塩量
+  avgProteinPercentage?: number // 平均タンパク質
+
+  // 合計値
+  totalSteps?: number // 合計歩数
+  totalExerciseMinutes?: number // 合計運動時間
+  totalCaloriesIntake?: number // 合計摂取カロリー
+  totalCaloriesBurned?: number // 合計消費カロリー
+
+  // 先月との比較
+  weightChange?: number // 体重変化（kg）
+  bodyFatChange?: number // 体脂肪率変化（%）
+  muscleMassChange?: number // 筋肉量変化（kg）
+  visceralFatLevelChange?: number // 内臓脂肪レベル変化
+  heartRateChange?: number // 心拍数変化（bpm）
+  sleepHoursChange?: number // 睡眠時間変化（時間）
+  stepsChange?: number // 歩数変化
+
+  recordCount: number // 記録日数
+}
+
+/**
  * アプリ設定のデータ構造
  * チュートリアル状態、ロック設定、表示設定などのアプリケーション設定を保存
  */
@@ -147,6 +246,9 @@ export interface AppSettings {
     showMainTask: boolean // その日のメインタスクの表示/非表示
     showTaskCount: boolean // タスクの合計数の表示/非表示
   }
+
+  // 健康管理設定
+  height?: number // 身長（cm）- BMI計算に使用
 
   updated_at: Date // 更新日時
 }

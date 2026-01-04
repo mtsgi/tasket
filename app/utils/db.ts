@@ -4,11 +4,11 @@
  * idb ライブラリを使用してIndexedDBを操作します。
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Item, DayTitle, Routine, RoutineLog, Preset, AppSettings } from '~/types/item'
+import type { Item, DayTitle, Routine, RoutineLog, Preset, AppSettings, HealthData } from '~/types/item'
 
 /**
  * データベーススキーマの型定義
- * itemsストア、dayTitlesストア、routinesストア、routineLogsストア、presetsストア、appSettingsストアを定義
+ * itemsストア、dayTitlesストア、routinesストア、routineLogsストア、presetsストア、appSettingsストア、healthDataストアを定義
  */
 interface TasketDB extends DBSchema {
   // @ts-expect-error idbライブラリの型定義との互換性の問題
@@ -54,6 +54,13 @@ interface TasketDB extends DBSchema {
     key: string
     value: AppSettings
   }
+  healthData: {
+    key: string
+    value: HealthData
+    indexes: {
+      'by-date': string // 日付でのインデックス
+    }
+  }
 }
 
 // データベース接続のシングルトンインスタンス
@@ -65,7 +72,7 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 5, {
+    dbPromise = openDB<TasketDB>('tasket-db', 6, {
       upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
@@ -132,6 +139,13 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           // appSettingsオブジェクトストアを作成
           db.createObjectStore('appSettings', { keyPath: 'id' })
         }
+
+        // バージョン6の新機能: 健康データ
+        if (oldVersion < 6) {
+          // healthDataオブジェクトストアを作成
+          const healthDataStore = db.createObjectStore('healthData', { keyPath: 'id' })
+          healthDataStore.createIndex('by-date', 'date')
+        }
       },
     })
   }
@@ -156,6 +170,7 @@ export async function getAllItems(): Promise<Item[]> {
     executed_at: item.executed_at ? new Date(item.executed_at) : null,
     created_at: new Date(item.created_at),
     notes: item.notes || '', // 既存データの互換性のため
+    mealLog: item.mealLog, // 食事ログデータ
   }))
 }
 
@@ -174,6 +189,7 @@ export async function getItemById(id: string): Promise<Item | undefined> {
       executed_at: item.executed_at ? new Date(item.executed_at) : null,
       created_at: new Date(item.created_at),
       notes: item.notes || '', // 既存データの互換性のため
+      mealLog: item.mealLog, // 食事ログデータ
     }
   }
   return undefined
@@ -514,5 +530,76 @@ export async function getAllAppSettings(): Promise<AppSettings[]> {
   return settings.map(s => ({
     ...s,
     updated_at: new Date(s.updated_at),
+  }))
+}
+
+// ============================================
+// HealthData（健康データ）関連の操作
+// ============================================
+
+/**
+ * 日付で健康データを取得
+ * @param date - 日付文字列（YYYY-MM-DD形式）
+ * @returns 健康データ、または見つからない場合はundefined
+ */
+export async function getHealthDataByDate(date: string): Promise<HealthData | undefined> {
+  const db = await getDB()
+  const dataList = await db.getAllFromIndex('healthData', 'by-date', date)
+  if (dataList.length > 0 && dataList[0]) {
+    return {
+      ...dataList[0],
+      created_at: new Date(dataList[0].created_at),
+      updated_at: new Date(dataList[0].updated_at),
+    }
+  }
+  return undefined
+}
+
+/**
+ * すべての健康データを取得
+ * @returns すべての健康データリスト
+ */
+export async function getAllHealthData(): Promise<HealthData[]> {
+  const db = await getDB()
+  const dataList = await db.getAll('healthData')
+  return dataList.map(data => ({
+    ...data,
+    created_at: new Date(data.created_at),
+    updated_at: new Date(data.updated_at),
+  }))
+}
+
+/**
+ * 健康データを追加または更新
+ * @param healthData - 健康データ
+ */
+export async function saveHealthData(healthData: HealthData): Promise<void> {
+  const db = await getDB()
+  await db.put('healthData', healthData)
+}
+
+/**
+ * 健康データを削除
+ * @param id - 健康データのID
+ */
+export async function deleteHealthData(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('healthData', id)
+}
+
+/**
+ * 日付範囲で健康データを取得
+ * @param startDate - 開始日（YYYY-MM-DD形式）
+ * @param endDate - 終了日（YYYY-MM-DD形式）
+ * @returns 指定期間の健康データリスト
+ */
+export async function getHealthDataByDateRange(startDate: string, endDate: string): Promise<HealthData[]> {
+  const db = await getDB()
+  const range = IDBKeyRange.bound(startDate, endDate)
+  const dataList = await db.getAllFromIndex('healthData', 'by-date', range)
+  return dataList.map(data => ({
+    ...data,
+    created_at: new Date(data.created_at),
+    updated_at: new Date(data.updated_at),
   }))
 }
