@@ -158,22 +158,43 @@ const executionStatus = computed(() => {
         class="meal-log-summary"
       >
         <div class="meal-log-info">
-          <Icon name="mdi:food" class="meal-icon" />
-          <span v-if="item.mealLog.calories" class="calories">
+          <Icon
+            name="mdi:food"
+            class="meal-icon"
+          />
+          <span
+            v-if="item.mealLog.calories"
+            class="calories"
+          >
             {{ item.mealLog.calories }}kcal
           </span>
-          <span v-if="item.mealLog.protein" class="nutrient">
+          <span
+            v-if="item.mealLog.protein"
+            class="nutrient"
+          >
             P: {{ item.mealLog.protein }}g
           </span>
-          <span v-if="item.mealLog.carbs" class="nutrient">
+          <span
+            v-if="item.mealLog.carbs"
+            class="nutrient"
+          >
             C: {{ item.mealLog.carbs }}g
           </span>
-          <span v-if="item.mealLog.fat" class="nutrient">
+          <span
+            v-if="item.mealLog.fat"
+            class="nutrient"
+          >
             F: {{ item.mealLog.fat }}g
           </span>
         </div>
-        <div v-if="item.mealLog.photo" class="meal-photo-thumb">
-          <img :src="item.mealLog.photo" alt="Meal" />
+        <div
+          v-if="item.mealLog.photo"
+          class="meal-photo-thumb"
+        >
+          <img
+            :src="item.mealLog.photo"
+            alt="Meal"
+          >
         </div>
       </div>
       <div

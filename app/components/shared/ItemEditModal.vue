@@ -79,14 +79,16 @@ async function handleSubmit() {
     }
 
     // 食事ログデータ
-    const mealLogData = showMealLog.value ? {
-      calories: mealCalories.value,
-      protein: mealProtein.value,
-      carbs: mealCarbs.value,
-      fat: mealFat.value,
-      photo: mealPhoto.value,
-      memo: mealMemo.value,
-    } : undefined
+    const mealLogData = showMealLog.value
+      ? {
+          calories: mealCalories.value,
+          protein: mealProtein.value,
+          carbs: mealCarbs.value,
+          fat: mealFat.value,
+          photo: mealPhoto.value,
+          memo: mealMemo.value,
+        }
+      : undefined
 
     await itemsStore.updateItemById(props.item.id, {
       title: title.value.trim(),
@@ -256,7 +258,10 @@ function handlePhotoUpload(event: Event) {
       </div>
 
       <!-- 食事ログセクション（TODOまたは支出の場合のみ表示） -->
-      <div v-if="type === 'todo' || type === 'expense'" class="meal-log-section">
+      <div
+        v-if="type === 'todo' || type === 'expense'"
+        class="meal-log-section"
+      >
         <button
           type="button"
           class="meal-log-toggle"
@@ -266,7 +271,10 @@ function handlePhotoUpload(event: Event) {
           {{ $t('食事ログを追加') }}
         </button>
 
-        <div v-if="showMealLog" class="meal-log-form">
+        <div
+          v-if="showMealLog"
+          class="meal-log-form"
+        >
           <div class="form-row">
             <div class="form-group">
               <label>{{ $t('カロリー') }}</label>
@@ -315,9 +323,15 @@ function handlePhotoUpload(event: Event) {
                 type="file"
                 accept="image/*"
                 @change="handlePhotoUpload"
-              />
-              <div v-if="mealPhoto" class="photo-preview">
-                <img :src="mealPhoto" alt="Meal photo" />
+              >
+              <div
+                v-if="mealPhoto"
+                class="photo-preview"
+              >
+                <img
+                  :src="mealPhoto"
+                  alt="Meal photo"
+                >
               </div>
             </div>
           </div>
