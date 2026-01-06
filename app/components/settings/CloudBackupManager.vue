@@ -5,6 +5,7 @@
  */
 import { useCloudBackupStore } from '~/stores/cloudBackup'
 import type { CloudBackupConfig, CloudProvider } from '~/types/cloudBackup'
+import ProviderSetupManual from './ProviderSetupManual.vue'
 
 const cloudBackupStore = useCloudBackupStore()
 const { t } = useI18n()
@@ -12,6 +13,7 @@ const { t } = useI18n()
 // モーダル状態
 const showConfigModal = ref(false)
 const showRestoreModal = ref(false)
+const showManualModal = ref(false)
 
 // フォーム状態
 const editingConfig = ref<CloudBackupConfig | null>(null)
@@ -271,6 +273,20 @@ function formatDateTime(date: Date): string {
   return new Date(date).toLocaleString()
 }
 
+/**
+ * セットアップマニュアルを表示
+ */
+function openManual() {
+  showManualModal.value = true
+}
+
+/**
+ * セットアップマニュアルを閉じる
+ */
+function closeManual() {
+  showManualModal.value = false
+}
+
 // 初期化
 onMounted(() => {
   cloudBackupStore.fetchConfigs()
@@ -332,7 +348,9 @@ onMounted(() => {
           <div class="config-header">
             <div class="config-info">
               <h4>{{ config.name }}</h4>
-              <span class="config-provider">{{ $t(config.provider === 's3-compatible' ? 'S3互換' : 'カスタム') }}</span>
+              <span class="config-provider">
+                {{ config.provider === 's3-compatible' ? $t('S3互換') : config.provider === 'webdav' ? $t('WebDAV') : $t('カスタム') }}
+              </span>
             </div>
             <div class="config-status">
               <span
@@ -472,59 +490,112 @@ onMounted(() => {
             <option value="s3-compatible">
               {{ $t('S3互換') }}
             </option>
+            <option value="webdav">
+              {{ $t('WebDAV') }}
+            </option>
           </select>
           <p class="form-help">
-            {{ $t('AWS S3、MinIO、Wasabi、Cloudflare R2などのS3互換APIをサポート') }}
+            <template v-if="formData.provider === 's3-compatible'">
+              {{ $t('AWS S3、MinIO、Wasabi、Cloudflare R2などのS3互換APIをサポート') }}
+            </template>
+            <template v-else-if="formData.provider === 'webdav'">
+              {{ $t('Nextcloud、ownCloud、Boxなどに対応') }}
+            </template>
           </p>
+          <UiButton
+            variant="secondary"
+            size="small"
+            style="margin-top: 8px;"
+            @click="openManual"
+          >
+            <Icon name="mdi:book-open-variant" />
+            {{ $t('セットアップマニュアルを表示') }}
+          </UiButton>
         </div>
 
-        <div class="form-group">
-          <label>{{ $t('エンドポイント') }}</label>
-          <input
-            v-model="formData.endpoint"
-            type="text"
-            :placeholder="$t('例: https://s3.amazonaws.com')"
-          >
-        </div>
+        <!-- S3互換の設定 -->
+        <template v-if="formData.provider === 's3-compatible'">
+          <div class="form-group">
+            <label>{{ $t('エンドポイント') }}</label>
+            <input
+              v-model="formData.endpoint"
+              type="text"
+              :placeholder="$t('例: https://s3.amazonaws.com')"
+            >
+          </div>
 
-        <div class="form-group">
-          <label>{{ $t('リージョン') }}</label>
-          <input
-            v-model="formData.region"
-            type="text"
-            :placeholder="$t('例: us-east-1')"
-          >
-        </div>
+          <div class="form-group">
+            <label>{{ $t('リージョン') }}</label>
+            <input
+              v-model="formData.region"
+              type="text"
+              :placeholder="$t('例: us-east-1')"
+            >
+          </div>
 
-        <div class="form-group">
-          <label>{{ $t('バケット名') }}</label>
-          <input
-            v-model="formData.bucket"
-            type="text"
-            :placeholder="$t('例: my-tasket-backup')"
-          >
-        </div>
+          <div class="form-group">
+            <label>{{ $t('バケット名') }}</label>
+            <input
+              v-model="formData.bucket"
+              type="text"
+              :placeholder="$t('例: my-tasket-backup')"
+            >
+          </div>
 
-        <div class="form-group">
-          <label>{{ $t('アクセスキーID') }}</label>
-          <input
-            v-model="formData.accessKeyId"
-            type="text"
-            :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
-          >
-        </div>
+          <div class="form-group">
+            <label>{{ $t('アクセスキーID') }}</label>
+            <input
+              v-model="formData.accessKeyId"
+              type="text"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+          </div>
 
-        <div class="form-group">
-          <label>{{ $t('シークレットアクセスキー') }}</label>
-          <input
-            v-model="formData.secretAccessKey"
-            type="password"
-            :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
-          >
-          <p class="form-help">
-            {{ $t('認証情報は安全に暗号化されて保存されます') }}
-          </p>
-        </div>
+          <div class="form-group">
+            <label>{{ $t('シークレットアクセスキー') }}</label>
+            <input
+              v-model="formData.secretAccessKey"
+              type="password"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+            <p class="form-help">
+              {{ $t('認証情報は安全に暗号化されて保存されます') }}
+            </p>
+          </div>
+        </template>
+
+        <!-- WebDAVの設定 -->
+        <template v-else-if="formData.provider === 'webdav'">
+          <div class="form-group">
+            <label>{{ $t('WebDAV URL') }}</label>
+            <input
+              v-model="formData.endpoint"
+              type="text"
+              :placeholder="$t('例: https://cloud.example.com/remote.php/dav/files/username')"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>{{ $t('ユーザー名') }}</label>
+            <input
+              v-model="formData.accessKeyId"
+              type="text"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>{{ $t('パスワード') }}</label>
+            <input
+              v-model="formData.secretAccessKey"
+              type="password"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+            <p class="form-help">
+              {{ $t('認証情報は安全に暗号化されて保存されます') }}
+            </p>
+          </div>
+        </template>
 
         <div class="form-group">
           <label class="checkbox-label">
@@ -641,6 +712,15 @@ onMounted(() => {
           </UiButton>
         </div>
       </div>
+    </UiModal>
+
+    <!-- セットアップマニュアルモーダル -->
+    <UiModal
+      :show="showManualModal"
+      :title="$t('セットアップマニュアル')"
+      @close="closeManual"
+    >
+      <ProviderSetupManual :provider="formData.provider" />
     </UiModal>
   </div>
 </template>

@@ -537,3 +537,15 @@ export default {
   '設定がありません': '設定がありません',
   'クラウドバックアップを使用するには、まず設定を追加してください': 'クラウドバックアップを使用するには、まず設定を追加してください',
 }
+  'WebDAV': 'WebDAV',
+  'Nextcloud、ownCloud、Boxなどに対応': 'Nextcloud、ownCloud、Boxなどに対応',
+  'ユーザー名': 'ユーザー名',
+  'パスワード': 'パスワード',
+  '設定ガイド': '設定ガイド',
+  'セットアップマニュアルを表示': 'セットアップマニュアルを表示',
+  'セットアップマニュアル': 'セットアップマニュアル',
+  'WebDAV URL': 'WebDAV URL',
+  '例: https://cloud.example.com/remote.php/dav/files/username': '例: https://cloud.example.com/remote.php/dav/files/username',
+  'WebDAVの設定方法': 'WebDAVの設定方法',
+  'S3互換ストレージの設定方法': 'S3互換ストレージの設定方法',
+}

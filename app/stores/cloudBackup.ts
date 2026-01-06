@@ -16,6 +16,7 @@ import {
 } from '~/utils/db'
 import { encrypt } from '~/utils/encryption'
 import { S3CompatibleAdapter } from '~/utils/cloudAdapters/S3CompatibleAdapter'
+import { WebDAVAdapter } from '~/utils/cloudAdapters/WebDAVAdapter'
 import type { BaseCloudAdapter } from '~/utils/cloudAdapters/BaseCloudAdapter'
 
 // バックアップデータのバージョン（データベースバージョンと一致させる）
@@ -230,6 +231,8 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
       switch (config.provider) {
         case 's3-compatible':
           return new S3CompatibleAdapter(config)
+        case 'webdav':
+          return new WebDAVAdapter(config)
         default:
           throw new Error(`サポートされていないプロバイダー: ${config.provider}`)
       }
