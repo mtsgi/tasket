@@ -536,7 +536,6 @@ export default {
   '例: my-tasket-backup': '例: my-tasket-backup',
   '設定がありません': '設定がありません',
   'クラウドバックアップを使用するには、まず設定を追加してください': 'クラウドバックアップを使用するには、まず設定を追加してください',
-}
   'WebDAV': 'WebDAV',
   'Nextcloud、ownCloud、Boxなどに対応': 'Nextcloud、ownCloud、Boxなどに対応',
   'ユーザー名': 'ユーザー名',
