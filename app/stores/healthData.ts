@@ -12,7 +12,6 @@ import {
   deleteHealthData,
   getHealthDataByDateRange,
 } from '~/utils/db'
-import { formatDate } from '~/utils/dateHelpers'
 import dayjs from 'dayjs'
 
 export const useHealthDataStore = defineStore('healthData', {
