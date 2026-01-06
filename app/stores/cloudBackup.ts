@@ -17,6 +17,9 @@ import {
 import { encrypt } from '~/utils/encryption'
 import { S3CompatibleAdapter } from '~/utils/cloudAdapters/S3CompatibleAdapter'
 import { WebDAVAdapter } from '~/utils/cloudAdapters/WebDAVAdapter'
+import { GoogleDriveAdapter } from '~/utils/cloudAdapters/GoogleDriveAdapter'
+import { DropboxAdapter } from '~/utils/cloudAdapters/DropboxAdapter'
+import { AzureBlobAdapter } from '~/utils/cloudAdapters/AzureBlobAdapter'
 import type { BaseCloudAdapter } from '~/utils/cloudAdapters/BaseCloudAdapter'
 
 // バックアップデータのバージョン（データベースバージョンと一致させる）
@@ -233,6 +236,12 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           return new S3CompatibleAdapter(config)
         case 'webdav':
           return new WebDAVAdapter(config)
+        case 'google-drive':
+          return new GoogleDriveAdapter(config)
+        case 'dropbox':
+          return new DropboxAdapter(config)
+        case 'azure-blob':
+          return new AzureBlobAdapter(config)
         default:
           throw new Error(`サポートされていないプロバイダー: ${config.provider}`)
       }

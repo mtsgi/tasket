@@ -274,6 +274,21 @@ function formatDateTime(date: Date): string {
 }
 
 /**
+ * プロバイダー名を取得
+ */
+function getProviderDisplayName(provider: CloudProvider): string {
+  const names: Record<CloudProvider, string> = {
+    's3-compatible': t('S3互換'),
+    'webdav': t('WebDAV'),
+    'google-drive': t('Google Drive'),
+    'dropbox': t('Dropbox'),
+    'azure-blob': t('Azure Blob Storage'),
+    'custom': t('カスタム'),
+  }
+  return names[provider] || t('カスタム')
+}
+
+/**
  * セットアップマニュアルを表示
  */
 function openManual() {
@@ -349,7 +364,7 @@ onMounted(() => {
             <div class="config-info">
               <h4>{{ config.name }}</h4>
               <span class="config-provider">
-                {{ config.provider === 's3-compatible' ? $t('S3互換') : config.provider === 'webdav' ? $t('WebDAV') : $t('カスタム') }}
+                {{ getProviderDisplayName(config.provider) }}
               </span>
             </div>
             <div class="config-status">
@@ -493,6 +508,15 @@ onMounted(() => {
             <option value="webdav">
               {{ $t('WebDAV') }}
             </option>
+            <option value="google-drive">
+              {{ $t('Google Drive') }}
+            </option>
+            <option value="dropbox">
+              {{ $t('Dropbox') }}
+            </option>
+            <option value="azure-blob">
+              {{ $t('Azure Blob Storage') }}
+            </option>
           </select>
           <p class="form-help">
             <template v-if="formData.provider === 's3-compatible'">
@@ -500,6 +524,15 @@ onMounted(() => {
             </template>
             <template v-else-if="formData.provider === 'webdav'">
               {{ $t('Nextcloud、ownCloud、Boxなどに対応') }}
+            </template>
+            <template v-else-if="formData.provider === 'google-drive'">
+              {{ $t('Google Driveを使用したクラウドバックアップ') }}
+            </template>
+            <template v-else-if="formData.provider === 'dropbox'">
+              {{ $t('Dropboxを使用したクラウドバックアップ') }}
+            </template>
+            <template v-else-if="formData.provider === 'azure-blob'">
+              {{ $t('Azure Blob Storageを使用したクラウドバックアップ') }}
             </template>
           </p>
           <UiButton
@@ -590,6 +623,69 @@ onMounted(() => {
               v-model="formData.secretAccessKey"
               type="password"
               :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+            <p class="form-help">
+              {{ $t('認証情報は安全に暗号化されて保存されます') }}
+            </p>
+          </div>
+        </template>
+
+        <!-- Google Driveの設定 -->
+        <template v-else-if="formData.provider === 'google-drive'">
+          <div class="form-group">
+            <label>{{ $t('アクセストークン') }}</label>
+            <input
+              v-model="formData.accessKeyId"
+              type="password"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+            <p class="form-help">
+              {{ $t('認証情報は安全に暗号化されて保存されます') }}
+            </p>
+          </div>
+        </template>
+
+        <!-- Dropboxの設定 -->
+        <template v-else-if="formData.provider === 'dropbox'">
+          <div class="form-group">
+            <label>{{ $t('アクセストークン') }}</label>
+            <input
+              v-model="formData.accessKeyId"
+              type="password"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+            <p class="form-help">
+              {{ $t('認証情報は安全に暗号化されて保存されます') }}
+            </p>
+          </div>
+        </template>
+
+        <!-- Azure Blob Storageの設定 -->
+        <template v-else-if="formData.provider === 'azure-blob'">
+          <div class="form-group">
+            <label>{{ $t('ストレージアカウント名') }}</label>
+            <input
+              v-model="formData.accessKeyId"
+              type="text"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>{{ $t('SASトークン') }}</label>
+            <input
+              v-model="formData.secretAccessKey"
+              type="password"
+              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>{{ $t('コンテナ名') }}</label>
+            <input
+              v-model="formData.bucket"
+              type="text"
+              placeholder="tasket-backups"
             >
             <p class="form-help">
               {{ $t('認証情報は安全に暗号化されて保存されます') }}

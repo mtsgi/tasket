@@ -6,7 +6,7 @@
 /**
  * サポートするクラウドプロバイダー
  */
-export type CloudProvider = 's3-compatible' | 'webdav' | 'custom'
+export type CloudProvider = 's3-compatible' | 'webdav' | 'google-drive' | 'dropbox' | 'azure-blob' | 'custom'
 
 /**
  * クラウドバックアップ設定のデータ構造
