@@ -43,13 +43,19 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     const canonicalUri = urlObj.pathname || '/'
     const canonicalQueryString = urlObj.search.slice(1) || ''
 
+    // ペイロードのハッシュを先に計算
+    const payloadHash = body
+      ? await this.sha256(body)
+      : await this.sha256('')
+
     const requestHeaders: Record<string, string> = {
       'host': host,
       'x-amz-date': amzDate,
+      'x-amz-content-sha256': payloadHash,
       ...headers,
     }
 
-    if (body) {
+    if (body && method !== 'GET') {
       requestHeaders['content-type'] = 'application/json'
     }
 
@@ -60,13 +66,6 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
       .join('')
 
     const signedHeaders = sortedHeaderKeys.map(key => key.toLowerCase()).join(';')
-
-    // ペイロードのハッシュ
-    const payloadHash = body
-      ? await this.sha256(body)
-      : await this.sha256('')
-
-    requestHeaders['x-amz-content-sha256'] = payloadHash
 
     // 正規リクエスト
     const canonicalRequest = [
@@ -197,9 +196,8 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
 
     const body = JSON.stringify(data, null, 2)
 
-    const { url: signedUrl, headers } = await this.signRequest('PUT', url, body, {
-      'content-type': 'application/json',
-    })
+    // PUTリクエストではcontent-typeを明示的に指定
+    const { url: signedUrl, headers } = await this.signRequest('PUT', url, body)
 
     const response = await fetch(signedUrl, {
       method: 'PUT',
