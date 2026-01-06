@@ -203,6 +203,8 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
       method: 'PUT',
       headers,
       body,
+      mode: 'cors',
+      credentials: 'omit',
     })
 
     if (!response.ok) {
@@ -231,6 +233,8 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     const response = await fetch(signedUrl, {
       method: 'GET',
       headers,
+      mode: 'cors',
+      credentials: 'omit',
     })
 
     if (!response.ok) {
@@ -260,6 +264,8 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     const response = await fetch(signedUrl, {
       method: 'GET',
       headers,
+      mode: 'cors',
+      credentials: 'omit',
     })
 
     if (!response.ok) {
