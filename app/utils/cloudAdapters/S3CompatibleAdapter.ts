@@ -271,9 +271,16 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
 
     const xml = await response.text()
 
-    // XMLをパース（簡易的な実装）
+    // XMLをパース
     const parser = new DOMParser()
     const doc = parser.parseFromString(xml, 'text/xml')
+
+    // パースエラーをチェック
+    const parserError = doc.querySelector('parsererror')
+    if (parserError) {
+      throw new Error('XMLパースエラー: ' + parserError.textContent)
+    }
+
     const contents = doc.getElementsByTagName('Contents')
 
     const files: Array<{ path: string, size: number, lastModified: Date }> = []
@@ -287,11 +294,18 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
       const lastModifiedElement = content.getElementsByTagName('LastModified')[0]
 
       if (keyElement && sizeElement && lastModifiedElement) {
-        files.push({
-          path: keyElement.textContent || '',
-          size: parseInt(sizeElement.textContent || '0', 10),
-          lastModified: new Date(lastModifiedElement.textContent || ''),
-        })
+        const key = keyElement.textContent || ''
+        const size = parseInt(sizeElement.textContent || '0', 10)
+        const lastModified = new Date(lastModifiedElement.textContent || '')
+
+        // 有効なデータのみ追加
+        if (key && !isNaN(size) && !isNaN(lastModified.getTime())) {
+          files.push({
+            path: key,
+            size,
+            lastModified,
+          })
+        }
       }
     }
 

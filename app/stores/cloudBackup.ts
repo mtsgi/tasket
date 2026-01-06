@@ -18,6 +18,9 @@ import { encrypt } from '~/utils/encryption'
 import { S3CompatibleAdapter } from '~/utils/cloudAdapters/S3CompatibleAdapter'
 import type { BaseCloudAdapter } from '~/utils/cloudAdapters/BaseCloudAdapter'
 
+// バックアップデータのバージョン（データベースバージョンと一致させる）
+const BACKUP_DATA_VERSION = 7
+
 export const useCloudBackupStore = defineStore('cloudBackup', {
   /**
    * ストアの状態
@@ -154,6 +157,7 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         isEnabled: boolean
         autoBackup: boolean
         autoBackupInterval: number
+        last_backup_at: Date
       }>,
     ): Promise<void> {
       try {
@@ -174,9 +178,16 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
         const updatedConfig: CloudBackupConfig = {
           ...existingConfig,
-          ...params,
+          name: params.name ?? existingConfig.name,
+          endpoint: params.endpoint ?? existingConfig.endpoint,
+          region: params.region ?? existingConfig.region,
+          bucket: params.bucket ?? existingConfig.bucket,
           accessKeyId,
           secretAccessKey,
+          isEnabled: params.isEnabled ?? existingConfig.isEnabled,
+          autoBackup: params.autoBackup ?? existingConfig.autoBackup,
+          autoBackupInterval: params.autoBackupInterval ?? existingConfig.autoBackupInterval,
+          last_backup_at: params.last_backup_at ?? existingConfig.last_backup_at,
           updated_at: new Date(),
         }
 
@@ -280,7 +291,7 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           const healthData = await getAllHealthData()
 
           const backupData = {
-            version: 6,
+            version: BACKUP_DATA_VERSION,
             exportedAt: new Date().toISOString(),
             items: itemsStore.items.map(item => ({
               ...item,
@@ -329,7 +340,6 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
           // 設定の最終バックアップ日時を更新
           await this.updateConfig(configId, {
-            ...config,
             last_backup_at: new Date(),
           })
 

@@ -36,6 +36,7 @@ const formData = ref({
 // バックアップファイル一覧
 const backupFiles = ref<Array<{ path: string, size: number, lastModified: Date }>>([])
 const selectedBackupFile = ref<string | null>(null)
+const selectedConfigId = ref<string | null>(null)
 
 // 通知
 const notification = ref<{ type: 'success' | 'error', message: string } | null>(null)
@@ -215,6 +216,7 @@ async function openRestoreModal(configId: string) {
   try {
     backupFiles.value = await cloudBackupStore.listBackupFiles(configId)
     selectedBackupFile.value = null
+    selectedConfigId.value = configId
     showRestoreModal.value = true
   }
   catch {
@@ -225,7 +227,12 @@ async function openRestoreModal(configId: string) {
 /**
  * バックアップから復元
  */
-async function restore(configId: string) {
+async function restore() {
+  if (!selectedConfigId.value) {
+    showNotification('error', t('設定を選択してください'))
+    return
+  }
+
   if (!selectedBackupFile.value) {
     showNotification('error', t('バックアップファイルを選択してください'))
     return
@@ -236,7 +243,7 @@ async function restore(configId: string) {
 
   try {
     isRestoring.value = true
-    await cloudBackupStore.restore(configId, selectedBackupFile.value)
+    await cloudBackupStore.restore(selectedConfigId.value, selectedBackupFile.value)
     showNotification('success', t('復元に成功しました'))
     showRestoreModal.value = false
   }
@@ -626,8 +633,8 @@ onMounted(() => {
         <div class="restore-actions">
           <UiButton
             variant="primary"
-            :disabled="!selectedBackupFile || isRestoring"
-            @click="restore(cloudBackupStore.defaultConfig?.id || '')"
+            :disabled="!selectedBackupFile || isRestoring || !selectedConfigId"
+            @click="restore"
           >
             <Icon name="mdi:restore" />
             {{ isRestoring ? $t('復元中') + '...' : $t('復元') }}
