@@ -5,6 +5,7 @@
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Item, DayTitle, Routine, RoutineLog, Preset, AppSettings, HealthData } from '~/types/item'
+import type { CloudBackupConfig, BackupHistory } from '~/types/cloudBackup'
 
 /**
  * データベーススキーマの型定義
@@ -61,6 +62,21 @@ interface TasketDB extends DBSchema {
       'by-date': string // 日付でのインデックス
     }
   }
+  cloudBackupConfigs: {
+    key: string
+    value: CloudBackupConfig
+    indexes: {
+      'by-provider': string // プロバイダーでのインデックス
+    }
+  }
+  backupHistory: {
+    key: string
+    value: BackupHistory
+    indexes: {
+      'by-configId': string // 設定IDでのインデックス
+      'by-status': string // ステータスでのインデックス
+    }
+  }
 }
 
 // データベース接続のシングルトンインスタンス
@@ -72,7 +88,7 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 6, {
+    dbPromise = openDB<TasketDB>('tasket-db', 7, {
       upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
@@ -145,6 +161,18 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           // healthDataオブジェクトストアを作成
           const healthDataStore = db.createObjectStore('healthData', { keyPath: 'id' })
           healthDataStore.createIndex('by-date', 'date')
+        }
+
+        // バージョン7の新機能: クラウドバックアップ
+        if (oldVersion < 7) {
+          // cloudBackupConfigsオブジェクトストアを作成
+          const cloudBackupConfigsStore = db.createObjectStore('cloudBackupConfigs', { keyPath: 'id' })
+          cloudBackupConfigsStore.createIndex('by-provider', 'provider')
+
+          // backupHistoryオブジェクトストアを作成
+          const backupHistoryStore = db.createObjectStore('backupHistory', { keyPath: 'id' })
+          backupHistoryStore.createIndex('by-configId', 'configId')
+          backupHistoryStore.createIndex('by-status', 'status')
         }
       },
     })
@@ -602,4 +630,127 @@ export async function getHealthDataByDateRange(startDate: string, endDate: strin
     created_at: new Date(data.created_at),
     updated_at: new Date(data.updated_at),
   }))
+}
+
+// ============================================
+// CloudBackupConfigs（クラウドバックアップ設定）関連の操作
+// ============================================
+
+/**
+ * すべてのクラウドバックアップ設定を取得
+ * @returns すべてのクラウドバックアップ設定リスト
+ */
+export async function getAllCloudBackupConfigs(): Promise<CloudBackupConfig[]> {
+  const db = await getDB()
+  const configs = await db.getAll('cloudBackupConfigs')
+  return configs.map(config => ({
+    ...config,
+    created_at: new Date(config.created_at),
+    updated_at: new Date(config.updated_at),
+    last_backup_at: config.last_backup_at ? new Date(config.last_backup_at) : undefined,
+  }))
+}
+
+/**
+ * IDでクラウドバックアップ設定を取得
+ * @param id - 設定ID
+ * @returns クラウドバックアップ設定、または見つからない場合はundefined
+ */
+export async function getCloudBackupConfigById(id: string): Promise<CloudBackupConfig | undefined> {
+  const db = await getDB()
+  const config = await db.get('cloudBackupConfigs', id)
+  if (config) {
+    return {
+      ...config,
+      created_at: new Date(config.created_at),
+      updated_at: new Date(config.updated_at),
+      last_backup_at: config.last_backup_at ? new Date(config.last_backup_at) : undefined,
+    }
+  }
+  return undefined
+}
+
+/**
+ * クラウドバックアップ設定を追加または更新
+ * @param config - クラウドバックアップ設定
+ */
+export async function saveCloudBackupConfig(config: CloudBackupConfig): Promise<void> {
+  const db = await getDB()
+  await db.put('cloudBackupConfigs', config)
+}
+
+/**
+ * クラウドバックアップ設定を削除
+ * @param id - 設定ID
+ */
+export async function deleteCloudBackupConfig(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('cloudBackupConfigs', id)
+  // 関連するバックアップ履歴も削除
+  const histories = await db.getAllFromIndex('backupHistory', 'by-configId', id)
+  for (const history of histories) {
+    await db.delete('backupHistory', history.id)
+  }
+}
+
+// ============================================
+// BackupHistory（バックアップ履歴）関連の操作
+// ============================================
+
+/**
+ * すべてのバックアップ履歴を取得
+ * @returns すべてのバックアップ履歴リスト（作成日時の新しい順）
+ */
+export async function getAllBackupHistory(): Promise<BackupHistory[]> {
+  const db = await getDB()
+  const histories = await db.getAll('backupHistory')
+  return histories
+    .map(history => ({
+      ...history,
+      created_at: new Date(history.created_at),
+    }))
+    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+}
+
+/**
+ * 設定IDでバックアップ履歴を取得
+ * @param configId - 設定ID
+ * @returns 設定IDに紐づくバックアップ履歴リスト
+ */
+export async function getBackupHistoryByConfigId(configId: string): Promise<BackupHistory[]> {
+  const db = await getDB()
+  const histories = await db.getAllFromIndex('backupHistory', 'by-configId', configId)
+  return histories
+    .map(history => ({
+      ...history,
+      created_at: new Date(history.created_at),
+    }))
+    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+}
+
+/**
+ * バックアップ履歴を追加
+ * @param history - バックアップ履歴
+ */
+export async function addBackupHistory(history: BackupHistory): Promise<void> {
+  const db = await getDB()
+  await db.add('backupHistory', history)
+}
+
+/**
+ * バックアップ履歴を更新
+ * @param history - バックアップ履歴
+ */
+export async function updateBackupHistory(history: BackupHistory): Promise<void> {
+  const db = await getDB()
+  await db.put('backupHistory', history)
+}
+
+/**
+ * バックアップ履歴を削除
+ * @param id - バックアップ履歴ID
+ */
+export async function deleteBackupHistory(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('backupHistory', id)
 }
