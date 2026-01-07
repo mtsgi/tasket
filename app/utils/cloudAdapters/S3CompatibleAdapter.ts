@@ -41,7 +41,14 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     const urlObj = new URL(url)
     const host = urlObj.hostname
     const canonicalUri = urlObj.pathname || '/'
-    const canonicalQueryString = urlObj.search.slice(1) || ''
+    
+    // クエリパラメータをソートして正規化
+    const queryParams = new URLSearchParams(urlObj.search)
+    const sortedParams = Array.from(queryParams.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&')
+    const canonicalQueryString = sortedParams
 
     // ペイロードのハッシュを先に計算
     const payloadHash = body
@@ -239,6 +246,12 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
 
     if (!response.ok) {
       const errorText = await response.text()
+      console.error('Download request failed:', {
+        status: response.status,
+        url: signedUrl,
+        path,
+        error: errorText,
+      })
       throw new Error(`ダウンロードに失敗しました: ${response.status} ${errorText}`)
     }
 
@@ -257,7 +270,9 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
       throw new Error('バケット名が設定されていません')
     }
 
-    const url = `${endpoint}/${bucket}?prefix=tasket-backups/`
+    // クエリパラメータをURLエンコードして追加
+    const prefix = encodeURIComponent('tasket-backups/')
+    const url = `${endpoint}/${bucket}?list-type=2&prefix=${prefix}`
 
     const { url: signedUrl, headers } = await this.signRequest('GET', url)
 
@@ -270,6 +285,11 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
 
     if (!response.ok) {
       const errorText = await response.text()
+      console.error('List request failed:', {
+        status: response.status,
+        url: signedUrl,
+        error: errorText,
+      })
       throw new Error(`リスト取得に失敗しました: ${response.status} ${errorText}`)
     }
 
