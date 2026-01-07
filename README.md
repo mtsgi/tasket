@@ -41,6 +41,7 @@ Tasketは「TODOアイテムに日時や金額を持たせる」というシン�
 - **プリセット機能**: よく使うアイテムをテンプレートとして保存・再利用
 - **検索機能**: すべてのアイテムから横断検索
 - **データ管理**: JSON形式でのエクスポート・インポート
+- **クラウドバックアップ**: S3互換、WebDAV、Dropbox、Azure Blob Storageへのバックアップ・復元
 - **サンプルデータ**: 初めてのユーザー向けにデモデータを追加可能
 - **チュートリアル**: 初回起動時に自動表示される機能ガイド
   - いつでもメニューから再表示可能
@@ -254,6 +255,43 @@ Tasketは「TODOアイテムに日時や金額を持たせる」というシン�
 | `calendarDisplay` | object | カレンダー表示設定 |
 | `updated_at` | Date | 更新日時 |
 
+#### `cloudBackupConfigs` - クラウドバックアップ設定
+
+クラウドストレージへのバックアップ設定を管理します。
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string (UUID) | 設定ID |
+| `provider` | string | プロバイダー種別（s3-compatible, webdav, dropbox, azure-blob） |
+| `name` | string | 設定名 |
+| `endpoint` | string | エンドポイントURL |
+| `region` | string | リージョン（S3互換のみ） |
+| `bucket` | string | バケット名/コンテナ名 |
+| `accessKeyId` | string | アクセスキー（暗号化済み） |
+| `secretAccessKey` | string | シークレットキー（暗号化済み） |
+| `isEnabled` | boolean | 有効/無効 |
+| `autoBackup` | boolean | 自動バックアップの有効/無効 |
+| `autoBackupInterval` | number | 自動バックアップ間隔（時間） |
+| `created_at` | Date | 作成日時 |
+| `updated_at` | Date | 更新日時 |
+| `last_backup_at` | Date | 最終バックアップ日時 |
+
+#### `backupHistory` - バックアップ履歴
+
+クラウドバックアップの実行履歴を記録します。
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string (UUID) | 履歴ID |
+| `configId` | string | 使用した設定のID |
+| `status` | string | ステータス（success, failed, in-progress） |
+| `type` | string | バックアップ種別（manual, auto） |
+| `size` | number | バックアップサイズ（バイト） |
+| `itemCount` | number | アイテム数 |
+| `error` | string | エラーメッセージ（失敗時） |
+| `remotePath` | string | リモートパス |
+| `created_at` | Date | 実行日時 |
+
 ### データモデルの特徴
 
 - **統一モデル**: TODO・収入・支出すべてを同じテーブルで管理
@@ -298,6 +336,52 @@ Tasketは「TODOアイテムに日時や金額を持たせる」というシン�
   is_completed: false
 }
 ```
+
+## クラウドバックアップ機能
+
+Tasketは、複数のクラウドストレージプロバイダーへのデータバックアップ・復元をサポートしています。
+
+### サポートプロバイダー
+
+#### 1. S3互換ストレージ
+- AWS S3
+- MinIO
+- Wasabi
+- Cloudflare R2
+- その他のS3互換ストレージ
+
+#### 2. WebDAV
+- Nextcloud
+- ownCloud
+- Box
+- その他のWebDAV対応ストレージ
+
+#### 3. Dropbox
+- Dropbox API v2を使用
+
+#### 4. Azure Blob Storage
+- Azure Blob Storage REST API
+
+### 主な機能
+
+- **暗号化**: 認証情報はAES-GCM暗号化してIndexedDBに保存
+- **手動バックアップ**: ワンクリックでクラウドにデータをアップロード
+- **自動バックアップ**: 設定した間隔で自動的にバックアップを実行
+- **復元**: クラウドからバックアップデータを選択して復元
+- **履歴管理**: バックアップの成功・失敗を履歴として記録
+- **複数設定**: 複数のクラウドプロバイダーを登録可能
+- **接続テスト**: 設定保存前に接続を確認
+
+### セットアップ方法
+
+各プロバイダーのセットアップ方法は、アプリ内の「セットアップマニュアルを表示」ボタンから詳細なガイドを確認できます。
+
+### セキュリティ
+
+- 認証情報（アクセスキー、シークレットキー、トークン）はWeb Crypto APIを使用してAES-GCM暗号化
+- 暗号化キーはlocalStorageに保存（デバイス固有）
+- HTTPS接続を前提とした設計
+- CORS設定に関する詳細なガイドを提供
 
 ## 技術スタック
 

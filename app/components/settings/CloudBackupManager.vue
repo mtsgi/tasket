@@ -280,7 +280,6 @@ function getProviderDisplayName(provider: CloudProvider): string {
   const names: Record<CloudProvider, string> = {
     's3-compatible': t('S3互換'),
     'webdav': t('WebDAV'),
-    'google-drive': t('Google Drive'),
     'dropbox': t('Dropbox'),
     'azure-blob': t('Azure Blob Storage'),
     'custom': t('カスタム'),
@@ -508,9 +507,6 @@ onMounted(() => {
             <option value="webdav">
               {{ $t('WebDAV') }}
             </option>
-            <option value="google-drive">
-              {{ $t('Google Drive') }}
-            </option>
             <option value="dropbox">
               {{ $t('Dropbox') }}
             </option>
@@ -524,9 +520,6 @@ onMounted(() => {
             </template>
             <template v-else-if="formData.provider === 'webdav'">
               {{ $t('Nextcloud、ownCloud、Boxなどに対応') }}
-            </template>
-            <template v-else-if="formData.provider === 'google-drive'">
-              {{ $t('Google Driveを使用したクラウドバックアップ') }}
             </template>
             <template v-else-if="formData.provider === 'dropbox'">
               {{ $t('Dropboxを使用したクラウドバックアップ') }}
@@ -621,21 +614,6 @@ onMounted(() => {
             <label>{{ $t('パスワード') }}</label>
             <input
               v-model="formData.secretAccessKey"
-              type="password"
-              :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
-            >
-            <p class="form-help">
-              {{ $t('認証情報は安全に暗号化されて保存されます') }}
-            </p>
-          </div>
-        </template>
-
-        <!-- Google Driveの設定 -->
-        <template v-else-if="formData.provider === 'google-drive'">
-          <div class="form-group">
-            <label>{{ $t('アクセストークン') }}</label>
-            <input
-              v-model="formData.accessKeyId"
               type="password"
               :placeholder="editingConfig ? '(変更する場合のみ入力)' : ''"
             >
