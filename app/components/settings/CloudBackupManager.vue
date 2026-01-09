@@ -309,8 +309,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="cloud-backup">
-    <!-- 通知 -->
+  <!-- 通知（モーダルの上に表示するためTeleportを使用） -->
+  <Teleport to="body">
     <Transition name="notification">
       <div
         v-if="notification"
@@ -321,6 +321,9 @@ onMounted(() => {
         {{ notification.message }}
       </div>
     </Transition>
+  </Teleport>
+
+  <div class="cloud-backup">
 
     <!-- 設定一覧 -->
     <div class="configs-section">
@@ -807,24 +810,36 @@ onMounted(() => {
 }
 
 .notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
   border-radius: 8px;
-  margin-bottom: 16px;
   font-size: 14px;
+  z-index: 1100; // モーダル(z-index: 1000)より上に表示
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
 
   &.success {
-    background-color: rgba(76, 175, 80, 0.1);
-    color: #4caf50;
+    background-color: rgba(76, 175, 80, 0.95);
+    color: #fff;
     border: 1px solid #4caf50;
   }
 
   &.error {
-    background-color: rgba(244, 67, 54, 0.1);
-    color: #f44336;
+    background-color: rgba(244, 67, 54, 0.95);
+    color: #fff;
     border: 1px solid #f44336;
+  }
+
+  @media (max-width: 600px) {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
   }
 }
 
