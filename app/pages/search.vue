@@ -63,7 +63,7 @@ const searchResults = computed(() => {
 
   // 食事ログフィルタを適用
   if (mealLogFilter.value === 'with') {
-    results = results.filter(item => item.mealLog !== undefined && item.mealLog !== null)
+    results = results.filter(item => !!item.mealLog)
   }
   else if (mealLogFilter.value === 'without') {
     results = results.filter(item => !item.mealLog)
