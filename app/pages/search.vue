@@ -15,13 +15,16 @@ const searchKeyword = ref('')
 // フィルタ用の種別
 const selectedType = ref<ItemType | ''>('')
 
+// 食事ログフィルタ
+const mealLogFilter = ref<'all' | 'with' | 'without'>('all')
+
 // 日付範囲フィルタ
 const dateRangeStart = ref('')
 const dateRangeEnd = ref('')
 
 // 検索条件が入力されているかどうか
 const hasSearchCriteria = computed(() => {
-  return !!(searchKeyword.value || selectedType.value || dateRangeStart.value || dateRangeEnd.value)
+  return !!(searchKeyword.value || selectedType.value || dateRangeStart.value || dateRangeEnd.value || mealLogFilter.value !== 'all')
 })
 
 // 検索結果
@@ -58,6 +61,14 @@ const searchResults = computed(() => {
     })
   }
 
+  // 食事ログフィルタを適用
+  if (mealLogFilter.value === 'with') {
+    results = results.filter(item => item.mealLog !== undefined && item.mealLog !== null)
+  }
+  else if (mealLogFilter.value === 'without') {
+    results = results.filter(item => !item.mealLog)
+  }
+
   return results
 })
 
@@ -76,6 +87,13 @@ function goBack() {
  */
 function resetTypeFilter() {
   selectedType.value = ''
+}
+
+/**
+ * 食事ログフィルタをリセット
+ */
+function resetMealLogFilter() {
+  mealLogFilter.value = 'all'
 }
 
 /**
@@ -161,6 +179,39 @@ onMounted(() => {
           >
             <Icon name="mdi:cash-plus" />
             {{ $t('収入') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <Icon name="mdi:food" />
+          {{ $t('食事ログでフィルタ') }}
+        </label>
+        <div class="type-filters">
+          <button
+            class="filter-btn"
+            :class="{ active: mealLogFilter === 'all' }"
+            @click="resetMealLogFilter"
+          >
+            <Icon name="mdi:all-inclusive" />
+            {{ $t('すべて') }}
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: mealLogFilter === 'with' }"
+            @click="mealLogFilter = 'with'"
+          >
+            <Icon name="mdi:food-apple" />
+            {{ $t('食事ログあり') }}
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: mealLogFilter === 'without' }"
+            @click="mealLogFilter = 'without'"
+          >
+            <Icon name="mdi:food-off" />
+            {{ $t('食事ログなし') }}
           </button>
         </div>
       </div>

@@ -256,6 +256,9 @@ export default {
   '日付範囲': 'Date Range',
   '開始日': 'Start Date',
   '終了日': 'End Date',
+  '食事ログでフィルタ': 'Filter by Meal Log',
+  '食事ログあり': 'With Meal Log',
+  '食事ログなし': 'Without Meal Log',
   '検索条件に一致するアイテムが見つかりません': 'No items match the search criteria',
   'キーワード、種別、または日付範囲を指定して検索してください': 'Specify keyword, type, or date range to search',
 
