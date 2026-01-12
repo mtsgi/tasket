@@ -4,6 +4,7 @@
  * 新規アイテム（TODO、支出、収入）を作成するためのフォームを提供
  */
 import type { ItemType } from '~/types/item'
+import { clearMealLogRefs } from '~/utils/mealLog'
 
 const props = defineProps<{
   date: string
@@ -28,17 +29,6 @@ const mealCarbs = ref<number | undefined>()
 const mealFat = ref<number | undefined>()
 const mealPhoto = ref<string | undefined>()
 const mealMemo = ref('')
-
-// 食事ログ管理のコンポーザブルを使用
-const { deleteMealLog } = useMealLog({
-  showMealLog,
-  mealCalories,
-  mealProtein,
-  mealCarbs,
-  mealFat,
-  mealPhoto,
-  mealMemo,
-})
 
 const isSubmitting = ref(false)
 
@@ -100,6 +90,21 @@ function togglePresetDropdown() {
  */
 function toggleMealLog() {
   showMealLog.value = !showMealLog.value
+}
+
+/**
+ * 食事ログを削除
+ */
+function deleteMealLog() {
+  clearMealLogRefs({
+    showMealLog,
+    mealCalories,
+    mealProtein,
+    mealCarbs,
+    mealFat,
+    mealPhoto,
+    mealMemo,
+  })
 }
 
 /**

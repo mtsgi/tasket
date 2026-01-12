@@ -6,6 +6,7 @@
 import type { Item, ItemType } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
 import { formatDate } from '~/utils/dateHelpers'
+import { clearMealLogRefs } from '~/utils/mealLog'
 
 const props = defineProps<{
   item: Item
@@ -43,17 +44,6 @@ const mealCarbs = ref<number | undefined>(props.item.mealLog?.carbs)
 const mealFat = ref<number | undefined>(props.item.mealLog?.fat)
 const mealPhoto = ref<string | undefined>(props.item.mealLog?.photo)
 const mealMemo = ref(props.item.mealLog?.memo || '')
-
-// 食事ログ管理のコンポーザブルを使用
-const { deleteMealLog } = useMealLog({
-  showMealLog,
-  mealCalories,
-  mealProtein,
-  mealCarbs,
-  mealFat,
-  mealPhoto,
-  mealMemo,
-})
 
 const isSubmitting = ref(false)
 
@@ -140,6 +130,21 @@ function clearExecutedTime() {
  */
 function toggleMealLog() {
   showMealLog.value = !showMealLog.value
+}
+
+/**
+ * 食事ログを削除
+ */
+function deleteMealLog() {
+  clearMealLogRefs({
+    showMealLog,
+    mealCalories,
+    mealProtein,
+    mealCarbs,
+    mealFat,
+    mealPhoto,
+    mealMemo,
+  })
 }
 
 /**
