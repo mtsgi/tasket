@@ -6,6 +6,7 @@
 import type { RoutineStatus } from '~/types/item'
 import RoutineManager from '~/components/shared/RoutineManager.vue'
 import PWAInstallSection from '~/components/shared/PWAInstallSection.vue'
+import CloudBackupManager from '~/components/settings/CloudBackupManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
 import { useRouter } from 'vue-router'
 
@@ -69,10 +70,12 @@ async function exportData() {
         executed_at: item.executed_at ? item.executed_at.toISOString() : null,
         created_at: item.created_at.toISOString(),
         // 食事ログの写真はBase64文字列として保存
-        mealLog: item.mealLog ? {
-          ...item.mealLog,
-          photo: item.mealLog.photo, // 既にBase64文字列として保存されている
-        } : undefined,
+        mealLog: item.mealLog
+          ? {
+              ...item.mealLog,
+              photo: item.mealLog.photo, // 既にBase64文字列として保存されている
+            }
+          : undefined,
       })),
       routines: routines.map(routine => ({
         ...routine,
@@ -414,6 +417,18 @@ function goBack() {
         {{ $t('毎日繰り返し行う習慣やタスクを月ごとに設定できます。') }}
       </p>
       <RoutineManager />
+    </section>
+
+    <!-- クラウドバックアップ -->
+    <section class="menu-section card">
+      <h2>
+        <Icon name="mdi:cloud-sync" />
+        {{ $t('クラウドバックアップ') }}
+      </h2>
+      <p class="section-description">
+        {{ $t('クラウドストレージにデータを自動バックアップできます') }}
+      </p>
+      <CloudBackupManager />
     </section>
 
     <!-- データ管理 -->
