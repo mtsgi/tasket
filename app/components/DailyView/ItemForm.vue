@@ -92,6 +92,20 @@ function toggleMealLog() {
 }
 
 /**
+ * 食事ログを削除
+ */
+function deleteMealLog() {
+  // 食事ログデータをすべてクリア
+  mealCalories.value = undefined
+  mealProtein.value = undefined
+  mealCarbs.value = undefined
+  mealFat.value = undefined
+  mealPhoto.value = undefined
+  mealMemo.value = ''
+  showMealLog.value = false
+}
+
+/**
  * 画像ファイルを選択
  */
 function handlePhotoUpload(event: Event) {
@@ -294,14 +308,25 @@ async function handleSubmit() {
         v-if="type === 'todo' || type === 'expense'"
         class="meal-log-section"
       >
-        <button
-          type="button"
-          class="meal-log-toggle"
-          @click="toggleMealLog"
-        >
-          <Icon :name="showMealLog ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
-          {{ $t('食事ログを追加') }}
-        </button>
+        <div class="meal-log-buttons">
+          <button
+            type="button"
+            class="meal-log-toggle"
+            @click="toggleMealLog"
+          >
+            <Icon :name="showMealLog ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
+            {{ $t('食事ログを追加') }}
+          </button>
+          <UiButton
+            v-if="showMealLog"
+            variant="danger"
+            icon
+            :aria-label="$t('食事ログを削除')"
+            @click="deleteMealLog"
+          >
+            <Icon name="mdi:delete" />
+          </UiButton>
+        </div>
 
         <div
           v-if="showMealLog"
@@ -525,8 +550,14 @@ async function handleSubmit() {
   }
 }
 
+.meal-log-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .meal-log-toggle {
-  width: 100%;
+  flex: 1;
   padding: 8px 12px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;

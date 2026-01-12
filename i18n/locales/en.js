@@ -386,6 +386,8 @@ export default {
   '健康データを記録': 'Record Health Data',
   '食事ログ': 'Meal Log',
   '食事の詳細': 'Meal Details',
+  '食事ログを追加': 'Add Meal Log',
+  '食事ログを削除': 'Delete Meal Log',
   '摂取カロリー': 'Calorie Intake',
   '体重': 'Weight',
   '体脂肪率': 'Body Fat %',

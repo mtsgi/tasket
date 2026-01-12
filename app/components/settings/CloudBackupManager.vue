@@ -324,7 +324,6 @@ onMounted(() => {
   </Teleport>
 
   <div class="cloud-backup">
-
     <!-- 設定一覧 -->
     <div class="configs-section">
       <div class="section-header">

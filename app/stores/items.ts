@@ -3,6 +3,7 @@
  * TODO、収入、支出のCRUD操作とフィルタリングを提供します。
  */
 import { defineStore } from 'pinia'
+import { toRaw } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item, ItemType } from '~/types/item'
 import { getAllItems, addItem, updateItem, deleteItem } from '~/utils/db'
@@ -248,7 +249,12 @@ export const useItemsStore = defineStore('items', {
     async updateItemById(id: string, data: Partial<Omit<Item, 'id' | 'created_at'>>) {
       const index = this.items.findIndex(item => item.id === id)
       if (index !== -1) {
-        const updatedItem = { ...this.items[index], ...data } as Item
+        const currentItem = this.items[index]
+        // Proxyオブジェクトを避けるため、toRawを使用してプレーンオブジェクトに変換
+        const updatedItem = {
+          ...toRaw(currentItem),
+          ...data,
+        } as Item
         await updateItem(updatedItem)
         this.items[index] = updatedItem
         return updatedItem
