@@ -44,6 +44,17 @@ const mealFat = ref<number | undefined>(props.item.mealLog?.fat)
 const mealPhoto = ref<string | undefined>(props.item.mealLog?.photo)
 const mealMemo = ref(props.item.mealLog?.memo || '')
 
+// 食事ログ管理のコンポーザブルを使用
+const { deleteMealLog } = useMealLog({
+  showMealLog,
+  mealCalories,
+  mealProtein,
+  mealCarbs,
+  mealFat,
+  mealPhoto,
+  mealMemo,
+})
+
 const isSubmitting = ref(false)
 
 /**
@@ -129,20 +140,6 @@ function clearExecutedTime() {
  */
 function toggleMealLog() {
   showMealLog.value = !showMealLog.value
-}
-
-/**
- * 食事ログを削除
- */
-function deleteMealLog() {
-  // 食事ログデータをすべてクリア
-  mealCalories.value = undefined
-  mealProtein.value = undefined
-  mealCarbs.value = undefined
-  mealFat.value = undefined
-  mealPhoto.value = undefined
-  mealMemo.value = ''
-  showMealLog.value = false
 }
 
 /**

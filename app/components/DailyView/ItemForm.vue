@@ -29,6 +29,17 @@ const mealFat = ref<number | undefined>()
 const mealPhoto = ref<string | undefined>()
 const mealMemo = ref('')
 
+// 食事ログ管理のコンポーザブルを使用
+const { deleteMealLog } = useMealLog({
+  showMealLog,
+  mealCalories,
+  mealProtein,
+  mealCarbs,
+  mealFat,
+  mealPhoto,
+  mealMemo,
+})
+
 const isSubmitting = ref(false)
 
 // プリセット選択のドロップダウン表示状態
@@ -89,20 +100,6 @@ function togglePresetDropdown() {
  */
 function toggleMealLog() {
   showMealLog.value = !showMealLog.value
-}
-
-/**
- * 食事ログを削除
- */
-function deleteMealLog() {
-  // 食事ログデータをすべてクリア
-  mealCalories.value = undefined
-  mealProtein.value = undefined
-  mealCarbs.value = undefined
-  mealFat.value = undefined
-  mealPhoto.value = undefined
-  mealMemo.value = ''
-  showMealLog.value = false
 }
 
 /**
