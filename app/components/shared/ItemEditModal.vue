@@ -6,6 +6,7 @@
 import type { Item, ItemType } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
 import { formatDate } from '~/utils/dateHelpers'
+import { clearMealLogRefs } from '~/utils/mealLog'
 
 const props = defineProps<{
   item: Item
@@ -129,6 +130,21 @@ function clearExecutedTime() {
  */
 function toggleMealLog() {
   showMealLog.value = !showMealLog.value
+}
+
+/**
+ * 食事ログを削除
+ */
+function deleteMealLog() {
+  clearMealLogRefs({
+    showMealLog,
+    mealCalories,
+    mealProtein,
+    mealCarbs,
+    mealFat,
+    mealPhoto,
+    mealMemo,
+  })
 }
 
 /**
@@ -262,14 +278,25 @@ function handlePhotoUpload(event: Event) {
         v-if="type === 'todo' || type === 'expense'"
         class="meal-log-section"
       >
-        <button
-          type="button"
-          class="meal-log-toggle"
-          @click="toggleMealLog"
-        >
-          <Icon :name="showMealLog ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
-          {{ $t('食事ログを追加') }}
-        </button>
+        <div class="meal-log-buttons">
+          <button
+            type="button"
+            class="meal-log-toggle"
+            @click="toggleMealLog"
+          >
+            <Icon :name="showMealLog ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
+            {{ $t('食事ログを追加') }}
+          </button>
+          <UiButton
+            v-if="showMealLog"
+            variant="danger"
+            icon
+            :aria-label="$t('食事ログを削除')"
+            @click="deleteMealLog"
+          >
+            <Icon name="mdi:delete" />
+          </UiButton>
+        </div>
 
         <div
           v-if="showMealLog"
@@ -482,8 +509,14 @@ function handlePhotoUpload(event: Event) {
   }
 }
 
+.meal-log-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .meal-log-toggle {
-  width: 100%;
+  flex: 1;
   padding: 8px 12px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;

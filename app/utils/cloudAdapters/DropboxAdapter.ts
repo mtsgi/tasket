@@ -138,7 +138,7 @@ export class DropboxAdapter extends BaseCloudAdapter {
       const response = await fetch('https://api.dropboxapi.com/2/users/get_current_account', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       })
 

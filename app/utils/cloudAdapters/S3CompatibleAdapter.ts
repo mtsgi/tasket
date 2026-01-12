@@ -41,7 +41,7 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     const urlObj = new URL(url)
     const host = urlObj.hostname
     const canonicalUri = urlObj.pathname || '/'
-    
+
     // クエリパラメータをソートして正規化
     const queryParams = new URLSearchParams(urlObj.search)
     const sortedParams = Array.from(queryParams.entries())

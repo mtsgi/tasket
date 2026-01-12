@@ -5,7 +5,7 @@
  */
 import type { CloudProvider } from '~/types/cloudBackup'
 
-const props = defineProps<{
+const _props = defineProps<{
   provider: CloudProvider
 }>()
 

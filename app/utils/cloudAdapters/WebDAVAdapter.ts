@@ -39,8 +39,8 @@ export class WebDAVAdapter extends BaseCloudAdapter {
       const checkResponse = await fetch(url, {
         method: 'PROPFIND',
         headers: {
-          'Authorization': authHeader,
-          'Depth': '0',
+          Authorization: authHeader,
+          Depth: '0',
         },
       })
 
@@ -49,7 +49,7 @@ export class WebDAVAdapter extends BaseCloudAdapter {
         const mkcolResponse = await fetch(url, {
           method: 'MKCOL',
           headers: {
-            'Authorization': authHeader,
+            Authorization: authHeader,
           },
         })
 
@@ -117,7 +117,7 @@ export class WebDAVAdapter extends BaseCloudAdapter {
     const response = await fetch(fileUrl, {
       method: 'GET',
       headers: {
-        'Authorization': authHeader,
+        Authorization: authHeader,
       },
     })
 
@@ -241,7 +241,7 @@ export class WebDAVAdapter extends BaseCloudAdapter {
       const response = await fetch(endpoint, {
         method: 'OPTIONS',
         headers: {
-          'Authorization': authHeader,
+          Authorization: authHeader,
         },
       })
 
