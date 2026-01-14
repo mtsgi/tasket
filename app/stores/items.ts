@@ -68,25 +68,54 @@ export const useItemsStore = defineStore('items', {
 
     /**
      * 特定の月の一意のアイテム名を取得（オートコンプリート用）
+     * 月内で入力された回数が多い順、回数が同じ場合は直近の入力日時順に並べる
      * @param yearMonth - 年月文字列（YYYY-MM）
-     * @returns その月の一意のアイテム名リスト
+     * @returns その月の一意のアイテム名リスト（入力回数の多い順）
      */
     getUniqueItemTitlesByMonth: (state) => {
       return (yearMonth: string) => {
         const startOfMonth = getStartOfMonth(yearMonth + '-01')
         const endOfMonth = getEndOfMonth(yearMonth + '-01')
 
-        // 月内のアイテムをフィルタリングし、タイトルを抽出
-        const titles = state.items
+        // 月内のアイテムをフィルタリング
+        const monthItems = state.items
           .filter((item) => {
             const scheduledAt = new Date(item.scheduled_at)
             return scheduledAt >= startOfMonth && scheduledAt <= endOfMonth
           })
-          .map(item => item.title.trim())
-          .filter(title => title.length > 0)
+          .filter(item => item.title.trim().length > 0)
 
-        // 重複を排除してユニークなタイトルのみを返す
-        return Array.from(new Set(titles))
+        // タイトルごとに出現回数と最新の入力日時を集計
+        const titleStats = new Map<string, { count: number, latestDate: Date }>()
+
+        monthItems.forEach((item) => {
+          const title = item.title.trim()
+          const existing = titleStats.get(title)
+          const scheduledAt = new Date(item.scheduled_at)
+
+          if (existing) {
+            existing.count++
+            // より新しい日時で更新
+            if (scheduledAt > existing.latestDate) {
+              existing.latestDate = scheduledAt
+            }
+          }
+          else {
+            titleStats.set(title, { count: 1, latestDate: scheduledAt })
+          }
+        })
+
+        // タイトルを配列に変換し、回数の多い順、同じ回数の場合は日時の新しい順でソート
+        return Array.from(titleStats.entries())
+          .sort((a, b) => {
+            // まず出現回数で比較（降順）
+            if (b[1].count !== a[1].count) {
+              return b[1].count - a[1].count
+            }
+            // 回数が同じ場合は日時で比較（新しい順）
+            return b[1].latestDate.getTime() - a[1].latestDate.getTime()
+          })
+          .map(entry => entry[0])
       }
     },
 
