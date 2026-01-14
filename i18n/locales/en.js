@@ -243,6 +243,8 @@ export default {
   '今月の支出が多い項目': 'Top expenses this month',
   '支出データがありません': 'No expense data',
   '回': 'times',
+  'さらに表示': 'Show more',
+  '折りたたむ': 'Show less',
 
   // Search
   '検索結果': 'Search Results',
