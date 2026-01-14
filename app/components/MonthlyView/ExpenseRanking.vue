@@ -10,20 +10,23 @@ const props = defineProps<{
   ranking: ExpenseRankingItem[]
 }>()
 
+// 定数: デフォルトで表示するランキング数
+const DEFAULT_VISIBLE_ITEMS = 10
+
 // 折りたたみ状態を管理
 const isExpanded = ref(false)
 
 // 表示するランキングアイテムを計算
 const displayedRanking = computed(() => {
-  // 10位まで、または全アイテムを表示
-  if (isExpanded.value || props.ranking.length <= 10) {
+  // デフォルト表示数まで、または全アイテムを表示
+  if (isExpanded.value || props.ranking.length <= DEFAULT_VISIBLE_ITEMS) {
     return props.ranking
   }
-  return props.ranking.slice(0, 10)
+  return props.ranking.slice(0, DEFAULT_VISIBLE_ITEMS)
 })
 
 // 11位以降が存在するかどうか
-const hasMoreItems = computed(() => props.ranking.length > 10)
+const hasMoreItems = computed(() => props.ranking.length > DEFAULT_VISIBLE_ITEMS)
 
 // 折りたたみ切り替え
 const toggleExpanded = () => {
@@ -65,6 +68,8 @@ const toggleExpanded = () => {
       <button
         v-if="hasMoreItems"
         class="toggle-button"
+        :aria-expanded="isExpanded"
+        :aria-label="isExpanded ? $t('折りたたむ') : $t('さらに表示')"
         @click="toggleExpanded"
       >
         <Icon :name="isExpanded ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
@@ -230,6 +235,11 @@ const toggleExpanded = () => {
 
   &:active {
     transform: scale(0.98);
+
+    // モーション軽減設定を尊重
+    @media (prefers-reduced-motion: reduce) {
+      transform: none;
+    }
   }
 }
 
