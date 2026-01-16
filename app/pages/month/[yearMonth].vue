@@ -12,6 +12,7 @@ import MonthlyHealthSummary from '~/components/MonthlyView/MonthlyHealthSummary.
 import MonthlySummaryComponent from '~/components/MonthlyView/MonthlySummary.vue'
 import ExpenseRanking from '~/components/MonthlyView/ExpenseRanking.vue'
 import RoutineAchievementGrid from '~/components/MonthlyView/RoutineAchievementGrid.vue'
+import MonthlyPhotoAlbum from '~/components/MonthlyView/MonthlyPhotoAlbum.vue'
 import type { RoutineLog } from '~/types/item'
 
 const route = useRoute()
@@ -185,6 +186,9 @@ watch(yearMonthParam, async () => {
       :routines="routines"
       :routine-logs="monthRoutineLogs"
     />
+
+    <!-- アルバム（写真がある場合のみ表示） -->
+    <MonthlyPhotoAlbum :items="items" />
 
     <ExpenseChart :daily-totals="dailyTotals" />
 

@@ -27,6 +27,7 @@ export default {
   'アルバム': 'Album',
   'アルバムを表示': 'View album',
   '枚': '',
+  '{count}枚の写真': '{count} photos',
 
   // Item types
   'TODO': 'TODO',

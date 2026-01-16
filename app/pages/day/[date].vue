@@ -17,6 +17,7 @@ import HealthSummary from '~/components/DailyView/HealthSummary.vue'
 import ItemList from '~/components/DailyView/ItemList.vue'
 import ItemForm from '~/components/DailyView/ItemForm.vue'
 import DailySummaryComponent from '~/components/DailyView/DailySummary.vue'
+import DailyPhotoAlbum from '~/components/DailyView/DailyPhotoAlbum.vue'
 
 // ルーターとストアの初期化
 const route = useRoute()
@@ -115,6 +116,9 @@ onMounted(() => {
 
     <!-- アイテム一覧 -->
     <ItemList :items="items" />
+
+    <!-- アルバム（写真がある場合のみ表示） -->
+    <DailyPhotoAlbum :items="items" />
 
     <!-- アイテム追加フォーム -->
     <ItemForm :date="dateParam" />
