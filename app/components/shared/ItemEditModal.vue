@@ -45,6 +45,10 @@ const mealFat = ref<number | undefined>(props.item.mealLog?.fat)
 const mealPhoto = ref<string | undefined>(props.item.mealLog?.photo)
 const mealMemo = ref(props.item.mealLog?.memo || '')
 
+// アルバム機能の状態（TODO用の写真）
+const albumPhotos = ref<string[]>(props.item.photos || [])
+const showPhotoGallery = ref(false)
+
 const isSubmitting = ref(false)
 
 /**
@@ -99,6 +103,7 @@ async function handleSubmit() {
       executed_at: executedAt,
       notes: notes.value.trim(),
       mealLog: mealLogData,
+      photos: type.value === 'todo' && albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
     })
 
     emit('close')
@@ -148,7 +153,7 @@ function deleteMealLog() {
 }
 
 /**
- * 画像ファイルを選択
+ * 画像ファイルを選択（食事ログ用）
  */
 function handlePhotoUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -160,6 +165,20 @@ function handlePhotoUpload(event: Event) {
     }
     reader.readAsDataURL(file)
   }
+}
+
+/**
+ * アルバム写真を追加
+ */
+function handleAlbumPhotoAdded(photo: string) {
+  albumPhotos.value.push(photo)
+}
+
+/**
+ * アルバム写真を削除
+ */
+function handleAlbumPhotoDeleted(index: number) {
+  albumPhotos.value.splice(index, 1)
 }
 </script>
 
@@ -374,6 +393,55 @@ function handlePhotoUpload(event: Event) {
         </div>
       </div>
 
+      <!-- アルバム機能（TODO専用） -->
+      <div
+        v-if="type === 'todo'"
+        class="album-section"
+      >
+        <div class="album-header">
+          <h4>
+            <Icon name="mdi:image-multiple" />
+            {{ $t('アルバム') }}
+          </h4>
+          <UiButton
+            v-if="albumPhotos.length > 0"
+            variant="secondary"
+            size="small"
+            @click="showPhotoGallery = true"
+          >
+            <Icon name="mdi:image-multiple-outline" />
+            {{ $t('アルバムを表示') }} ({{ albumPhotos.length }})
+          </UiButton>
+        </div>
+        <UiPhotoUpload
+          :multiple="true"
+          :max-photos="10"
+          :label="$t('写真を追加')"
+          @photo-added="handleAlbumPhotoAdded"
+        />
+        <div
+          v-if="albumPhotos.length > 0"
+          class="album-preview"
+        >
+          <div
+            v-for="(photo, index) in albumPhotos.slice(0, 3)"
+            :key="index"
+            class="album-thumb"
+          >
+            <img
+              :src="photo"
+              :alt="`Photo ${index + 1}`"
+            >
+          </div>
+          <div
+            v-if="albumPhotos.length > 3"
+            class="more-photos"
+          >
+            +{{ albumPhotos.length - 3 }}
+          </div>
+        </div>
+      </div>
+
       <div class="form-group">
         <label for="edit-amount">{{ $t('金額') }}</label>
         <UiInput
@@ -409,6 +477,16 @@ function handlePhotoUpload(event: Event) {
         {{ $t('保存') }}
       </UiButton>
     </template>
+
+    <!-- アルバム写真ギャラリーモーダル -->
+    <UiPhotoGallery
+      :photos="albumPhotos"
+      :show="showPhotoGallery"
+      :allow-delete="true"
+      :title="$t('アルバム')"
+      @close="showPhotoGallery = false"
+      @delete-photo="handleAlbumPhotoDeleted"
+    />
   </UiModal>
 </template>
 
@@ -608,6 +686,74 @@ function handlePhotoUpload(event: Event) {
         object-fit: cover;
         border-radius: 8px;
         overflow: hidden;
+      }
+    }
+  }
+}
+
+/* アルバムセクション */
+.album-section {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+
+  .dark-mode & {
+    background: #2a2a2a;
+  }
+
+  .album-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+
+      .dark-mode & {
+        color: #e0e0e0;
+      }
+    }
+  }
+
+  .album-preview {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+
+    .album-thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: white;
+
+      .dark-mode & {
+        background: #333333;
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    .more-photos {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+
+      .dark-mode & {
+        color: #b0b0b0;
       }
     }
   }

@@ -197,6 +197,37 @@ const executionStatus = computed(() => {
           >
         </div>
       </div>
+      <!-- アルバム写真サマリー -->
+      <div
+        v-if="item.photos && item.photos.length > 0"
+        class="album-summary"
+      >
+        <div class="album-icon-label">
+          <Icon
+            name="mdi:image-multiple"
+            class="album-icon"
+          />
+          <span>{{ item.photos.length }}{{ $t('枚') }}</span>
+        </div>
+        <div class="album-thumbs">
+          <div
+            v-for="(photo, index) in item.photos.slice(0, 3)"
+            :key="index"
+            class="album-photo-thumb"
+          >
+            <img
+              :src="photo"
+              :alt="`Photo ${index + 1}`"
+            >
+          </div>
+          <div
+            v-if="item.photos.length > 3"
+            class="more-indicator"
+          >
+            +{{ item.photos.length - 3 }}
+          </div>
+        </div>
+      </div>
       <div
         v-if="item.amount > 0"
         class="amount-display"
@@ -388,6 +419,69 @@ const executionStatus = computed(() => {
         width: 100%;
         height: 100%;
         object-fit: cover;
+      }
+    }
+  }
+
+  .album-summary {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: #f5f7fa;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .dark-mode & {
+      background: #2a2a2a;
+    }
+
+    .album-icon-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #666;
+
+      .dark-mode & {
+        color: #999;
+      }
+
+      .album-icon {
+        font-size: 14px;
+        color: #4a90d9;
+      }
+    }
+
+    .album-thumbs {
+      flex: 1;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+
+      .album-photo-thumb {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        overflow: hidden;
+        flex-shrink: 0;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+
+      .more-indicator {
+        font-size: 10px;
+        color: #666;
+        font-weight: 500;
+
+        .dark-mode & {
+          color: #999;
+        }
       }
     }
   }
