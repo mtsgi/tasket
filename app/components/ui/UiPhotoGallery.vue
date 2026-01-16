@@ -5,6 +5,9 @@
  */
 import { PHOTO_GALLERY_Z_INDEX } from '~/utils/constants'
 
+// z-index値をリアクティブにするため、computedで包む
+const zIndex = computed(() => PHOTO_GALLERY_Z_INDEX)
+
 const props = defineProps<{
   // 表示する写真の配列（Base64エンコードされた画像データ）
   photos: string[]
@@ -274,7 +277,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.95);
-  z-index: v-bind('PHOTO_GALLERY_Z_INDEX');
+  z-index: v-bind(zIndex);
   display: flex;
   align-items: center;
   justify-content: center;
