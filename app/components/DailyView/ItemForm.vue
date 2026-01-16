@@ -5,6 +5,7 @@
  */
 import type { ItemType } from '~/types/item'
 import { clearMealLogRefs } from '~/utils/mealLog'
+import { ALBUM_MAX_PHOTOS } from '~/utils/constants'
 
 const props = defineProps<{
   date: string
@@ -449,7 +450,8 @@ async function handleSubmit() {
         </div>
         <UiPhotoUpload
           :multiple="true"
-          :max-photos="10"
+          :max-photos="ALBUM_MAX_PHOTOS"
+          :current-photo-count="albumPhotos.length"
           :label="$t('写真を追加')"
           @photo-added="handleAlbumPhotoAdded"
         />

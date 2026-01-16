@@ -3,6 +3,7 @@
  * 写真ギャラリーモーダルコンポーネント
  * 写真をサムネイル・拡大表示し、削除機能を提供
  */
+import { PHOTO_GALLERY_Z_INDEX } from '~/utils/constants'
 
 const props = defineProps<{
   // 表示する写真の配列（Base64エンコードされた画像データ）
@@ -273,7 +274,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.95);
-  z-index: 10000;
+  z-index: v-bind('PHOTO_GALLERY_Z_INDEX');
   display: flex;
   align-items: center;
   justify-content: center;

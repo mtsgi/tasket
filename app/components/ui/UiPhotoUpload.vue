@@ -4,6 +4,8 @@
  * 単一または複数の写真をアップロードできる汎用的なフォームコンポーネント
  */
 
+const { t } = useI18n()
+
 const props = defineProps<{
   // 複数枚の写真を許可するかどうか
   multiple?: boolean
@@ -11,6 +13,8 @@ const props = defineProps<{
   maxPhotos?: number
   // ラベルテキスト
   label?: string
+  // 現在の写真枚数（親コンポーネントから渡される）
+  currentPhotoCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +32,18 @@ function handlePhotoUpload(event: Event) {
   if (!input.files) return
 
   const files = props.multiple ? Array.from(input.files) : [input.files[0]]
+
+  // 最大枚数チェック
+  if (props.multiple && props.maxPhotos && props.currentPhotoCount !== undefined) {
+    const remainingSlots = props.maxPhotos - props.currentPhotoCount
+    if (remainingSlots <= 0) {
+      alert(t('最大{count}枚まで追加できます', { count: props.maxPhotos }))
+      input.value = ''
+      return
+    }
+    // 残り枚数分のみ処理
+    files.splice(remainingSlots)
+  }
 
   files.forEach((file) => {
     if (!file) return

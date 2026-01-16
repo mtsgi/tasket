@@ -7,6 +7,7 @@ import type { Item, ItemType } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
 import { formatDate } from '~/utils/dateHelpers'
 import { clearMealLogRefs } from '~/utils/mealLog'
+import { ALBUM_MAX_PHOTOS } from '~/utils/constants'
 
 const props = defineProps<{
   item: Item
@@ -415,7 +416,8 @@ function handleAlbumPhotoDeleted(index: number) {
         </div>
         <UiPhotoUpload
           :multiple="true"
-          :max-photos="10"
+          :max-photos="ALBUM_MAX_PHOTOS"
+          :current-photo-count="albumPhotos.length"
           :label="$t('写真を追加')"
           @photo-added="handleAlbumPhotoAdded"
         />

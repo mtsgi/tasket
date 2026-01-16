@@ -28,6 +28,7 @@ export default {
   'アルバムを表示': 'View album',
   '枚': '',
   '{count}枚の写真': '{count} photos',
+  '最大{count}枚まで追加できます': 'Maximum {count} photos allowed',
 
   // Item types
   'TODO': 'TODO',
