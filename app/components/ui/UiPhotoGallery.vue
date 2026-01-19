@@ -3,10 +3,7 @@
  * 写真ギャラリーモーダルコンポーネント
  * 写真をサムネイル・拡大表示し、削除機能を提供
  */
-import { PHOTO_GALLERY_Z_INDEX } from '~/utils/constants'
-
-// z-index値を文字列として使用
-const zIndexValue = String(PHOTO_GALLERY_Z_INDEX)
+const { t } = useI18n()
 
 const props = defineProps<{
   // 表示する写真の配列（Base64エンコードされた画像データ）
@@ -66,7 +63,6 @@ function showNextPhoto() {
  * 写真を削除
  */
 function deletePhoto(index: number) {
-  const { t } = useI18n()
   if (confirm(t('この写真を削除しますか？'))) {
     emit('delete-photo', index)
     // 拡大表示中の写真が削除された場合、拡大表示を閉じる
@@ -260,7 +256,7 @@ onUnmounted(() => {
     position: absolute;
     top: 4px;
     right: 4px;
-    padding: 4px;
+    padding: 0px 15px;
     min-width: auto;
     opacity: 0.9;
 
@@ -277,7 +273,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.95);
-  z-index: v-bind(zIndexValue);
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -706,7 +706,7 @@ function handleAlbumPhotoDeleted(index: number) {
         top: 8px;
         right: 8px;
         min-width: auto;
-        padding: 6px;
+        padding: 0 16px;
         opacity: 0.9;
 
         &:hover {
