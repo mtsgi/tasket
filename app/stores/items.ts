@@ -251,6 +251,7 @@ export const useItemsStore = defineStore('items', {
       scheduled_at: Date
       notes?: string
       mealLog?: import('~/types/item').MealLog
+      photos?: string[]
     }) {
       const newItem: Item = {
         id: uuidv4(),
@@ -263,6 +264,8 @@ export const useItemsStore = defineStore('items', {
         created_at: new Date(),
         notes: data.notes || '',
         mealLog: data.mealLog,
+        // Proxyオブジェクトを避けるため、photosもtoRawで変換
+        photos: data.photos ? toRaw(data.photos) : undefined,
       }
       await addItem(newItem)
       this.items.push(newItem)
@@ -280,9 +283,14 @@ export const useItemsStore = defineStore('items', {
       if (index !== -1) {
         const currentItem = this.items[index]
         // Proxyオブジェクトを避けるため、toRawを使用してプレーンオブジェクトに変換
+        // photosフィールドも配列の場合はtoRawで変換
+        const updatedData = { ...data }
+        if (updatedData.photos) {
+          updatedData.photos = toRaw(updatedData.photos)
+        }
         const updatedItem = {
           ...toRaw(currentItem),
-          ...data,
+          ...updatedData,
         } as Item
         await updateItem(updatedItem)
         this.items[index] = updatedItem

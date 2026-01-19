@@ -5,6 +5,7 @@
  */
 import type { ItemType } from '~/types/item'
 import { clearMealLogRefs } from '~/utils/mealLog'
+import { ALBUM_MAX_PHOTOS } from '~/utils/constants'
 
 const props = defineProps<{
   date: string
@@ -29,6 +30,10 @@ const mealCarbs = ref<number | undefined>()
 const mealFat = ref<number | undefined>()
 const mealPhoto = ref<string | undefined>()
 const mealMemo = ref('')
+
+// アルバム機能の状態（TODO用の写真）
+const albumPhotos = ref<string[]>([])
+const showPhotoGallery = ref(false)
 
 const isSubmitting = ref(false)
 
@@ -108,7 +113,7 @@ function deleteMealLog() {
 }
 
 /**
- * 画像ファイルを選択
+ * 画像ファイルを選択（食事ログ用）
  */
 function handlePhotoUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -120,6 +125,21 @@ function handlePhotoUpload(event: Event) {
     }
     reader.readAsDataURL(file)
   }
+}
+
+/**
+ * アルバム写真を追加
+ */
+function handleAlbumPhotoAdded(photo: string) {
+  albumPhotos.value.push(photo)
+}
+
+/**
+ * アルバム写真を削除
+ */
+function handleAlbumPhotoDeleted(index: number) {
+  // Proxyオブジェクトを避けるため、filterを使用して新しい配列を作成
+  albumPhotos.value = albumPhotos.value.filter((_, i) => i !== index)
 }
 
 /**
@@ -167,6 +187,7 @@ async function handleSubmit() {
       scheduled_at: scheduledAt,
       notes: notes.value.trim(),
       mealLog: mealLogData,
+      photos: type.value === 'todo' && albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
     })
 
     // フォームをリセット（種別と時刻はリセットしない）
@@ -181,6 +202,8 @@ async function handleSubmit() {
     mealPhoto.value = undefined
     mealMemo.value = ''
     showMealLog.value = false
+    // アルバム写真もリセット
+    albumPhotos.value = []
   }
   finally {
     isSubmitting.value = false
@@ -391,6 +414,15 @@ async function handleSubmit() {
                   :src="mealPhoto"
                   alt="Meal photo"
                 >
+                <UiButton
+                  variant="danger"
+                  icon
+                  class="delete-photo-btn"
+                  :aria-label="$t('写真を削除')"
+                  @click="mealPhoto = undefined"
+                >
+                  <Icon name="mdi:delete" />
+                </UiButton>
               </div>
             </div>
           </div>
@@ -402,6 +434,56 @@ async function handleSubmit() {
               :placeholder="$t('食事メモ')"
               rows="2"
             />
+          </div>
+        </div>
+      </div>
+
+      <!-- アルバム機能（TODO専用） -->
+      <div
+        v-if="type === 'todo'"
+        class="album-section"
+      >
+        <div class="album-header">
+          <h4>
+            <Icon name="mdi:image-multiple" />
+            {{ $t('アルバム') }}
+          </h4>
+          <UiButton
+            v-if="albumPhotos.length > 0"
+            variant="secondary"
+            size="small"
+            @click="showPhotoGallery = true"
+          >
+            <Icon name="mdi:image-multiple-outline" />
+            {{ $t('アルバムを表示') }} ({{ albumPhotos.length }})
+          </UiButton>
+        </div>
+        <UiPhotoUpload
+          :multiple="true"
+          :max-photos="ALBUM_MAX_PHOTOS"
+          :current-photo-count="albumPhotos.length"
+          :label="$t('写真を追加')"
+          @photo-added="handleAlbumPhotoAdded"
+        />
+        <div
+          v-if="albumPhotos.length > 0"
+          class="album-preview"
+        >
+          <div
+            v-for="(photo, index) in albumPhotos.slice(0, 3)"
+            :key="index"
+            class="album-thumb"
+          >
+            <img
+              :src="photo"
+              :alt="`Photo ${index + 1}`"
+            >
+          </div>
+          <div
+            v-if="albumPhotos.length > 3"
+            class="more-photos"
+          >
+            +{{ albumPhotos.length - 3 }}
           </div>
         </div>
       </div>
@@ -430,6 +512,16 @@ async function handleSubmit() {
         {{ $t('追加') }}
       </UiButton>
     </form>
+
+    <!-- アルバム写真ギャラリーモーダル -->
+    <UiPhotoGallery
+      :photos="albumPhotos"
+      :show="showPhotoGallery"
+      :allow-delete="true"
+      :title="$t('アルバム')"
+      @close="showPhotoGallery = false"
+      @delete-photo="handleAlbumPhotoDeleted"
+    />
   </section>
 </template>
 
@@ -647,6 +739,7 @@ async function handleSubmit() {
 
     .photo-preview {
       margin-top: 8px;
+      position: relative;
 
       img {
         width: 100%;
@@ -654,6 +747,19 @@ async function handleSubmit() {
         object-fit: cover;
         border-radius: 8px;
         overflow: hidden;
+      }
+
+      .delete-photo-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        min-width: auto;
+        padding: 6px;
+        opacity: 0.9;
+
+        &:hover {
+          opacity: 1;
+        }
       }
     }
   }
@@ -685,6 +791,74 @@ async function handleSubmit() {
   @media (max-width: 600px) {
     min-height: 44px;
     font-size: 16px;
+  }
+}
+
+/* アルバムセクション */
+.album-section {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+
+  .dark-mode & {
+    background: #2a2a2a;
+  }
+
+  .album-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+
+      .dark-mode & {
+        color: #e0e0e0;
+      }
+    }
+  }
+
+  .album-preview {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+
+    .album-thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: white;
+
+      .dark-mode & {
+        background: #333;
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    .more-photos {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+
+      .dark-mode & {
+        color: #b0b0b0;
+      }
+    }
   }
 }
 </style>

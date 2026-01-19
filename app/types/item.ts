@@ -23,6 +23,9 @@ export interface Item {
 
   // 食事ログ関連（type='todo'で食事の場合に使用）
   mealLog?: MealLog // 食事ログデータ
+
+  // アルバム機能（TODO用の写真）
+  photos?: string[] // 写真の配列（Base64エンコードされた画像データ）
 }
 
 /**

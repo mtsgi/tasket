@@ -17,6 +17,18 @@ export default {
   '設定': 'Settings',
   'メニュー': 'Menu',
   '検索': 'Search',
+  '写真': 'Photo',
+  '写真ギャラリー': 'Photo Gallery',
+  '写真がありません': 'No photos',
+  'この写真を削除しますか？': 'Delete this photo?',
+  '前の写真': 'Previous photo',
+  '次の写真': 'Next photo',
+  '写真を削除': 'Delete photo',
+  'アルバム': 'Album',
+  'アルバムを表示': 'View album',
+  '枚': '',
+  '{count}枚の写真': '{count} photos',
+  '最大{count}枚まで追加できます': 'Maximum {count} photos allowed',
 
   // Item types
   'TODO': 'TODO',
