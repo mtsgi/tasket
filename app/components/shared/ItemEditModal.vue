@@ -179,7 +179,8 @@ function handleAlbumPhotoAdded(photo: string) {
  * アルバム写真を削除
  */
 function handleAlbumPhotoDeleted(index: number) {
-  albumPhotos.value.splice(index, 1)
+  // Proxyオブジェクトを避けるため、新しい配列を作成
+  albumPhotos.value = [...albumPhotos.value.slice(0, index), ...albumPhotos.value.slice(index + 1)]
 }
 </script>
 

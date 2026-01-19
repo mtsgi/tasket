@@ -264,7 +264,8 @@ export const useItemsStore = defineStore('items', {
         created_at: new Date(),
         notes: data.notes || '',
         mealLog: data.mealLog,
-        photos: data.photos,
+        // Proxyオブジェクトを避けるため、photosもtoRawで変換
+        photos: data.photos ? toRaw(data.photos) : undefined,
       }
       await addItem(newItem)
       this.items.push(newItem)
