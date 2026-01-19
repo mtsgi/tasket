@@ -138,8 +138,8 @@ function handleAlbumPhotoAdded(photo: string) {
  * アルバム写真を削除
  */
 function handleAlbumPhotoDeleted(index: number) {
-  // Proxyオブジェクトを避けるため、新しい配列を作成
-  albumPhotos.value = [...albumPhotos.value.slice(0, index), ...albumPhotos.value.slice(index + 1)]
+  // Proxyオブジェクトを避けるため、filterを使用して新しい配列を作成
+  albumPhotos.value = albumPhotos.value.filter((_, i) => i !== index)
 }
 
 /**
@@ -414,6 +414,15 @@ async function handleSubmit() {
                   :src="mealPhoto"
                   alt="Meal photo"
                 >
+                <UiButton
+                  variant="danger"
+                  icon
+                  class="delete-photo-btn"
+                  :aria-label="$t('写真を削除')"
+                  @click="mealPhoto = undefined"
+                >
+                  <Icon name="mdi:delete" />
+                </UiButton>
               </div>
             </div>
           </div>
@@ -730,6 +739,7 @@ async function handleSubmit() {
 
     .photo-preview {
       margin-top: 8px;
+      position: relative;
 
       img {
         width: 100%;
@@ -737,6 +747,19 @@ async function handleSubmit() {
         object-fit: cover;
         border-radius: 8px;
         overflow: hidden;
+      }
+
+      .delete-photo-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        min-width: auto;
+        padding: 6px;
+        opacity: 0.9;
+
+        &:hover {
+          opacity: 1;
+        }
       }
     }
   }
