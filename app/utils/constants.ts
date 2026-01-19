@@ -6,4 +6,4 @@
 export const ALBUM_MAX_PHOTOS = 10 // アルバムに追加できる最大写真枚数
 
 // UIコンポーネント関連
-export const PHOTO_GALLERY_Z_INDEX = 1000 // 写真ギャラリーモーダルのz-index
+export const PHOTO_GALLERY_Z_INDEX = 1100 // 写真ギャラリーモーダルのz-index（UiModalより上に表示）
