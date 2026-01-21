@@ -263,14 +263,69 @@ async function clearAllData() {
   if (!confirmed) return
 
   try {
-    // すべてのアイテムを削除
-    const items = [...itemsStore.items]
+    // データベースから各種データを取得して削除
+    const {
+      getAllItems,
+      deleteItem,
+      getAllRoutines,
+      deleteRoutine,
+      getAllHealthData,
+      deleteHealthData,
+      getAllDayTitles,
+      deleteDayTitle,
+      getAllPresets,
+      deletePreset,
+      getAllCloudBackupConfigs,
+      deleteCloudBackupConfig,
+    } = await import('~/utils/db')
+
+    // アイテムを削除
+    const items = await getAllItems()
     for (const item of items) {
-      await itemsStore.deleteItemById(item.id)
+      await deleteItem(item.id)
     }
+
+    // 日課を削除（日課ログも自動的に削除される）
+    const routines = await getAllRoutines()
+    for (const routine of routines) {
+      await deleteRoutine(routine.id)
+    }
+
+    // 健康データを削除
+    const healthDataList = await getAllHealthData()
+    for (const healthData of healthDataList) {
+      await deleteHealthData(healthData.id)
+    }
+
+    // 日タイトルを削除
+    const dayTitles = await getAllDayTitles()
+    for (const dayTitle of dayTitles) {
+      await deleteDayTitle(dayTitle.id)
+    }
+
+    // プリセットを削除
+    const presets = await getAllPresets()
+    for (const preset of presets) {
+      await deletePreset(preset.id)
+    }
+
+    // クラウドバックアップ設定を削除（バックアップ履歴も自動的に削除される）
+    const cloudBackupConfigs = await getAllCloudBackupConfigs()
+    for (const config of cloudBackupConfigs) {
+      await deleteCloudBackupConfig(config.id)
+    }
+
+    // ストアの状態をリセット
+    await itemsStore.fetchItems()
+    await routinesStore.fetchAllRoutines()
+    const healthDataStore = useHealthDataStore()
+    await healthDataStore.fetchHealthData()
+    await presetsStore.fetchPresets()
+
     showNotification('success', t('すべてのデータを削除しました'))
   }
-  catch {
+  catch (error) {
+    console.error('データの削除に失敗しました:', error)
     showNotification('error', t('データの削除に失敗しました'))
   }
 }
