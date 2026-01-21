@@ -14,6 +14,8 @@ const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
 const dayTitlesStore = useDayTitlesStore()
 const presetsStore = usePresetsStore()
+const healthDataStore = useHealthDataStore()
+const cloudBackupStore = useCloudBackupStore()
 const tutorialStore = useTutorialStore()
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
@@ -263,14 +265,33 @@ async function clearAllData() {
   if (!confirmed) return
 
   try {
-    // すべてのアイテムを削除
-    const items = [...itemsStore.items]
-    for (const item of items) {
-      await itemsStore.deleteItemById(item.id)
-    }
+    // IndexedDBデータベースを完全に削除
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase('tasket-db')
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+      request.onblocked = () => {
+        console.warn('データベースの削除がブロックされました')
+        // ブロックされてもresolveして続行
+        resolve()
+      }
+    })
+
+    // すべてのPiniaストアをリセット
+    itemsStore.$reset()
+    routinesStore.$reset()
+    dayTitlesStore.$reset()
+    presetsStore.$reset()
+    healthDataStore.$reset()
+    cloudBackupStore.$reset()
+    tutorialStore.$reset()
+    settingsStore.$reset()
+    lockStore.$reset()
+
     showNotification('success', t('すべてのデータを削除しました'))
   }
-  catch {
+  catch (error) {
+    console.error('データの削除に失敗しました:', error)
     showNotification('error', t('データの削除に失敗しました'))
   }
 }
@@ -295,7 +316,6 @@ async function addSampleData() {
     await itemsStore.fetchItems()
     await routinesStore.fetchRoutines()
     await presetsStore.fetchPresets()
-    const healthDataStore = useHealthDataStore()
     await healthDataStore.fetchHealthData()
 
     showNotification(
