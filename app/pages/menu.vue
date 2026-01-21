@@ -9,20 +9,6 @@ import PWAInstallSection from '~/components/shared/PWAInstallSection.vue'
 import CloudBackupManager from '~/components/settings/CloudBackupManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
 import { useRouter } from 'vue-router'
-import {
-  getAllItems,
-  deleteItem,
-  getAllRoutines,
-  deleteRoutine,
-  getAllHealthData,
-  deleteHealthData,
-  getAllDayTitles,
-  deleteDayTitle,
-  getAllPresets,
-  deletePreset,
-  getAllCloudBackupConfigs,
-  deleteCloudBackupConfig,
-} from '~/utils/db'
 
 const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
@@ -279,41 +265,28 @@ async function clearAllData() {
   if (!confirmed) return
 
   try {
-    // データベースから各種データを取得
-    const [items, routines, healthDataList, dayTitles, presets, cloudBackupConfigs] = await Promise.all([
-      getAllItems(),
-      getAllRoutines(),
-      getAllHealthData(),
-      getAllDayTitles(),
-      getAllPresets(),
-      getAllCloudBackupConfigs(),
-    ])
+    // IndexedDBデータベースを完全に削除
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase('tasket-db')
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+      request.onblocked = () => {
+        console.warn('データベースの削除がブロックされました')
+        // ブロックされてもresolveして続行
+        resolve()
+      }
+    })
 
-    // 各データ種別を並列で削除
-    await Promise.all([
-      // アイテムを削除
-      ...items.map(item => deleteItem(item.id)),
-      // 日課を削除（日課ログも自動的に削除される）
-      ...routines.map(routine => deleteRoutine(routine.id)),
-      // 健康データを削除
-      ...healthDataList.map(healthData => deleteHealthData(healthData.id)),
-      // 日タイトルを削除
-      ...dayTitles.map(dayTitle => deleteDayTitle(dayTitle.id)),
-      // プリセットを削除
-      ...presets.map(preset => deletePreset(preset.id)),
-      // クラウドバックアップ設定を削除（バックアップ履歴も自動的に削除される）
-      ...cloudBackupConfigs.map(config => deleteCloudBackupConfig(config.id)),
-    ])
-
-    // ストアの状態をリセット
-    await itemsStore.fetchItems()
-    await routinesStore.fetchAllRoutines()
-    await healthDataStore.fetchHealthData()
-    await presetsStore.fetchPresets()
-    await cloudBackupStore.fetchConfigs()
-    await cloudBackupStore.fetchHistories()
-    // 日タイトルは日付ごとに取得するため、ここではキャッシュをクリア
+    // すべてのPiniaストアをリセット
+    itemsStore.$reset()
+    routinesStore.$reset()
     dayTitlesStore.$reset()
+    presetsStore.$reset()
+    healthDataStore.$reset()
+    cloudBackupStore.$reset()
+    tutorialStore.$reset()
+    settingsStore.$reset()
+    lockStore.$reset()
 
     showNotification('success', t('すべてのデータを削除しました'))
   }
