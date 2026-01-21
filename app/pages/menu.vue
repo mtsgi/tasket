@@ -9,6 +9,20 @@ import PWAInstallSection from '~/components/shared/PWAInstallSection.vue'
 import CloudBackupManager from '~/components/settings/CloudBackupManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
 import { useRouter } from 'vue-router'
+import {
+  getAllItems,
+  deleteItem,
+  getAllRoutines,
+  deleteRoutine,
+  getAllHealthData,
+  deleteHealthData,
+  getAllDayTitles,
+  deleteDayTitle,
+  getAllPresets,
+  deletePreset,
+  getAllCloudBackupConfigs,
+  deleteCloudBackupConfig,
+} from '~/utils/db'
 
 const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
@@ -265,57 +279,31 @@ async function clearAllData() {
   if (!confirmed) return
 
   try {
-    // データベースから各種データを取得して削除
-    const {
-      getAllItems,
-      deleteItem,
-      getAllRoutines,
-      deleteRoutine,
-      getAllHealthData,
-      deleteHealthData,
-      getAllDayTitles,
-      deleteDayTitle,
-      getAllPresets,
-      deletePreset,
-      getAllCloudBackupConfigs,
-      deleteCloudBackupConfig,
-    } = await import('~/utils/db')
+    // データベースから各種データを取得
+    const [items, routines, healthDataList, dayTitles, presets, cloudBackupConfigs] = await Promise.all([
+      getAllItems(),
+      getAllRoutines(),
+      getAllHealthData(),
+      getAllDayTitles(),
+      getAllPresets(),
+      getAllCloudBackupConfigs(),
+    ])
 
-    // アイテムを削除
-    const items = await getAllItems()
-    for (const item of items) {
-      await deleteItem(item.id)
-    }
-
-    // 日課を削除（日課ログも自動的に削除される）
-    const routines = await getAllRoutines()
-    for (const routine of routines) {
-      await deleteRoutine(routine.id)
-    }
-
-    // 健康データを削除
-    const healthDataList = await getAllHealthData()
-    for (const healthData of healthDataList) {
-      await deleteHealthData(healthData.id)
-    }
-
-    // 日タイトルを削除
-    const dayTitles = await getAllDayTitles()
-    for (const dayTitle of dayTitles) {
-      await deleteDayTitle(dayTitle.id)
-    }
-
-    // プリセットを削除
-    const presets = await getAllPresets()
-    for (const preset of presets) {
-      await deletePreset(preset.id)
-    }
-
-    // クラウドバックアップ設定を削除（バックアップ履歴も自動的に削除される）
-    const cloudBackupConfigs = await getAllCloudBackupConfigs()
-    for (const config of cloudBackupConfigs) {
-      await deleteCloudBackupConfig(config.id)
-    }
+    // 各データ種別を並列で削除
+    await Promise.all([
+      // アイテムを削除
+      ...items.map(item => deleteItem(item.id)),
+      // 日課を削除（日課ログも自動的に削除される）
+      ...routines.map(routine => deleteRoutine(routine.id)),
+      // 健康データを削除
+      ...healthDataList.map(healthData => deleteHealthData(healthData.id)),
+      // 日タイトルを削除
+      ...dayTitles.map(dayTitle => deleteDayTitle(dayTitle.id)),
+      // プリセットを削除
+      ...presets.map(preset => deletePreset(preset.id)),
+      // クラウドバックアップ設定を削除（バックアップ履歴も自動的に削除される）
+      ...cloudBackupConfigs.map(config => deleteCloudBackupConfig(config.id)),
+    ])
 
     // ストアの状態をリセット
     await itemsStore.fetchItems()
