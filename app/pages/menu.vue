@@ -343,7 +343,6 @@ async function addSampleData() {
     await itemsStore.fetchItems()
     await routinesStore.fetchRoutines()
     await presetsStore.fetchPresets()
-    const healthDataStore = useHealthDataStore()
     await healthDataStore.fetchHealthData()
 
     showNotification(
