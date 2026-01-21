@@ -14,6 +14,8 @@ const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
 const dayTitlesStore = useDayTitlesStore()
 const presetsStore = usePresetsStore()
+const healthDataStore = useHealthDataStore()
+const cloudBackupStore = useCloudBackupStore()
 const tutorialStore = useTutorialStore()
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
@@ -318,9 +320,12 @@ async function clearAllData() {
     // ストアの状態をリセット
     await itemsStore.fetchItems()
     await routinesStore.fetchAllRoutines()
-    const healthDataStore = useHealthDataStore()
     await healthDataStore.fetchHealthData()
     await presetsStore.fetchPresets()
+    await cloudBackupStore.fetchConfigs()
+    await cloudBackupStore.fetchHistories()
+    // 日タイトルは日付ごとに取得するため、ここではキャッシュをクリア
+    dayTitlesStore.$reset()
 
     showNotification('success', t('すべてのデータを削除しました'))
   }
