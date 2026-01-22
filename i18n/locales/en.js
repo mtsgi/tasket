@@ -35,6 +35,11 @@ export default {
   '収入': 'Income',
   '支出': 'Expense',
   'やること': 'Tasks',
+  '重要': 'Important',
+  '重要フラグ': 'Important Flag',
+  '重要なアイテム': 'Important Items',
+  '重要としてマーク': 'Mark as Important',
+  '重要フラグを解除': 'Unmark as Important',
 
   // Menu screen
   'チュートリアル': 'Tutorial',

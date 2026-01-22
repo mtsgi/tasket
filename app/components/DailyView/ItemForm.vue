@@ -21,6 +21,7 @@ const amount = ref(0)
 const type = ref<ItemType>('todo')
 const time = ref('12:00')
 const notes = ref('')
+const isImportant = ref(false)
 
 // 食事ログの状態
 const showMealLog = ref(false)
@@ -188,12 +189,14 @@ async function handleSubmit() {
       notes: notes.value.trim(),
       mealLog: mealLogData,
       photos: type.value === 'todo' && albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
+      is_important: type.value === 'todo' ? isImportant.value : false,
     })
 
     // フォームをリセット（種別と時刻はリセットしない）
     title.value = ''
     amount.value = 0
     notes.value = ''
+    isImportant.value = false
     // 食事ログもリセット
     mealCalories.value = undefined
     mealProtein.value = undefined
@@ -326,6 +329,23 @@ async function handleSubmit() {
           :placeholder="$t('備考（任意）')"
           rows="2"
         />
+      </div>
+
+      <!-- 重要フラグ（TODOの場合のみ表示） -->
+      <div
+        v-if="type === 'todo'"
+        class="form-group important-flag-group"
+      >
+        <label class="checkbox-label">
+          <UiCheckbox
+            v-model="isImportant"
+          />
+          <Icon
+            :name="isImportant ? 'mdi:star' : 'mdi:star-outline'"
+            :class="{ important: isImportant }"
+          />
+          <span>{{ $t('重要') }}</span>
+        </label>
       </div>
 
       <!-- 食事ログセクション（TODOまたは支出の場合のみ表示） -->
@@ -858,6 +878,21 @@ async function handleSubmit() {
       .dark-mode & {
         color: #b0b0b0;
       }
+    }
+  }
+}
+
+/* 重要フラグ */
+.important-flag-group {
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+
+    .important {
+      color: #ffc107;
     }
   }
 }

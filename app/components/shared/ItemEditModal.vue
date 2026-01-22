@@ -29,6 +29,7 @@ const time = ref(
 )
 const date = ref(formatDate(props.item.scheduled_at))
 const notes = ref(props.item.notes || '')
+const isImportant = ref(props.item.is_important ?? false)
 
 // 実行時刻（任意）
 const executedTime = ref(
@@ -105,6 +106,7 @@ async function handleSubmit() {
       notes: notes.value.trim(),
       mealLog: mealLogData,
       photos: type.value === 'todo' && albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
+      is_important: type.value === 'todo' ? isImportant.value : false,
     })
 
     emit('close')
@@ -292,6 +294,23 @@ function handleAlbumPhotoDeleted(index: number) {
           :placeholder="$t('備考（任意）')"
           rows="2"
         />
+      </div>
+
+      <!-- 重要フラグ（TODOの場合のみ表示） -->
+      <div
+        v-if="type === 'todo'"
+        class="form-group important-flag-group"
+      >
+        <label class="checkbox-label">
+          <UiCheckbox
+            v-model="isImportant"
+          />
+          <Icon
+            :name="isImportant ? 'mdi:star' : 'mdi:star-outline'"
+            :class="{ important: isImportant }"
+          />
+          <span>{{ $t('重要') }}</span>
+        </label>
       </div>
 
       <!-- 食事ログセクション（TODOまたは支出の場合のみ表示） -->
@@ -781,6 +800,21 @@ function handleAlbumPhotoDeleted(index: number) {
       .dark-mode & {
         color: #b0b0b0;
       }
+    }
+  }
+}
+
+/* 重要フラグ */
+.important-flag-group {
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+
+    .important {
+      color: #ffc107;
     }
   }
 }
