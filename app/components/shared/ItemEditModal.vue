@@ -19,6 +19,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const itemsStore = useItemsStore()
+const settingsStore = useSettingsStore()
 
 // フォームの状態
 const title = ref(props.item.title)
@@ -71,16 +72,29 @@ async function handleSubmit() {
     const [hoursStr, minutesStr] = (time.value ? time.value.split(':') : ['00', '00'])
     const hours = Number(hoursStr ?? '0')
     const minutes = Number(minutesStr ?? '0')
+    const dateChangeLine = settingsStore.dateChangeLine
+
+    // 日付変更線より前の時刻の場合、翌日の日付を使用
+    // 例: 日付変更線が4時で、2時のアイテムを編集する場合
+    // 12月12日の日付で2時を設定すると、実際には12月13日の2時として保存される
+    // （12月12日の実効範囲は12日4:00〜13日3:59なので、2時は13日分）
     const scheduledAt = new Date(date.value)
+    if (hours < dateChangeLine) {
+      scheduledAt.setDate(scheduledAt.getDate() + 1)
+    }
     scheduledAt.setHours(hours, minutes, 0, 0)
 
     // 実行時刻が設定されている場合のみ変換
+    // 実行時刻も日付変更線を考慮する
     let executedAt: Date | null = null
     if (executedTime.value) {
       const [execHoursStr, execMinutesStr] = executedTime.value.split(':')
       const execHours = Number(execHoursStr ?? '0')
       const execMinutes = Number(execMinutesStr ?? '0')
       executedAt = new Date(date.value)
+      if (execHours < dateChangeLine) {
+        executedAt.setDate(executedAt.getDate() + 1)
+      }
       executedAt.setHours(execHours, execMinutes, 0, 0)
     }
 
