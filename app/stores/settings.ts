@@ -22,6 +22,7 @@ export interface Settings {
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
   healthGraphSettings: HealthGraphSettings // 健康グラフ表示設定
+  height?: number // 身長（cm）- BMI計算に使用
 }
 
 export const useSettingsStore = defineStore('settings', {
@@ -42,6 +43,7 @@ export const useSettingsStore = defineStore('settings', {
     healthGraphSettings: {
       spanGaps: false, // デフォルトは補完しない
     } as HealthGraphSettings,
+    height: undefined as number | undefined, // 身長（cm）- BMI計算に使用
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
   }),
 
@@ -87,6 +89,7 @@ export const useSettingsStore = defineStore('settings', {
           this.healthGraphSettings = settings.healthGraphSettings ?? {
             spanGaps: false,
           }
+          this.height = settings.height
 
           // Fileオブジェクトの場合はObject URLを生成
           if (this.backgroundImage instanceof File) {
@@ -125,6 +128,7 @@ export const useSettingsStore = defineStore('settings', {
           language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
           healthGraphSettings: { ...this.healthGraphSettings }, // reactive proxyをplain objectに変換
+          height: this.height,
           updated_at: new Date(),
         })
       }
@@ -207,6 +211,15 @@ export const useSettingsStore = defineStore('settings', {
       catch (e) {
         console.error('健康グラフ表示設定の保存に失敗しました:', e)
       }
+    },
+
+    /**
+     * 身長の設定
+     * @param height - 身長（cm）
+     */
+    async setHeight(height: number | undefined) {
+      this.height = height
+      await this.saveSettings()
     },
   },
 })
