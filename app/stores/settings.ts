@@ -12,11 +12,16 @@ export interface CalendarDisplaySettings {
   showTaskCount: boolean // タスクの合計数の表示/非表示
 }
 
+export interface HealthGraphSettings {
+  spanGaps: boolean // データの欠けた日を補完する（線をつなげる）
+}
+
 export interface Settings {
   darkMode: boolean // ダークモードの有効/無効
   backgroundImage: string | File // 背景画像（パス、Base64、またはFileオブジェクト）
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
+  healthGraphSettings: HealthGraphSettings // 健康グラフ表示設定
 }
 
 export const useSettingsStore = defineStore('settings', {
@@ -34,6 +39,9 @@ export const useSettingsStore = defineStore('settings', {
       showMainTask: true,
       showTaskCount: true,
     } as CalendarDisplaySettings,
+    healthGraphSettings: {
+      spanGaps: false, // デフォルトは補完しない
+    } as HealthGraphSettings,
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
   }),
 
@@ -76,6 +84,9 @@ export const useSettingsStore = defineStore('settings', {
             showMainTask: true,
             showTaskCount: true,
           }
+          this.healthGraphSettings = settings.healthGraphSettings ?? {
+            spanGaps: false,
+          }
 
           // Fileオブジェクトの場合はObject URLを生成
           if (this.backgroundImage instanceof File) {
@@ -113,6 +124,7 @@ export const useSettingsStore = defineStore('settings', {
           dateChangeLine: this.dateChangeLine,
           language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
+          healthGraphSettings: { ...this.healthGraphSettings }, // reactive proxyをplain objectに変換
           updated_at: new Date(),
         })
       }
@@ -181,6 +193,20 @@ export const useSettingsStore = defineStore('settings', {
     async setLanguage(lang: 'ja' | 'en') {
       this.language = lang
       await this.saveSettings()
+    },
+
+    /**
+     * 健康グラフ表示設定の更新
+     * @param settings - 健康グラフ表示設定
+     */
+    async updateHealthGraphSettings(settings: Partial<HealthGraphSettings>) {
+      try {
+        this.healthGraphSettings = { ...this.healthGraphSettings, ...settings }
+        await this.saveSettings()
+      }
+      catch (e) {
+        console.error('健康グラフ表示設定の保存に失敗しました:', e)
+      }
     },
   },
 })

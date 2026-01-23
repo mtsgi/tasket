@@ -253,6 +253,9 @@ export interface AppSettings {
 
   // 健康管理設定
   height?: number // 身長（cm）- BMI計算に使用
+  healthGraphSettings?: {
+    spanGaps: boolean // データの欠けた日を補完する（線をつなげる）
+  }
 
   updated_at: Date // 更新日時
 }

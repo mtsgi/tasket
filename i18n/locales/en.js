@@ -501,6 +501,8 @@ export default {
   '体重・体脂肪率': 'Weight & Body Fat',
   '表示項目': 'Display Item',
   '記録なし': 'No Record',
+  'データの欠けた日を補完する': 'Connect missing data points',
+  'グラフ設定': 'Chart Settings',
   '月経期': 'Menstruation',
   '卵胞期': 'Follicular Phase',
   '排卵期': 'Ovulation',
