@@ -37,6 +37,13 @@ async function handleToggleComplete() {
 }
 
 /**
+ * 重要フラグを切り替える
+ */
+async function handleToggleImportant() {
+  await itemsStore.toggleImportant(props.item.id)
+}
+
+/**
  * 編集モーダルを開く
  */
 function handleEdit() {
@@ -239,6 +246,18 @@ const executionStatus = computed(() => {
     </div>
 
     <div class="item-actions">
+      <UiButton
+        v-if="item.type === 'todo'"
+        variant="secondary"
+        icon
+        :aria-label="item.is_important ? $t('重要フラグを解除') : $t('重要としてマーク')"
+        @click="handleToggleImportant"
+      >
+        <Icon
+          :name="item.is_important ? 'mdi:star' : 'mdi:star-outline'"
+          :class="{ important: item.is_important }"
+        />
+      </UiButton>
       <UiButton
         variant="secondary"
         icon
@@ -499,6 +518,10 @@ const executionStatus = computed(() => {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+
+  .important {
+    color: #ffc107;
+  }
 }
 
 @media (max-width: 600px) {

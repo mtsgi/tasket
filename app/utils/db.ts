@@ -20,6 +20,7 @@ interface TasketDB extends DBSchema {
       'by-scheduled-at': Date // 予定日時でのインデックス
       'by-type': string // 種別でのインデックス
       'by-is-completed': boolean // 完了状態でのインデックス
+      'by-is-important': boolean // 重要フラグでのインデックス
     }
   }
   dayTitles: {
@@ -88,7 +89,7 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 7, {
+    dbPromise = openDB<TasketDB>('tasket-db', 8, {
       upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
@@ -174,6 +175,13 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           backupHistoryStore.createIndex('by-configId', 'configId')
           backupHistoryStore.createIndex('by-status', 'status')
         }
+
+        // バージョン8の新機能: 重要フラグ
+        if (oldVersion < 8) {
+          // itemsストアに重要フラグのインデックスを追加
+          const itemsStore = transaction.objectStore('items')
+          itemsStore.createIndex('by-is-important', 'is_important')
+        }
       },
     })
   }
@@ -198,6 +206,7 @@ export async function getAllItems(): Promise<Item[]> {
     executed_at: item.executed_at ? new Date(item.executed_at) : null,
     created_at: new Date(item.created_at),
     notes: item.notes || '', // 既存データの互換性のため
+    is_important: item.is_important ?? false, // 既存データの互換性のため
     mealLog: item.mealLog, // 食事ログデータ
   }))
 }
@@ -217,6 +226,7 @@ export async function getItemById(id: string): Promise<Item | undefined> {
       executed_at: item.executed_at ? new Date(item.executed_at) : null,
       created_at: new Date(item.created_at),
       notes: item.notes || '', // 既存データの互換性のため
+      is_important: item.is_important ?? false, // 既存データの互換性のため
       mealLog: item.mealLog, // 食事ログデータ
     }
   }

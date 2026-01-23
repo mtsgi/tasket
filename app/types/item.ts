@@ -16,6 +16,7 @@ export interface Item {
   amount: number // 金額（TODOの場合は0）
   type: ItemType // アイテムの種別
   is_completed: boolean // 完了状態
+  is_important: boolean // 重要フラグ（TODOで使用）
   scheduled_at: Date // 予定日時
   executed_at: Date | null // 実行日時（完了時に設定）
   created_at: Date // 作成日時

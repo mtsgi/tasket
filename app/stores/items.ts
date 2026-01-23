@@ -252,6 +252,7 @@ export const useItemsStore = defineStore('items', {
       notes?: string
       mealLog?: import('~/types/item').MealLog
       photos?: string[]
+      is_important?: boolean
     }) {
       const newItem: Item = {
         id: uuidv4(),
@@ -259,6 +260,7 @@ export const useItemsStore = defineStore('items', {
         amount: data.amount,
         type: data.type,
         is_completed: false,
+        is_important: data.is_important ?? false,
         scheduled_at: data.scheduled_at,
         executed_at: null,
         created_at: new Date(),
@@ -310,6 +312,20 @@ export const useItemsStore = defineStore('items', {
         const isCompleted = !item.is_completed
         await this.updateItemById(id, {
           is_completed: isCompleted,
+        })
+      }
+    },
+
+    /**
+     * アイテムの重要フラグを切り替え
+     * @param id - アイテムID
+     */
+    async toggleImportant(id: string) {
+      const item = this.items.find(item => item.id === id)
+      if (item) {
+        const isImportant = !item.is_important
+        await this.updateItemById(id, {
+          is_important: isImportant,
         })
       }
     },
