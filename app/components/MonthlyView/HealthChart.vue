@@ -26,6 +26,19 @@ const props = defineProps<{
 const healthDataStore = useHealthDataStore()
 const settingsStore = useSettingsStore()
 
+// 設定モーダルの表示状態
+const showSettings = ref(false)
+
+// 設定モーダルを開く
+function openSettings() {
+  showSettings.value = true
+}
+
+// 設定モーダルを閉じる
+function closeSettings() {
+  showSettings.value = false
+}
+
 // 選択されたグラフタイプ
 type ChartType = 'weight-bodyfat' | 'heartrate' | 'muscle' | 'visceral' | 'steps' | 'sleep' | 'basal-metabolic' | 'body-water' | 'bone-mass' | 'protein'
 const selectedChartType = ref<ChartType>('weight-bodyfat')
@@ -353,12 +366,6 @@ const hasData = computed(() => {
   return monthHealthData.value.length > 0
 })
 
-// spanGaps設定の切り替え
-const toggleSpanGaps = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  await settingsStore.updateHealthGraphSettings({ spanGaps: target.checked })
-}
-
 onMounted(async () => {
   await healthDataStore.fetchHealthData()
 })
@@ -384,16 +391,13 @@ onMounted(async () => {
             </option>
           </select>
         </div>
-        <div class="chart-settings">
-          <label class="checkbox-label">
-            <input
-              type="checkbox"
-              :checked="settingsStore.healthGraphSettings.spanGaps"
-              @change="toggleSpanGaps"
-            >
-            <span>{{ $t('データの欠けた日を補完する') }}</span>
-          </label>
-        </div>
+        <button
+          class="btn-settings"
+          @click="openSettings"
+        >
+          <Icon name="mdi:cog" />
+          {{ $t('表示設定') }}
+        </button>
       </div>
     </div>
     <div
@@ -411,6 +415,12 @@ onMounted(async () => {
     >
       <p>{{ $t('健康データが記録されていません') }}</p>
     </div>
+
+    <!-- 設定モーダル -->
+    <HealthChartSettings
+      :show="showSettings"
+      @close="closeSettings"
+    />
   </div>
 </template>
 
@@ -438,7 +448,7 @@ onMounted(async () => {
   .chart-controls {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
   }
 
@@ -477,27 +487,40 @@ onMounted(async () => {
     }
   }
 
-  .chart-settings {
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-      color: #666;
-      cursor: pointer;
+  .btn-settings {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background-color: white;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
 
-      .dark-mode & {
-        color: #b0b0b0;
+    &:hover {
+      background-color: #f5f5f5;
+      border-color: #d0d0d0;
+    }
+
+    &:active {
+      background-color: #e8e8e8;
+    }
+
+    .dark-mode & {
+      background-color: #333;
+      border-color: #444;
+      color: #e0e0e0;
+
+      &:hover {
+        background-color: #404040;
+        border-color: #555;
       }
 
-      input[type="checkbox"] {
-        cursor: pointer;
-        width: 16px;
-        height: 16px;
-      }
-
-      span {
-        user-select: none;
+      &:active {
+        background-color: #4a4a4a;
       }
     }
   }

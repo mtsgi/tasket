@@ -503,6 +503,8 @@ export default {
   '記録なし': 'No Record',
   'データの欠けた日を補完する': 'Connect missing data points',
   'グラフ設定': 'Chart Settings',
+  'グラフ表示設定': 'Chart Display Settings',
+  '健康データグラフの表示オプションを設定してください': 'Configure display options for health data charts',
   '月経期': 'Menstruation',
   '卵胞期': 'Follicular Phase',
   '排卵期': 'Ovulation',
