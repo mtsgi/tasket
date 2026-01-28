@@ -123,10 +123,10 @@ function handlePhotoClick(photoData: {
     <h2>
       <Icon name="mdi:image-multiple" />
       {{ $t('アルバム') }}
+      <p class="photo-count">
+        {{ $t('{count}枚の写真', { count: allPhotos.length }) }}
+      </p>
     </h2>
-    <p class="photo-count">
-      {{ $t('{count}枚の写真', { count: allPhotos.length }) }}
-    </p>
     <div class="photo-grid">
       <div
         v-for="(photoData, index) in displayedPhotos"
@@ -207,7 +207,6 @@ function handlePhotoClick(photoData: {
   .photo-count {
     font-size: 13px;
     color: #999;
-    margin-bottom: 16px;
 
     .dark-mode & {
       color: #888;

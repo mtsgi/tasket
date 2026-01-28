@@ -16,6 +16,7 @@ import {
   type ChartOptions,
 } from 'chart.js'
 import dayjs from 'dayjs'
+import HealthChartSettings from './HealthChartSettings.vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -442,7 +443,8 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 18px;
+    font-size: 16px;
+    color: #666;
   }
 
   .chart-controls {
