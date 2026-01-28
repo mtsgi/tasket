@@ -14,6 +14,8 @@ const props = defineProps<{
 const showPhotoGallery = ref(false)
 const selectedItemPhotos = ref<string[]>([])
 const selectedItemTitle = ref('')
+const isExpanded = ref(false) // アルバムの展開状態
+const DISPLAY_LIMIT = 9 // 表示上限数
 
 /**
  * 月ごとのすべての写真を取得（日付情報付き）
@@ -60,6 +62,30 @@ const allPhotos = computed(() => {
 })
 
 /**
+ * 表示する写真リスト（表示上限を適用）
+ */
+const displayedPhotos = computed(() => {
+  if (isExpanded.value || allPhotos.value.length <= DISPLAY_LIMIT) {
+    return allPhotos.value
+  }
+  return allPhotos.value.slice(0, DISPLAY_LIMIT)
+})
+
+/**
+ * 「さらに表示」ボタンを表示するか
+ */
+const showExpandButton = computed(() => {
+  return allPhotos.value.length > DISPLAY_LIMIT
+})
+
+/**
+ * 展開/折りたたみを切り替え
+ */
+function toggleExpand() {
+  isExpanded.value = !isExpanded.value
+}
+
+/**
  * 写真をクリックしたとき、そのアイテムの写真をギャラリー表示
  */
 function handlePhotoClick(photoData: {
@@ -103,7 +129,7 @@ function handlePhotoClick(photoData: {
     </p>
     <div class="photo-grid">
       <div
-        v-for="(photoData, index) in allPhotos"
+        v-for="(photoData, index) in displayedPhotos"
         :key="index"
         class="photo-item"
         @click="handlePhotoClick(photoData)"
@@ -122,6 +148,28 @@ function handlePhotoClick(photoData: {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 展開/折りたたみボタン -->
+    <div
+      v-if="showExpandButton"
+      class="expand-button-container"
+    >
+      <button
+        class="expand-button"
+        @click="toggleExpand"
+      >
+        <Icon
+          :name="isExpanded ? 'mdi:chevron-up' : 'mdi:chevron-down'"
+        />
+        <span v-if="!isExpanded">
+          {{ $t('さらに表示') }}
+          <span class="remaining-count">({{ $t('残り{count}枚', { count: allPhotos.length - DISPLAY_LIMIT }) }})</span>
+        </span>
+        <span v-else>
+          {{ $t('折りたたむ') }}
+        </span>
+      </button>
     </div>
 
     <!-- 写真ギャラリーモーダル -->
@@ -234,6 +282,62 @@ function handlePhotoClick(photoData: {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+  }
+}
+
+.expand-button-container {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+
+  .expand-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    .dark-mode & {
+      background: #2a2a2a;
+      border-color: #444;
+      color: #b0b0b0;
+    }
+
+    &:hover {
+      background: #f5f7fa;
+      border-color: #ccc;
+      transform: translateY(-1px);
+
+      .dark-mode & {
+        background: #333;
+        border-color: #555;
+      }
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    .remaining-count {
+      color: #999;
+      font-size: 13px;
+      margin-left: 4px;
+
+      .dark-mode & {
+        color: #777;
+      }
+    }
+
+    @media (max-width: 600px) {
+      font-size: 13px;
+      padding: 8px 16px;
     }
   }
 }
