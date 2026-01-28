@@ -29,6 +29,7 @@ export default {
   '枚': '',
   '{count}枚の写真': '{count} photos',
   '最大{count}枚まで追加できます': 'Maximum {count} photos allowed',
+  '残り{count}枚': '{count} more',
 
   // Item types
   'TODO': 'TODO',

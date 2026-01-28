@@ -29,6 +29,7 @@ export default {
   '枚': '枚',
   '{count}枚の写真': '{count}枚の写真',
   '最大{count}枚まで追加できます': '最大{count}枚まで追加できます',
+  '残り{count}枚': '残り{count}枚',
 
   // アイテム種別
   'TODO': 'TODO',
