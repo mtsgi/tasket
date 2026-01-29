@@ -14,6 +14,11 @@ export interface CalendarDisplaySettings {
 
 export interface HealthGraphSettings {
   spanGaps: boolean // データの欠けた日を補完する（線をつなげる）
+  chartHeight: 'small' | 'medium' | 'large' // グラフの高さ
+  showGridLines: boolean // グリッド線の表示/非表示
+  lineTension: 'straight' | 'smooth' // 折れ線の形状（直線/なめらか）
+  pointRadius: 'small' | 'medium' | 'large' // データポイントのサイズ
+  fillArea: boolean // グラフエリアの塗りつぶし
 }
 
 export interface Settings {
@@ -42,6 +47,11 @@ export const useSettingsStore = defineStore('settings', {
     } as CalendarDisplaySettings,
     healthGraphSettings: {
       spanGaps: false, // デフォルトは補完しない
+      chartHeight: 'medium', // デフォルトは中サイズ
+      showGridLines: true, // デフォルトはグリッド線表示
+      lineTension: 'smooth', // デフォルトはなめらかな線
+      pointRadius: 'medium', // デフォルトは中サイズのポイント
+      fillArea: false, // デフォルトは塗りつぶしなし
     } as HealthGraphSettings,
     height: undefined as number | undefined, // 身長（cm）- BMI計算に使用
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
@@ -88,6 +98,11 @@ export const useSettingsStore = defineStore('settings', {
           }
           this.healthGraphSettings = settings.healthGraphSettings ?? {
             spanGaps: false,
+            chartHeight: 'medium',
+            showGridLines: true,
+            lineTension: 'smooth',
+            pointRadius: 'medium',
+            fillArea: false,
           }
           this.height = settings.height
 

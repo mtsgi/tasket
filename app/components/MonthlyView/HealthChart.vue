@@ -63,6 +63,25 @@ const monthHealthData = computed(() => {
   return healthDataStore.getHealthDataByMonth(props.yearMonth)
 })
 
+// 設定から取得する値
+const tension = computed(() => {
+  return settingsStore.healthGraphSettings.lineTension === 'smooth' ? 0.4 : 0
+})
+
+const pointRadius = computed(() => {
+  const sizeMap = { small: 2, medium: 3, large: 5 }
+  return sizeMap[settingsStore.healthGraphSettings.pointRadius]
+})
+
+const fillEnabled = computed(() => {
+  return settingsStore.healthGraphSettings.fillArea
+})
+
+const chartHeight = computed(() => {
+  const heightMap = { small: '200px', medium: '300px', large: '400px' }
+  return heightMap[settingsStore.healthGraphSettings.chartHeight]
+})
+
 // グラフデータの準備
 const chartData = computed(() => {
   const data = monthHealthData.value
@@ -93,7 +112,9 @@ const chartData = computed(() => {
           data: weightData,
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
           yAxisID: 'y',
         },
         {
@@ -101,7 +122,9 @@ const chartData = computed(() => {
           data: bodyFatData,
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
           yAxisID: 'y1',
         },
       ],
@@ -123,7 +146,9 @@ const chartData = computed(() => {
           data: heartRateData,
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -144,7 +169,9 @@ const chartData = computed(() => {
           data: muscleMassData,
           borderColor: 'rgb(54, 162, 235)',
           backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -165,7 +192,9 @@ const chartData = computed(() => {
           data: visceralData,
           borderColor: 'rgb(255, 159, 64)',
           backgroundColor: 'rgba(255, 159, 64, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -186,7 +215,9 @@ const chartData = computed(() => {
           data: stepsData,
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -207,7 +238,9 @@ const chartData = computed(() => {
           data: sleepData,
           borderColor: 'rgb(153, 102, 255)',
           backgroundColor: 'rgba(153, 102, 255, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -228,7 +261,9 @@ const chartData = computed(() => {
           data: basalMetabolicData,
           borderColor: 'rgb(255, 205, 86)',
           backgroundColor: 'rgba(255, 205, 86, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -249,7 +284,9 @@ const chartData = computed(() => {
           data: bodyWaterData,
           borderColor: 'rgb(54, 162, 235)',
           backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -270,7 +307,9 @@ const chartData = computed(() => {
           data: boneMassData,
           borderColor: 'rgb(201, 203, 207)',
           backgroundColor: 'rgba(201, 203, 207, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -291,7 +330,9 @@ const chartData = computed(() => {
           data: proteinData,
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -334,6 +375,9 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
           display: true,
           text: $t('体重') + ' (kg)',
         },
+        grid: {
+          display: settingsStore.healthGraphSettings.showGridLines,
+        },
       },
       y1: {
         type: 'linear',
@@ -355,6 +399,14 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         type: 'linear',
         display: true,
         position: 'left',
+        grid: {
+          display: settingsStore.healthGraphSettings.showGridLines,
+        },
+      },
+      x: {
+        grid: {
+          display: settingsStore.healthGraphSettings.showGridLines,
+        },
       },
     }
   }
@@ -404,6 +456,7 @@ onMounted(async () => {
     <div
       v-if="hasData"
       class="chart-container"
+      :style="{ height: chartHeight }"
     >
       <Line
         :data="chartData"
@@ -534,11 +587,11 @@ onMounted(async () => {
 }
 
 .chart-container {
-  height: 300px;
   position: relative;
+  // 高さは動的に設定される
 
   @media (max-width: 600px) {
-    height: 250px;
+    // モバイルでは設定を尊重
   }
 }
 

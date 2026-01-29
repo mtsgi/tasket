@@ -56,9 +56,67 @@ function handleClose() {
       </p>
 
       <div class="settings-list">
+        <!-- データ補完設定 -->
         <UiCheckbox
           v-model="localSettings.spanGaps"
           :label="$t('データの欠けた日を補完する')"
+        />
+
+        <!-- グラフの高さ -->
+        <div class="setting-item">
+          <label class="setting-label">{{ $t('グラフの高さ') }}</label>
+          <UiSelect v-model="localSettings.chartHeight">
+            <option value="small">
+              {{ $t('小') }}
+            </option>
+            <option value="medium">
+              {{ $t('中') }}
+            </option>
+            <option value="large">
+              {{ $t('大') }}
+            </option>
+          </UiSelect>
+        </div>
+
+        <!-- グリッド線表示 -->
+        <UiCheckbox
+          v-model="localSettings.showGridLines"
+          :label="$t('グリッド線を表示')"
+        />
+
+        <!-- 折れ線の形状 -->
+        <div class="setting-item">
+          <label class="setting-label">{{ $t('折れ線の形状') }}</label>
+          <UiSelect v-model="localSettings.lineTension">
+            <option value="straight">
+              {{ $t('直線') }}
+            </option>
+            <option value="smooth">
+              {{ $t('なめらか') }}
+            </option>
+          </UiSelect>
+        </div>
+
+        <!-- データポイントのサイズ -->
+        <div class="setting-item">
+          <label class="setting-label">{{ $t('データポイントのサイズ') }}</label>
+          <UiSelect v-model="localSettings.pointRadius">
+            <option value="small">
+              {{ $t('小') }}
+            </option>
+            <option value="medium">
+              {{ $t('中') }}
+            </option>
+            <option value="large">
+              {{ $t('大') }}
+            </option>
+          </UiSelect>
+        </div>
+
+        <!-- グラフエリアの塗りつぶし -->
+        <UiCheckbox
+          v-model="localSettings.fillArea"
+          :label="$t('グラフエリアを塗りつぶす')"
         />
       </div>
     </div>
@@ -97,6 +155,22 @@ function handleClose() {
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .setting-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+
+      .dark-mode & {
+        color: #e0e0e0;
+      }
+    }
   }
 }
 </style>
