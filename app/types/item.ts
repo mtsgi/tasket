@@ -254,7 +254,12 @@ export interface AppSettings {
   // 健康管理設定
   height?: number // 身長（cm）- BMI計算に使用
   healthGraphSettings?: {
-    spanGaps: boolean // データの欠けた日を補完する（線をつなげる）
+    spanGaps?: boolean // データの欠けた日を補完する（線をつなげる）
+    chartHeight?: 'small' | 'medium' | 'large' // グラフの高さ
+    showGridLines?: boolean // グリッド線の表示/非表示
+    lineTension?: 'straight' | 'smooth' // 折れ線の形状（直線/なめらか）
+    pointRadius?: 'small' | 'medium' | 'large' // データポイントのサイズ
+    fillArea?: boolean // グラフエリアの塗りつぶし
   }
 
   updated_at: Date // 更新日時

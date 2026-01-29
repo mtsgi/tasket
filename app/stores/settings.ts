@@ -96,13 +96,18 @@ export const useSettingsStore = defineStore('settings', {
             showMainTask: true,
             showTaskCount: true,
           }
-          this.healthGraphSettings = settings.healthGraphSettings ?? {
+          // デフォルト値と既存設定をマージ
+          const defaultHealthGraphSettings = {
             spanGaps: false,
-            chartHeight: 'medium',
+            chartHeight: 'medium' as const,
             showGridLines: true,
-            lineTension: 'smooth',
-            pointRadius: 'medium',
+            lineTension: 'smooth' as const,
+            pointRadius: 'medium' as const,
             fillArea: false,
+          }
+          this.healthGraphSettings = {
+            ...defaultHealthGraphSettings,
+            ...settings.healthGraphSettings,
           }
           this.height = settings.height
 
