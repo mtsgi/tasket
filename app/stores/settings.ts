@@ -12,11 +12,22 @@ export interface CalendarDisplaySettings {
   showTaskCount: boolean // タスクの合計数の表示/非表示
 }
 
+export interface HealthGraphSettings {
+  spanGaps: boolean // データの欠けた日を補完する（線をつなげる）
+  chartHeight: 'small' | 'medium' | 'large' // グラフの高さ
+  showGridLines: boolean // グリッド線の表示/非表示
+  lineTension: 'straight' | 'smooth' // 折れ線の形状（直線/なめらか）
+  pointRadius: 'small' | 'medium' | 'large' // データポイントのサイズ
+  fillArea: boolean // グラフエリアの塗りつぶし
+}
+
 export interface Settings {
   darkMode: boolean // ダークモードの有効/無効
   backgroundImage: string | File // 背景画像（パス、Base64、またはFileオブジェクト）
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
+  healthGraphSettings: HealthGraphSettings // 健康グラフ表示設定
+  height?: number // 身長（cm）- BMI計算に使用
 }
 
 export const useSettingsStore = defineStore('settings', {
@@ -34,6 +45,15 @@ export const useSettingsStore = defineStore('settings', {
       showMainTask: true,
       showTaskCount: true,
     } as CalendarDisplaySettings,
+    healthGraphSettings: {
+      spanGaps: false, // デフォルトは補完しない
+      chartHeight: 'medium', // デフォルトは中サイズ
+      showGridLines: true, // デフォルトはグリッド線表示
+      lineTension: 'smooth', // デフォルトはなめらかな線
+      pointRadius: 'medium', // デフォルトは中サイズのポイント
+      fillArea: false, // デフォルトは塗りつぶしなし
+    } as HealthGraphSettings,
+    height: undefined as number | undefined, // 身長（cm）- BMI計算に使用
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
   }),
 
@@ -76,6 +96,20 @@ export const useSettingsStore = defineStore('settings', {
             showMainTask: true,
             showTaskCount: true,
           }
+          // デフォルト値と既存設定をマージ
+          const defaultHealthGraphSettings = {
+            spanGaps: false,
+            chartHeight: 'medium' as const,
+            showGridLines: true,
+            lineTension: 'smooth' as const,
+            pointRadius: 'medium' as const,
+            fillArea: false,
+          }
+          this.healthGraphSettings = {
+            ...defaultHealthGraphSettings,
+            ...settings.healthGraphSettings,
+          }
+          this.height = settings.height
 
           // Fileオブジェクトの場合はObject URLを生成
           if (this.backgroundImage instanceof File) {
@@ -113,6 +147,8 @@ export const useSettingsStore = defineStore('settings', {
           dateChangeLine: this.dateChangeLine,
           language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
+          healthGraphSettings: { ...this.healthGraphSettings }, // reactive proxyをplain objectに変換
+          height: this.height,
           updated_at: new Date(),
         })
       }
@@ -180,6 +216,29 @@ export const useSettingsStore = defineStore('settings', {
      */
     async setLanguage(lang: 'ja' | 'en') {
       this.language = lang
+      await this.saveSettings()
+    },
+
+    /**
+     * 健康グラフ表示設定の更新
+     * @param settings - 健康グラフ表示設定
+     */
+    async updateHealthGraphSettings(settings: Partial<HealthGraphSettings>) {
+      try {
+        this.healthGraphSettings = { ...this.healthGraphSettings, ...settings }
+        await this.saveSettings()
+      }
+      catch (e) {
+        console.error('健康グラフ表示設定の保存に失敗しました:', e)
+      }
+    },
+
+    /**
+     * 身長の設定
+     * @param height - 身長（cm）
+     */
+    async setHeight(height: number | undefined) {
+      this.height = height
       await this.saveSettings()
     },
   },

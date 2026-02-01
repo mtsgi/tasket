@@ -16,6 +16,7 @@ import {
   type ChartOptions,
 } from 'chart.js'
 import dayjs from 'dayjs'
+import HealthChartSettings from './HealthChartSettings.vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -24,9 +25,23 @@ const props = defineProps<{
 }>()
 
 const healthDataStore = useHealthDataStore()
+const settingsStore = useSettingsStore()
+
+// 設定モーダルの表示状態
+const showSettings = ref(false)
+
+// 設定モーダルを開く
+function openSettings() {
+  showSettings.value = true
+}
+
+// 設定モーダルを閉じる
+function closeSettings() {
+  showSettings.value = false
+}
 
 // 選択されたグラフタイプ
-type ChartType = 'weight-bodyfat' | 'heartrate' | 'muscle' | 'visceral' | 'steps' | 'sleep'
+type ChartType = 'weight-bodyfat' | 'heartrate' | 'muscle' | 'visceral' | 'steps' | 'sleep' | 'basal-metabolic' | 'body-water' | 'bone-mass' | 'protein'
 const selectedChartType = ref<ChartType>('weight-bodyfat')
 
 // チャートタイプのオプション
@@ -37,11 +52,34 @@ const chartTypeOptions = [
   { value: 'visceral', label: $t('内臓脂肪レベル') },
   { value: 'steps', label: $t('歩数') },
   { value: 'sleep', label: $t('睡眠時間') },
+  { value: 'basal-metabolic', label: $t('基礎代謝量') },
+  { value: 'body-water', label: $t('体内水分率') },
+  { value: 'bone-mass', label: $t('骨塩量') },
+  { value: 'protein', label: $t('タンパク質') },
 ]
 
 // その月の健康データ
 const monthHealthData = computed(() => {
   return healthDataStore.getHealthDataByMonth(props.yearMonth)
+})
+
+// 設定から取得する値
+const tension = computed(() => {
+  return settingsStore.healthGraphSettings.lineTension === 'smooth' ? 0.4 : 0
+})
+
+const pointRadius = computed(() => {
+  const sizeMap = { small: 2, medium: 3, large: 5 }
+  return sizeMap[settingsStore.healthGraphSettings.pointRadius]
+})
+
+const fillEnabled = computed(() => {
+  return settingsStore.healthGraphSettings.fillArea
+})
+
+const chartHeight = computed(() => {
+  const heightMap = { small: '200px', medium: '300px', large: '400px' }
+  return heightMap[settingsStore.healthGraphSettings.chartHeight]
 })
 
 // グラフデータの準備
@@ -74,7 +112,9 @@ const chartData = computed(() => {
           data: weightData,
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
           yAxisID: 'y',
         },
         {
@@ -82,7 +122,9 @@ const chartData = computed(() => {
           data: bodyFatData,
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
           yAxisID: 'y1',
         },
       ],
@@ -104,7 +146,9 @@ const chartData = computed(() => {
           data: heartRateData,
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -125,7 +169,9 @@ const chartData = computed(() => {
           data: muscleMassData,
           borderColor: 'rgb(54, 162, 235)',
           backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -146,7 +192,9 @@ const chartData = computed(() => {
           data: visceralData,
           borderColor: 'rgb(255, 159, 64)',
           backgroundColor: 'rgba(255, 159, 64, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -167,7 +215,9 @@ const chartData = computed(() => {
           data: stepsData,
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -188,7 +238,101 @@ const chartData = computed(() => {
           data: sleepData,
           borderColor: 'rgb(153, 102, 255)',
           backgroundColor: 'rgba(153, 102, 255, 0.2)',
-          tension: 0.3,
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
+        },
+      ],
+    }
+  }
+  else if (selectedChartType.value === 'basal-metabolic') {
+    // 基礎代謝量
+    const basalMetabolicData = labels.map((day) => {
+      const dateStr = `${props.yearMonth}-${day.padStart(2, '0')}`
+      const healthData = data.find(d => d.date === dateStr)
+      return healthData?.basalMetabolicRate || null
+    })
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: $t('基礎代謝量') + ' (kcal)',
+          data: basalMetabolicData,
+          borderColor: 'rgb(255, 205, 86)',
+          backgroundColor: 'rgba(255, 205, 86, 0.2)',
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
+        },
+      ],
+    }
+  }
+  else if (selectedChartType.value === 'body-water') {
+    // 体内水分率
+    const bodyWaterData = labels.map((day) => {
+      const dateStr = `${props.yearMonth}-${day.padStart(2, '0')}`
+      const healthData = data.find(d => d.date === dateStr)
+      return healthData?.bodyWaterPercentage || null
+    })
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: $t('体内水分率') + ' (%)',
+          data: bodyWaterData,
+          borderColor: 'rgb(54, 162, 235)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
+        },
+      ],
+    }
+  }
+  else if (selectedChartType.value === 'bone-mass') {
+    // 骨塩量
+    const boneMassData = labels.map((day) => {
+      const dateStr = `${props.yearMonth}-${day.padStart(2, '0')}`
+      const healthData = data.find(d => d.date === dateStr)
+      return healthData?.boneMass || null
+    })
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: $t('骨塩量') + ' (kg)',
+          data: boneMassData,
+          borderColor: 'rgb(201, 203, 207)',
+          backgroundColor: 'rgba(201, 203, 207, 0.2)',
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
+        },
+      ],
+    }
+  }
+  else if (selectedChartType.value === 'protein') {
+    // タンパク質
+    const proteinData = labels.map((day) => {
+      const dateStr = `${props.yearMonth}-${day.padStart(2, '0')}`
+      const healthData = data.find(d => d.date === dateStr)
+      return healthData?.proteinPercentage || null
+    })
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: $t('タンパク質') + ' (%)',
+          data: proteinData,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          tension: tension.value,
+          pointRadius: pointRadius.value,
+          fill: fillEnabled.value,
         },
       ],
     }
@@ -216,6 +360,8 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
       },
     },
     scales: {},
+    // spanGaps設定を反映
+    spanGaps: settingsStore.healthGraphSettings.spanGaps,
   }
 
   // グラフタイプに応じてスケールを設定
@@ -228,6 +374,9 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         title: {
           display: true,
           text: $t('体重') + ' (kg)',
+        },
+        grid: {
+          display: settingsStore.healthGraphSettings.showGridLines,
         },
       },
       y1: {
@@ -250,6 +399,14 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         type: 'linear',
         display: true,
         position: 'left',
+        grid: {
+          display: settingsStore.healthGraphSettings.showGridLines,
+        },
+      },
+      x: {
+        grid: {
+          display: settingsStore.healthGraphSettings.showGridLines,
+        },
       },
     }
   }
@@ -274,22 +431,32 @@ onMounted(async () => {
         <Icon name="mdi:chart-line" />
         {{ $t('健康データの推移') }}
       </h3>
-      <div class="chart-selector">
-        <label>{{ $t('表示項目') }}:</label>
-        <select v-model="selectedChartType">
-          <option
-            v-for="option in chartTypeOptions"
-            :key="option.value"
-            :value="option.value"
-          >
-            {{ option.label }}
-          </option>
-        </select>
+      <div class="chart-controls">
+        <div class="chart-selector">
+          <label>{{ $t('表示項目') }}:</label>
+          <select v-model="selectedChartType">
+            <option
+              v-for="option in chartTypeOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+        <button
+          class="btn-settings"
+          @click="openSettings"
+        >
+          <Icon name="mdi:cog" />
+          {{ $t('表示設定') }}
+        </button>
       </div>
     </div>
     <div
       v-if="hasData"
       class="chart-container"
+      :style="{ height: chartHeight }"
     >
       <Line
         :data="chartData"
@@ -302,6 +469,12 @@ onMounted(async () => {
     >
       <p>{{ $t('健康データが記録されていません') }}</p>
     </div>
+
+    <!-- 設定モーダル -->
+    <HealthChartSettings
+      :show="showSettings"
+      @close="closeSettings"
+    />
   </div>
 </template>
 
@@ -323,7 +496,15 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 18px;
+    font-size: 16px;
+    color: #666;
+  }
+
+  .chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   .chart-selector {
@@ -361,6 +542,44 @@ onMounted(async () => {
     }
   }
 
+  .btn-settings {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background-color: white;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: #f5f5f5;
+      border-color: #d0d0d0;
+    }
+
+    &:active {
+      background-color: #e8e8e8;
+    }
+
+    .dark-mode & {
+      background-color: #333;
+      border-color: #444;
+      color: #e0e0e0;
+
+      &:hover {
+        background-color: #404040;
+        border-color: #555;
+      }
+
+      &:active {
+        background-color: #4a4a4a;
+      }
+    }
+  }
+
   @media (max-width: 600px) {
     flex-direction: column;
     align-items: flex-start;
@@ -368,11 +587,11 @@ onMounted(async () => {
 }
 
 .chart-container {
-  height: 300px;
   position: relative;
+  // 高さは動的に設定される
 
   @media (max-width: 600px) {
-    height: 250px;
+    // モバイルでは設定を尊重
   }
 }
 

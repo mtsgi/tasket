@@ -120,13 +120,15 @@ function handlePhotoClick(photoData: {
     v-if="allPhotos.length > 0"
     class="monthly-photo-album card"
   >
-    <h2>
-      <Icon name="mdi:image-multiple" />
-      {{ $t('アルバム') }}
-    </h2>
-    <p class="photo-count">
-      {{ $t('{count}枚の写真', { count: allPhotos.length }) }}
-    </p>
+    <div class="album-header">
+      <h2>
+        <Icon name="mdi:image-multiple" />
+        {{ $t('アルバム') }}
+      </h2>
+      <p class="photo-count">
+        {{ $t('{count}枚の写真', { count: allPhotos.length }) }}
+      </p>
+    </div>
     <div class="photo-grid">
       <div
         v-for="(photoData, index) in displayedPhotos"
@@ -185,10 +187,18 @@ function handlePhotoClick(photoData: {
 
 <style lang="scss" scoped>
 .monthly-photo-album {
+  .album-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+
   h2 {
     font-size: 16px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin: 0;
     color: #666;
     display: flex;
     align-items: center;
@@ -207,7 +217,8 @@ function handlePhotoClick(photoData: {
   .photo-count {
     font-size: 13px;
     color: #999;
-    margin-bottom: 16px;
+    margin: 0;
+    white-space: nowrap;
 
     .dark-mode & {
       color: #888;
