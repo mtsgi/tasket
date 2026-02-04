@@ -105,10 +105,11 @@ export function convertHealthDataToCSV(healthDataList: HealthData[], locale: 'ja
 /**
  * CSV値のエスケープ処理
  * カンマ、改行、ダブルクォートを含む値を適切にエスケープ
- * @param value - エスケープする値
+ * @param value - エスケープする値（空文字列の場合は空文字列を返す）
  * @returns エスケープされた値
  */
 function escapeCsvValue(value: string): string {
+  // 空文字列または未定義の場合は空文字列を返す
   if (!value) return ''
 
   // カンマ、改行、ダブルクォートを含む場合はダブルクォートで囲む
