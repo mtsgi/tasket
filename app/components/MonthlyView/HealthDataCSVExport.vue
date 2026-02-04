@@ -88,6 +88,7 @@ async function exportToCSV() {
     downloadCSV(csvContent, filename)
 
     // 成功メッセージを表示
+    // TODO: Replace alert with a toast notification system for better UX
     alert(t('{count}件の健康データをエクスポートしました', { count: dataList.length }))
 
     // モーダルを閉じる

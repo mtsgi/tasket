@@ -73,7 +73,7 @@ export function convertHealthDataToCSV(healthDataList: HealthData[], locale: 'ja
   // CSVの行を生成
   const rows = sortedData.map((data) => {
     return [
-      data.date,
+      escapeCsvValue(data.date),
       data.weight ?? '',
       data.bodyFatPercentage ?? '',
       data.muscleMass ?? '',
@@ -92,7 +92,7 @@ export function convertHealthDataToCSV(healthDataList: HealthData[], locale: 'ja
       data.exerciseMinutes ?? '',
       data.caloriesBurned ?? '',
       data.waterIntake ?? '',
-      data.menstrualCycle ?? '',
+      escapeCsvValue(data.menstrualCycle ?? ''),
       escapeCsvValue(data.medicationRecord ?? ''),
       escapeCsvValue(data.healthMemo ?? ''),
     ].join(',')
