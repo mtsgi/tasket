@@ -23,6 +23,7 @@ export interface HealthGraphSettings {
 
 export interface Settings {
   darkMode: boolean // ダークモードの有効/無効
+  darkModeSync: boolean // システム(OS)のダークモード設定と同期するかどうか
   backgroundImage: string | File // 背景画像（パス、Base64、またはFileオブジェクト）
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
@@ -36,6 +37,7 @@ export const useSettingsStore = defineStore('settings', {
    */
   state: () => ({
     darkMode: false,
+    darkModeSync: false, // デフォルトは手動モード
     backgroundImage: 'none' as string | File,
     dateChangeLine: 0, // デフォルトは0時（通常の日付変更）
     language: 'ja' as 'ja' | 'en', // デフォルトは日本語
@@ -55,6 +57,7 @@ export const useSettingsStore = defineStore('settings', {
     } as HealthGraphSettings,
     height: undefined as number | undefined, // 身長（cm）- BMI計算に使用
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
+    mediaQueryListener: null as ((e: MediaQueryListEvent) => void) | null, // システムダークモード検知用リスナー
   }),
 
   /**
@@ -87,6 +90,7 @@ export const useSettingsStore = defineStore('settings', {
         const settings = await getAppSettings()
         if (settings) {
           this.darkMode = settings.darkMode ?? false
+          this.darkModeSync = settings.darkModeSync ?? false
           this.backgroundImage = settings.backgroundImage ?? 'none'
           this.dateChangeLine = settings.dateChangeLine ?? 0
           this.language = settings.language ?? 'ja'
@@ -114,6 +118,11 @@ export const useSettingsStore = defineStore('settings', {
           // Fileオブジェクトの場合はObject URLを生成
           if (this.backgroundImage instanceof File) {
             this.backgroundImageUrl = URL.createObjectURL(this.backgroundImage)
+          }
+
+          // システム同期が有効な場合はリスナーを設定
+          if (this.darkModeSync) {
+            this.setupSystemDarkModeListener()
           }
         }
       }
@@ -143,6 +152,7 @@ export const useSettingsStore = defineStore('settings', {
             lockTimeout: 0,
           }),
           darkMode: this.darkMode,
+          darkModeSync: this.darkModeSync,
           backgroundImage: this.backgroundImage,
           dateChangeLine: this.dateChangeLine,
           language: this.language,
@@ -239,6 +249,70 @@ export const useSettingsStore = defineStore('settings', {
      */
     async setHeight(height: number | undefined) {
       this.height = height
+      await this.saveSettings()
+    },
+
+    /**
+     * システムダークモードの検知リスナーを設定
+     */
+    setupSystemDarkModeListener() {
+      // すでにリスナーが設定されている場合は削除
+      if (this.mediaQueryListener) {
+        this.removeSystemDarkModeListener()
+      }
+
+      // matchMediaがサポートされていない場合は何もしない
+      if (typeof window === 'undefined' || !window.matchMedia) {
+        return
+      }
+
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+      // リスナー関数を作成
+      this.mediaQueryListener = (e: MediaQueryListEvent) => {
+        if (this.darkModeSync) {
+          this.darkMode = e.matches
+          this.saveSettings()
+        }
+      }
+
+      // リスナーを追加
+      mediaQuery.addEventListener('change', this.mediaQueryListener)
+
+      // 初回実行: システムの現在の状態を反映
+      if (this.darkModeSync) {
+        this.darkMode = mediaQuery.matches
+      }
+    },
+
+    /**
+     * システムダークモードの検知リスナーを削除
+     */
+    removeSystemDarkModeListener() {
+      if (typeof window === 'undefined' || !window.matchMedia || !this.mediaQueryListener) {
+        return
+      }
+
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      mediaQuery.removeEventListener('change', this.mediaQueryListener)
+      this.mediaQueryListener = null
+    },
+
+    /**
+     * システム同期の切り替え
+     */
+    async toggleDarkModeSync() {
+      this.darkModeSync = !this.darkModeSync
+
+      if (this.darkModeSync) {
+        // 同期を有効化: システムの現在の設定を取得して反映
+        this.setupSystemDarkModeListener()
+      }
+      else {
+        // 同期を無効化: リスナーを削除
+        this.removeSystemDarkModeListener()
+      }
+
       await this.saveSettings()
     },
   },
