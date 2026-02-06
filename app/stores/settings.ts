@@ -270,7 +270,7 @@ export const useSettingsStore = defineStore('settings', {
 
       // リスナー関数を作成
       this.mediaQueryListener = (e: MediaQueryListEvent) => {
-        if (this.darkModeSync) {
+        if (this.darkModeSync && this.darkMode !== e.matches) {
           this.darkMode = e.matches
           this.saveSettings()
         }
@@ -280,8 +280,9 @@ export const useSettingsStore = defineStore('settings', {
       mediaQuery.addEventListener('change', this.mediaQueryListener)
 
       // 初回実行: システムの現在の状態を反映
-      if (this.darkModeSync) {
+      if (this.darkModeSync && this.darkMode !== mediaQuery.matches) {
         this.darkMode = mediaQuery.matches
+        this.saveSettings()
       }
     },
 
