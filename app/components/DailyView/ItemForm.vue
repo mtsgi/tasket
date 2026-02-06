@@ -188,7 +188,7 @@ async function handleSubmit() {
       scheduled_at: scheduledAt,
       notes: notes.value.trim(),
       mealLog: mealLogData,
-      photos: type.value === 'todo' && albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
+      photos: albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
       is_important: type.value === 'todo' ? isImportant.value : false,
     })
 
@@ -458,11 +458,8 @@ async function handleSubmit() {
         </div>
       </div>
 
-      <!-- アルバム機能（TODO専用） -->
-      <div
-        v-if="type === 'todo'"
-        class="album-section"
-      >
+      <!-- アルバム機能（TODO・支出・収入対応） -->
+      <div class="album-section">
         <div class="album-header">
           <h4>
             <Icon name="mdi:image-multiple" />
