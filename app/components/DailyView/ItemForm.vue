@@ -458,7 +458,7 @@ async function handleSubmit() {
         </div>
       </div>
 
-      <!-- アルバム機能（全種別対応） -->
+      <!-- アルバム機能（TODO・支出・収入対応） -->
       <div class="album-section">
         <div class="album-header">
           <h4>
