@@ -300,11 +300,10 @@ export const useSettingsStore = defineStore('settings', {
     },
 
     /**
-     * システム同期の切り替え
+     * システム同期の設定を保存
+     * 注: v-modelが値の切り替えを行うため、この関数では切り替えは行わない
      */
-    async toggleDarkModeSync() {
-      this.darkModeSync = !this.darkModeSync
-
+    async updateDarkModeSync() {
       if (this.darkModeSync) {
         // 同期を有効化: システムの現在の設定を取得して反映
         this.setupSystemDarkModeListener()

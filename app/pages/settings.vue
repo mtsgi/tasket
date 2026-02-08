@@ -101,7 +101,7 @@ async function handleDarkModeChange() {
  */
 async function handleDarkModeSyncChange() {
   await nextTick()
-  await settingsStore.toggleDarkModeSync()
+  await settingsStore.updateDarkModeSync()
 }
 
 /**
