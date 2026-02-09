@@ -97,6 +97,14 @@ async function handleDarkModeChange() {
 }
 
 /**
+ * ダークモード同期変更ハンドラ
+ */
+async function handleDarkModeSyncChange() {
+  await nextTick()
+  await settingsStore.updateDarkModeSync()
+}
+
+/**
  * 日付変更線変更ハンドラ
  */
 async function handleDateChangeLineChange() {
@@ -342,7 +350,22 @@ function goBack() {
           <input
             v-model="settingsStore.darkMode"
             type="checkbox"
+            :disabled="settingsStore.darkModeSync"
             @change="handleDarkModeChange"
+          >
+          <span class="slider" />
+        </label>
+      </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>{{ $t('システムと同期') }}</h3>
+          <p>{{ $t('システム(OS)のダークモード設定と同期します') }}</p>
+        </div>
+        <label class="toggle-switch">
+          <input
+            v-model="settingsStore.darkModeSync"
+            type="checkbox"
+            @change="handleDarkModeSyncChange"
           >
           <span class="slider" />
         </label>
@@ -741,6 +764,11 @@ function goBack() {
 
     &:checked + .slider:before {
       transform: translateX(24px);
+    }
+
+    &:disabled + .slider {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 

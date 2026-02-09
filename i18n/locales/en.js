@@ -105,6 +105,8 @@ export default {
   '表示設定': 'Display Settings',
   'ダークモード': 'Dark Mode',
   '画面を暗い色調で表示します': 'Display the screen in dark colors',
+  'システムと同期': 'Sync with System',
+  'システム(OS)のダークモード設定と同期します': 'Synchronize with system (OS) dark mode settings',
   '日付変更線': 'Date Change Line',
   '日付変更線を設定すると、指定した時刻から翌日同時刻の直前までを1日として扱います。深夜作業が多い場合に便利です。':
     'Set a date change line to treat the period from a specified time to just before the same time the next day as one day. Useful for late-night work.',

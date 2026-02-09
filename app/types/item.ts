@@ -241,6 +241,7 @@ export interface AppSettings {
 
   // 表示設定関連
   darkMode: boolean // ダークモードの有効/無効
+  darkModeSync: boolean // システム(OS)のダークモード設定と同期するかどうか
   backgroundImage: string | File // 背景画像（パスまたはFileオブジェクト）
   dateChangeLine: number // 日付変更線の時刻（0-23時）
   language: 'ja' | 'en' // 表示言語
