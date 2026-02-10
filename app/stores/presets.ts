@@ -39,7 +39,7 @@ export const usePresetsStore = defineStore('presets', {
      * @param dateChangeLine - 日付変更線の時刻（0-23時）
      * @returns 指定された種別のプリセットリスト（時刻順）
      */
-    getPresetsByTypesSorted: (state) => {
+    getPresetsByTypeSorted: (state) => {
       return (type: ItemType, dateChangeLine: number) => {
         const filtered = state.presets.filter(preset => preset.type === type)
 
