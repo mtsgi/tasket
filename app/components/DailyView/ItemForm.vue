@@ -46,9 +46,9 @@ onMounted(async () => {
   await presetsStore.fetchPresets()
 })
 
-// 現在の種別に対応するプリセットを取得
+// 現在の種別に対応するプリセットを取得（時刻順にソート、日付変更線を考慮）
 const filteredPresets = computed(() => {
-  return presetsStore.getPresetsByType(type.value)
+  return presetsStore.getPresetsByTypeSorted(type.value, settingsStore.dateChangeLine)
 })
 
 // 現在の月の年月文字列を取得

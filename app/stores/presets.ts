@@ -31,6 +31,41 @@ export const usePresetsStore = defineStore('presets', {
         return state.presets.filter(preset => preset.type === type)
       }
     },
+
+    /**
+     * 種別でフィルタリングし、時刻順にソートされたプリセットを取得
+     * 日付変更線を考慮してソート（日付変更線以降の時刻から順に並べる）
+     * @param type - アイテム種別
+     * @param dateChangeLine - 日付変更線の時刻（0-23時）
+     * @returns 指定された種別のプリセットリスト（時刻順）
+     */
+    getPresetsByTypeSorted: (state) => {
+      return (type: ItemType, dateChangeLine: number) => {
+        const filtered = state.presets.filter(preset => preset.type === type)
+
+        // 時刻順にソート（日付変更線を考慮）
+        return filtered.sort((a, b) => {
+          // 時刻文字列（HH:mm）を時間数値に変換
+          const [aHour, aMinute] = a.time.split(':').map(Number)
+          const [bHour, bMinute] = b.time.split(':').map(Number)
+
+          // 日付変更線からの相対位置を計算
+          // 日付変更線より前の時刻は、24時間を加算して後ろに配置
+          const getRelativeMinutes = (hour: number, minute: number) => {
+            if (hour < dateChangeLine) {
+              // 日付変更線より前の時刻は翌日扱い
+              return (hour + 24) * 60 + minute
+            }
+            return hour * 60 + minute
+          }
+
+          const aRelative = getRelativeMinutes(aHour, aMinute)
+          const bRelative = getRelativeMinutes(bHour, bMinute)
+
+          return aRelative - bRelative
+        })
+      }
+    },
   },
 
   /**
