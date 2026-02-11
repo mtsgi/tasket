@@ -37,9 +37,26 @@ const props = defineProps<{
 type DataMode = 'daily' | 'cumulative'
 type ChartType = 'line' | 'bar'
 
-const dataMode = ref<DataMode>('daily')
-const chartType = ref<ChartType>('line')
+const settingsStore = useSettingsStore()
 const { t } = useI18n()
+
+// 設定ストアから設定を読み込む
+const dataMode = ref<DataMode>(settingsStore.expenseChartSettings.dataMode)
+const chartType = ref<ChartType>(settingsStore.expenseChartSettings.chartType)
+
+/**
+ * dataModeが変更されたときに設定を保存
+ */
+watch(dataMode, async (newValue) => {
+  await settingsStore.updateExpenseChartSettings({ dataMode: newValue })
+})
+
+/**
+ * chartTypeが変更されたときに設定を保存
+ */
+watch(chartType, async (newValue) => {
+  await settingsStore.updateExpenseChartSettings({ chartType: newValue })
+})
 
 /**
  * 累積データを計算

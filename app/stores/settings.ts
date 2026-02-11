@@ -21,6 +21,11 @@ export interface HealthGraphSettings {
   fillArea: boolean // グラフエリアの塗りつぶし
 }
 
+export interface ExpenseChartSettings {
+  dataMode: 'daily' | 'cumulative' // データモード（単日/累積）
+  chartType: 'line' | 'bar' // グラフの種類（折れ線/棒グラフ）
+}
+
 export interface Settings {
   darkMode: boolean // ダークモードの有効/無効
   darkModeSync: boolean // システム(OS)のダークモード設定と同期するかどうか
@@ -28,6 +33,7 @@ export interface Settings {
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
   healthGraphSettings: HealthGraphSettings // 健康グラフ表示設定
+  expenseChartSettings: ExpenseChartSettings // 収支推移グラフ表示設定
   height?: number // 身長（cm）- BMI計算に使用
 }
 
@@ -55,6 +61,10 @@ export const useSettingsStore = defineStore('settings', {
       pointRadius: 'medium', // デフォルトは中サイズのポイント
       fillArea: false, // デフォルトは塗りつぶしなし
     } as HealthGraphSettings,
+    expenseChartSettings: {
+      dataMode: 'daily', // デフォルトは単日表示
+      chartType: 'line', // デフォルトは折れ線グラフ
+    } as ExpenseChartSettings,
     height: undefined as number | undefined, // 身長（cm）- BMI計算に使用
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
     mediaQueryListener: null as ((e: MediaQueryListEvent) => void) | null, // システムダークモード検知用リスナー
@@ -113,6 +123,15 @@ export const useSettingsStore = defineStore('settings', {
             ...defaultHealthGraphSettings,
             ...settings.healthGraphSettings,
           }
+          // デフォルト値と既存設定をマージ
+          const defaultExpenseChartSettings = {
+            dataMode: 'daily' as const,
+            chartType: 'line' as const,
+          }
+          this.expenseChartSettings = {
+            ...defaultExpenseChartSettings,
+            ...settings.expenseChartSettings,
+          }
           this.height = settings.height
 
           // Fileオブジェクトの場合はObject URLを生成
@@ -158,6 +177,7 @@ export const useSettingsStore = defineStore('settings', {
           language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
           healthGraphSettings: { ...this.healthGraphSettings }, // reactive proxyをplain objectに変換
+          expenseChartSettings: { ...this.expenseChartSettings }, // reactive proxyをplain objectに変換
           height: this.height,
           updated_at: new Date(),
         })
@@ -240,6 +260,20 @@ export const useSettingsStore = defineStore('settings', {
       }
       catch (e) {
         console.error('健康グラフ表示設定の保存に失敗しました:', e)
+      }
+    },
+
+    /**
+     * 収支推移グラフ表示設定の更新
+     * @param settings - 収支推移グラフ表示設定
+     */
+    async updateExpenseChartSettings(settings: Partial<ExpenseChartSettings>) {
+      try {
+        this.expenseChartSettings = { ...this.expenseChartSettings, ...settings }
+        await this.saveSettings()
+      }
+      catch (e) {
+        console.error('収支推移グラフ表示設定の保存に失敗しました:', e)
       }
     },
 
