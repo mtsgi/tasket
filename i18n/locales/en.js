@@ -522,6 +522,21 @@ export default {
   '卵胞期': 'Follicular Phase',
   '排卵期': 'Ovulation',
   '黄体期': 'Luteal Phase',
+
+  // Health Data CSV Export
+  '健康データをCSV出力': 'Export Health Data to CSV',
+  'CSV出力': 'CSV Export',
+  'エクスポート中': 'Exporting...',
+  '日付範囲を指定してCSVファイルをダウンロード': 'Specify date range and download CSV file',
+  '開始日と終了日を入力してください': 'Please enter start date and end date',
+  'CSVファイルをダウンロード': 'Download CSV File',
+  '健康データのCSV出力': 'Health Data CSV Export',
+  '健康データをCSV形式でエクスポートしました': 'Health data exported to CSV successfully',
+  '健康データのエクスポートに失敗しました': 'Failed to export health data',
+  '開始日は終了日より前の日付を指定してください': 'Start date must be before end date',
+  '指定された期間にデータがありません': 'No data available for the specified period',
+  '{count}件の健康データをエクスポートしました': '{count} health data records exported',
+
   // Cloud Backup
   'クラウドバックアップ': 'Cloud Backup',
   'クラウドストレージにデータを自動バックアップできます': 'Automatically backup your data to cloud storage',

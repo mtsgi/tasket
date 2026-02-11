@@ -5,6 +5,7 @@
  */
 import { useHealthDataStore } from '~/stores/healthData'
 import { useItemsStore } from '~/stores/items'
+import HealthDataCSVExport from './HealthDataCSVExport.vue'
 
 const props = defineProps<{
   yearMonth: string // YYYY-MM形式
@@ -116,10 +117,13 @@ onMounted(async () => {
     v-if="hasData"
     class="monthly-health-summary card"
   >
-    <h3>
-      <Icon name="mdi:heart-pulse" />
-      {{ $t('月次健康サマリー') }}
-    </h3>
+    <div class="header-section">
+      <h3>
+        <Icon name="mdi:heart-pulse" />
+        {{ $t('月次健康サマリー') }}
+      </h3>
+      <HealthDataCSVExport />
+    </div>
 
     <div class="summary-grid">
       <!-- 記録日数 -->
@@ -273,8 +277,17 @@ onMounted(async () => {
 .monthly-health-summary {
   color: #666666;
 
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
   h3 {
-    margin: 0 0 16px 0;
+    margin: 0;
     font-size: 16px;
     font-weight: 600;
   }
