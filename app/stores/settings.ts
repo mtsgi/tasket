@@ -4,6 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { getAppSettings, saveAppSettings } from '~/utils/db'
+import type { ExpenseChartSettings } from '~/types/item'
 
 export interface CalendarDisplaySettings {
   showExpense: boolean // 支出合計の表示/非表示
@@ -28,6 +29,7 @@ export interface Settings {
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
   healthGraphSettings: HealthGraphSettings // 健康グラフ表示設定
+  expenseChartSettings: ExpenseChartSettings // 収支推移グラフ表示設定
   height?: number // 身長（cm）- BMI計算に使用
 }
 
@@ -55,6 +57,15 @@ export const useSettingsStore = defineStore('settings', {
       pointRadius: 'medium', // デフォルトは中サイズのポイント
       fillArea: false, // デフォルトは塗りつぶしなし
     } as HealthGraphSettings,
+    expenseChartSettings: {
+      dataMode: 'daily', // デフォルトは単日表示
+      chartType: 'line', // デフォルトは折れ線グラフ
+      visibleDatasets: {
+        income: true, // デフォルトは収入を表示
+        expense: true, // デフォルトは支出を表示
+        balance: true, // デフォルトは残高を表示
+      },
+    } as ExpenseChartSettings,
     height: undefined as number | undefined, // 身長（cm）- BMI計算に使用
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
     mediaQueryListener: null as ((e: MediaQueryListEvent) => void) | null, // システムダークモード検知用リスナー
@@ -113,6 +124,24 @@ export const useSettingsStore = defineStore('settings', {
             ...defaultHealthGraphSettings,
             ...settings.healthGraphSettings,
           }
+          // デフォルト値と既存設定をマージ
+          const defaultExpenseChartSettings = {
+            dataMode: 'daily' as const,
+            chartType: 'line' as const,
+            visibleDatasets: {
+              income: true,
+              expense: true,
+              balance: true,
+            },
+          }
+          this.expenseChartSettings = {
+            ...defaultExpenseChartSettings,
+            ...settings.expenseChartSettings,
+            visibleDatasets: {
+              ...defaultExpenseChartSettings.visibleDatasets,
+              ...settings.expenseChartSettings?.visibleDatasets,
+            },
+          }
           this.height = settings.height
 
           // Fileオブジェクトの場合はObject URLを生成
@@ -158,6 +187,11 @@ export const useSettingsStore = defineStore('settings', {
           language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
           healthGraphSettings: { ...this.healthGraphSettings }, // reactive proxyをplain objectに変換
+          expenseChartSettings: {
+            dataMode: this.expenseChartSettings.dataMode,
+            chartType: this.expenseChartSettings.chartType,
+            visibleDatasets: { ...this.expenseChartSettings.visibleDatasets },
+          }, // reactive proxyをplain objectに変換
           height: this.height,
           updated_at: new Date(),
         })
@@ -240,6 +274,20 @@ export const useSettingsStore = defineStore('settings', {
       }
       catch (e) {
         console.error('健康グラフ表示設定の保存に失敗しました:', e)
+      }
+    },
+
+    /**
+     * 収支推移グラフ表示設定の更新
+     * @param settings - 収支推移グラフ表示設定
+     */
+    async updateExpenseChartSettings(settings: Partial<ExpenseChartSettings>) {
+      try {
+        this.expenseChartSettings = { ...this.expenseChartSettings, ...settings }
+        await this.saveSettings()
+      }
+      catch (e) {
+        console.error('収支推移グラフ表示設定の保存に失敗しました:', e)
       }
     },
 

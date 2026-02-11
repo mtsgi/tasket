@@ -222,6 +222,19 @@ export interface MonthlyHealthSummary {
 }
 
 /**
+ * 収支推移グラフの表示設定
+ */
+export interface ExpenseChartSettings {
+  dataMode: 'daily' | 'cumulative' // データモード（単日/累積）
+  chartType: 'line' | 'bar' // グラフの種類（折れ線/棒グラフ）
+  visibleDatasets: {
+    income: boolean // 収入の表示/非表示
+    expense: boolean // 支出の表示/非表示
+    balance: boolean // 残高の表示/非表示
+  }
+}
+
+/**
  * アプリ設定のデータ構造
  * チュートリアル状態、ロック設定、表示設定などのアプリケーション設定を保存
  */
@@ -262,6 +275,9 @@ export interface AppSettings {
     pointRadius?: 'small' | 'medium' | 'large' // データポイントのサイズ
     fillArea?: boolean // グラフエリアの塗りつぶし
   }
+
+  // 収支推移グラフ設定
+  expenseChartSettings?: ExpenseChartSettings
 
   updated_at: Date // 更新日時
 }

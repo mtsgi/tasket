@@ -11,6 +11,8 @@ import {
   Tooltip,
   Legend,
   type TooltipItem,
+  type LegendItem,
+  type LegendElement,
 } from 'chart.js'
 
 ChartJS.register(
@@ -37,9 +39,52 @@ const props = defineProps<{
 type DataMode = 'daily' | 'cumulative'
 type ChartType = 'line' | 'bar'
 
-const dataMode = ref<DataMode>('daily')
-const chartType = ref<ChartType>('line')
+// データセットのインデックス定数
+const INCOME_DATASET_INDEX = 0
+const EXPENSE_DATASET_INDEX = 1
+const BALANCE_DATASET_INDEX = 2
+
+const settingsStore = useSettingsStore()
 const { t } = useI18n()
+
+// 設定ストアから設定を読み込む
+const dataMode = ref<DataMode>(settingsStore.expenseChartSettings.dataMode)
+const chartType = ref<ChartType>(settingsStore.expenseChartSettings.chartType)
+
+/**
+ * dataModeが変更されたときに設定を保存
+ */
+watch(dataMode, async (newValue) => {
+  // ストアと値が異なる場合のみ保存（無限ループ防止）
+  if (settingsStore.expenseChartSettings.dataMode !== newValue) {
+    await settingsStore.updateExpenseChartSettings({ dataMode: newValue })
+  }
+})
+
+/**
+ * chartTypeが変更されたときに設定を保存
+ */
+watch(chartType, async (newValue) => {
+  // ストアと値が異なる場合のみ保存（無限ループ防止）
+  if (settingsStore.expenseChartSettings.chartType !== newValue) {
+    await settingsStore.updateExpenseChartSettings({ chartType: newValue })
+  }
+})
+
+/**
+ * ストアの設定が変更されたらrefを更新（初期読み込み時など）
+ */
+watch(() => settingsStore.expenseChartSettings.dataMode, (newValue) => {
+  if (dataMode.value !== newValue) {
+    dataMode.value = newValue
+  }
+})
+
+watch(() => settingsStore.expenseChartSettings.chartType, (newValue) => {
+  if (chartType.value !== newValue) {
+    chartType.value = newValue
+  }
+})
 
 /**
  * 累積データを計算
@@ -91,6 +136,7 @@ const chartData = computed(() => ({
       backgroundColor: `rgba(76, 175, 80, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
+      hidden: !settingsStore.expenseChartSettings.visibleDatasets.income,
     },
     {
       label: t('支出'),
@@ -99,6 +145,7 @@ const chartData = computed(() => ({
       backgroundColor: `rgba(244, 67, 54, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
+      hidden: !settingsStore.expenseChartSettings.visibleDatasets.expense,
     },
     {
       label: t('残高'),
@@ -107,6 +154,7 @@ const chartData = computed(() => ({
       backgroundColor: `rgba(74, 144, 217, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
+      hidden: !settingsStore.expenseChartSettings.visibleDatasets.balance,
     },
   ],
 }))
@@ -123,6 +171,27 @@ const chartOptions = {
         font: {
           size: 12,
         },
+      },
+      onClick: async (_event: MouseEvent, legendItem: LegendItem, legend: LegendElement<'line' | 'bar'>) => {
+        // デフォルトの動作を実行（データセットの表示/非表示を切り替え）
+        const index = legendItem.datasetIndex
+        if (index === undefined) return
+
+        const chart = legend.chart
+        const meta = chart.getDatasetMeta(index)
+
+        // 表示状態を切り替え
+        meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null
+        chart.update()
+
+        // 設定を保存
+        const visibleDatasets = {
+          income: !chart.getDatasetMeta(INCOME_DATASET_INDEX).hidden,
+          expense: !chart.getDatasetMeta(EXPENSE_DATASET_INDEX).hidden,
+          balance: !chart.getDatasetMeta(BALANCE_DATASET_INDEX).hidden,
+        }
+
+        await settingsStore.updateExpenseChartSettings({ visibleDatasets })
       },
     },
     tooltip: {
