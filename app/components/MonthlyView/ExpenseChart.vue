@@ -11,6 +11,8 @@ import {
   Tooltip,
   Legend,
   type TooltipItem,
+  type LegendItem,
+  type LegendElement,
 } from 'chart.js'
 
 ChartJS.register(
@@ -129,6 +131,7 @@ const chartData = computed(() => ({
       backgroundColor: `rgba(76, 175, 80, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
+      hidden: !settingsStore.expenseChartSettings.visibleDatasets.income,
     },
     {
       label: t('支出'),
@@ -137,6 +140,7 @@ const chartData = computed(() => ({
       backgroundColor: `rgba(244, 67, 54, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
+      hidden: !settingsStore.expenseChartSettings.visibleDatasets.expense,
     },
     {
       label: t('残高'),
@@ -145,6 +149,7 @@ const chartData = computed(() => ({
       backgroundColor: `rgba(74, 144, 217, ${backgroundOpacity.value})`,
       tension: 0.3,
       pointRadius: 2,
+      hidden: !settingsStore.expenseChartSettings.visibleDatasets.balance,
     },
   ],
 }))
@@ -161,6 +166,25 @@ const chartOptions = {
         font: {
           size: 12,
         },
+      },
+      onClick: async (_e: MouseEvent, legendItem: LegendItem, legend: LegendElement<'line' | 'bar'>) => {
+        // デフォルトの動作を実行（データセットの表示/非表示を切り替え）
+        const index = legendItem.datasetIndex
+        const chart = legend.chart
+        const meta = chart.getDatasetMeta(index)
+
+        // 表示状態を切り替え
+        meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null
+        chart.update()
+
+        // 設定を保存
+        const visibleDatasets = {
+          income: !chart.getDatasetMeta(0).hidden,
+          expense: !chart.getDatasetMeta(1).hidden,
+          balance: !chart.getDatasetMeta(2).hidden,
+        }
+
+        await settingsStore.updateExpenseChartSettings({ visibleDatasets })
       },
     },
     tooltip: {

@@ -227,6 +227,11 @@ export interface MonthlyHealthSummary {
 export interface ExpenseChartSettings {
   dataMode: 'daily' | 'cumulative' // データモード（単日/累積）
   chartType: 'line' | 'bar' // グラフの種類（折れ線/棒グラフ）
+  visibleDatasets: {
+    income: boolean // 収入の表示/非表示
+    expense: boolean // 支出の表示/非表示
+    balance: boolean // 残高の表示/非表示
+  }
 }
 
 /**

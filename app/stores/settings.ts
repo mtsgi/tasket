@@ -60,6 +60,11 @@ export const useSettingsStore = defineStore('settings', {
     expenseChartSettings: {
       dataMode: 'daily', // デフォルトは単日表示
       chartType: 'line', // デフォルトは折れ線グラフ
+      visibleDatasets: {
+        income: true, // デフォルトは収入を表示
+        expense: true, // デフォルトは支出を表示
+        balance: true, // デフォルトは残高を表示
+      },
     } as ExpenseChartSettings,
     height: undefined as number | undefined, // 身長（cm）- BMI計算に使用
     backgroundImageUrl: null as string | null, // Fileオブジェクトから生成されたURL
@@ -123,10 +128,19 @@ export const useSettingsStore = defineStore('settings', {
           const defaultExpenseChartSettings = {
             dataMode: 'daily' as const,
             chartType: 'line' as const,
+            visibleDatasets: {
+              income: true,
+              expense: true,
+              balance: true,
+            },
           }
           this.expenseChartSettings = {
             ...defaultExpenseChartSettings,
             ...settings.expenseChartSettings,
+            visibleDatasets: {
+              ...defaultExpenseChartSettings.visibleDatasets,
+              ...settings.expenseChartSettings?.visibleDatasets,
+            },
           }
           this.height = settings.height
 
@@ -173,7 +187,11 @@ export const useSettingsStore = defineStore('settings', {
           language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
           healthGraphSettings: { ...this.healthGraphSettings }, // reactive proxyをplain objectに変換
-          expenseChartSettings: { ...this.expenseChartSettings }, // reactive proxyをplain objectに変換
+          expenseChartSettings: {
+            dataMode: this.expenseChartSettings.dataMode,
+            chartType: this.expenseChartSettings.chartType,
+            visibleDatasets: { ...this.expenseChartSettings.visibleDatasets },
+          }, // reactive proxyをplain objectに変換
           height: this.height,
           updated_at: new Date(),
         })
