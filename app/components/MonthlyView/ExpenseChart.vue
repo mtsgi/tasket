@@ -44,19 +44,6 @@ const { t } = useI18n()
 const dataMode = ref<DataMode>(settingsStore.expenseChartSettings.dataMode)
 const chartType = ref<ChartType>(settingsStore.expenseChartSettings.chartType)
 
-// ストアの設定が変更されたら、ref を更新する（初期読み込み時など）
-watch(() => settingsStore.expenseChartSettings.dataMode, (newValue) => {
-  if (dataMode.value !== newValue) {
-    dataMode.value = newValue
-  }
-}, { immediate: true })
-
-watch(() => settingsStore.expenseChartSettings.chartType, (newValue) => {
-  if (chartType.value !== newValue) {
-    chartType.value = newValue
-  }
-}, { immediate: true })
-
 /**
  * dataModeが変更されたときに設定を保存
  */
@@ -74,6 +61,21 @@ watch(chartType, async (newValue) => {
   // ストアと値が異なる場合のみ保存（無限ループ防止）
   if (settingsStore.expenseChartSettings.chartType !== newValue) {
     await settingsStore.updateExpenseChartSettings({ chartType: newValue })
+  }
+})
+
+/**
+ * ストアの設定が変更されたらrefを更新（初期読み込み時など）
+ */
+watch(() => settingsStore.expenseChartSettings.dataMode, (newValue) => {
+  if (dataMode.value !== newValue) {
+    dataMode.value = newValue
+  }
+})
+
+watch(() => settingsStore.expenseChartSettings.chartType, (newValue) => {
+  if (chartType.value !== newValue) {
+    chartType.value = newValue
   }
 })
 

@@ -4,6 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { getAppSettings, saveAppSettings } from '~/utils/db'
+import type { ExpenseChartSettings } from '~/types/item'
 
 export interface CalendarDisplaySettings {
   showExpense: boolean // 支出合計の表示/非表示
@@ -19,11 +20,6 @@ export interface HealthGraphSettings {
   lineTension: 'straight' | 'smooth' // 折れ線の形状（直線/なめらか）
   pointRadius: 'small' | 'medium' | 'large' // データポイントのサイズ
   fillArea: boolean // グラフエリアの塗りつぶし
-}
-
-export interface ExpenseChartSettings {
-  dataMode: 'daily' | 'cumulative' // データモード（単日/累積）
-  chartType: 'line' | 'bar' // グラフの種類（折れ線/棒グラフ）
 }
 
 export interface Settings {
