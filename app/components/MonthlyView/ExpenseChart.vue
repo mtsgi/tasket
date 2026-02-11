@@ -167,9 +167,11 @@ const chartOptions = {
           size: 12,
         },
       },
-      onClick: async (_e: MouseEvent, legendItem: LegendItem, legend: LegendElement<'line' | 'bar'>) => {
+      onClick: async (event: MouseEvent, legendItem: LegendItem, legend: LegendElement<'line' | 'bar'>) => {
         // デフォルトの動作を実行（データセットの表示/非表示を切り替え）
         const index = legendItem.datasetIndex
+        if (index === undefined) return
+
         const chart = legend.chart
         const meta = chart.getDatasetMeta(index)
 
