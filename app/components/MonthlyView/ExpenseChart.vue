@@ -39,6 +39,11 @@ const props = defineProps<{
 type DataMode = 'daily' | 'cumulative'
 type ChartType = 'line' | 'bar'
 
+// データセットのインデックス定数
+const INCOME_DATASET_INDEX = 0
+const EXPENSE_DATASET_INDEX = 1
+const BALANCE_DATASET_INDEX = 2
+
 const settingsStore = useSettingsStore()
 const { t } = useI18n()
 
@@ -167,7 +172,7 @@ const chartOptions = {
           size: 12,
         },
       },
-      onClick: async (event: MouseEvent, legendItem: LegendItem, legend: LegendElement<'line' | 'bar'>) => {
+      onClick: async (_event: MouseEvent, legendItem: LegendItem, legend: LegendElement<'line' | 'bar'>) => {
         // デフォルトの動作を実行（データセットの表示/非表示を切り替え）
         const index = legendItem.datasetIndex
         if (index === undefined) return
@@ -181,9 +186,9 @@ const chartOptions = {
 
         // 設定を保存
         const visibleDatasets = {
-          income: !chart.getDatasetMeta(0).hidden,
-          expense: !chart.getDatasetMeta(1).hidden,
-          balance: !chart.getDatasetMeta(2).hidden,
+          income: !chart.getDatasetMeta(INCOME_DATASET_INDEX).hidden,
+          expense: !chart.getDatasetMeta(EXPENSE_DATASET_INDEX).hidden,
+          balance: !chart.getDatasetMeta(BALANCE_DATASET_INDEX).hidden,
         }
 
         await settingsStore.updateExpenseChartSettings({ visibleDatasets })
