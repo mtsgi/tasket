@@ -574,5 +574,9 @@ onMounted(async () => {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .comparison-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
 }
 </style>
