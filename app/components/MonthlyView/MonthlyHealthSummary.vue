@@ -354,7 +354,7 @@ onMounted(async () => {
       <h4>{{ $t('健康アドバイス') }}</h4>
       <div class="advice-list">
         <p
-          v-for="(advice, index) in healthAdvice"
+          v-for="(message, index) in healthAdvice"
           :key="index"
           class="advice-item"
         >
@@ -362,7 +362,7 @@ onMounted(async () => {
             name="mdi:lightbulb-on"
             class="advice-icon"
           />
-          {{ advice }}
+          {{ message }}
         </p>
       </div>
     </div>
