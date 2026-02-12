@@ -442,6 +442,7 @@ export default {
   '健康データの推移': 'Health Data Trends',
   '月次健康サマリー': 'Monthly Health Summary',
   '先月との比較': 'Comparison with Last Month',
+  '健康アドバイス': 'Health Advice',
   '記録日数': 'Days Recorded',
   '平均体重': 'Average Weight',
   '平均体脂肪率': 'Average Body Fat %',
