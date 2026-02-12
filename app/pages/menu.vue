@@ -240,6 +240,8 @@ async function importData(event: Event) {
           updated_at: new Date(healthDataItem.updated_at),
         })
       }
+      // 健康データストアを再読み込み
+      await healthDataStore.fetchHealthData()
     }
 
     showNotification('success', t('{count}件のアイテムをインポートしました', { count: data.items.length }))

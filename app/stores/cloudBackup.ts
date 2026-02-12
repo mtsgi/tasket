@@ -401,12 +401,12 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         // アイテムをインポート
         for (const itemData of data.items) {
           await itemsStore.createItem({
-            title: itemData.title,
-            amount: itemData.amount,
-            type: itemData.type,
-            scheduled_at: new Date(itemData.scheduled_at),
-            notes: itemData.notes || '',
-            mealLog: itemData.mealLog,
+            title: (itemData as any).title,
+            amount: (itemData as any).amount,
+            type: (itemData as any).type,
+            scheduled_at: new Date((itemData as any).scheduled_at),
+            notes: (itemData as any).notes || '',
+            mealLog: (itemData as any).mealLog,
           })
         }
 
@@ -414,8 +414,8 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         if (data.routines) {
           for (const routineData of data.routines) {
             await routinesStore.createRoutine({
-              title: routineData.title,
-              yearMonth: routineData.yearMonth,
+              title: (routineData as any).title,
+              yearMonth: (routineData as any).yearMonth,
             })
           }
         }
@@ -425,11 +425,11 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           const { saveRoutineLog } = await import('~/utils/db')
           for (const logData of data.routineLogs) {
             await saveRoutineLog({
-              id: logData.id,
-              routineId: logData.routineId,
-              date: logData.date,
-              status: logData.status || 'unconfirmed',
-              completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
+              id: (logData as any).id,
+              routineId: (logData as any).routineId,
+              date: (logData as any).date,
+              status: (logData as any).status || 'unconfirmed',
+              completed_at: (logData as any).completed_at ? new Date((logData as any).completed_at) : null,
             })
           }
         }
@@ -437,7 +437,7 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         // 日タイトルをインポート
         if (data.dayTitles) {
           for (const dayTitleData of data.dayTitles) {
-            await dayTitlesStore.saveDayTitle(dayTitleData.date, dayTitleData.title)
+            await dayTitlesStore.saveDayTitle((dayTitleData as any).date, (dayTitleData as any).title)
           }
         }
 
@@ -446,8 +446,8 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           const { saveAppSettings } = await import('~/utils/db')
           for (const settingsData of data.appSettings) {
             await saveAppSettings({
-              ...settingsData,
-              updated_at: new Date(settingsData.updated_at),
+              ...(settingsData as any),
+              updated_at: new Date((settingsData as any).updated_at),
             })
           }
           await settingsStore.loadSettings()
@@ -460,11 +460,14 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           const { saveHealthData } = await import('~/utils/db')
           for (const healthDataItem of data.healthData) {
             await saveHealthData({
-              ...healthDataItem,
-              created_at: new Date(healthDataItem.created_at),
-              updated_at: new Date(healthDataItem.updated_at),
+              ...(healthDataItem as any),
+              created_at: new Date((healthDataItem as any).created_at),
+              updated_at: new Date((healthDataItem as any).updated_at),
             })
           }
+          // 健康データストアを再読み込み
+          const healthDataStore = useHealthDataStore()
+          await healthDataStore.fetchHealthData()
         }
 
         await itemsStore.fetchItems()
