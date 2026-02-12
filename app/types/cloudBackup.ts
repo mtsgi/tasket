@@ -12,7 +12,10 @@ export type CloudProvider = 's3-compatible' | 'webdav' | 'dropbox' | 'azure-blob
 
 /**
  * シリアライズされた健康データ（エクスポート形式）
- * created_atとupdated_atがISO文字列形式
+ * エクスポート/バックアップ時に使用する形式で、Date型のフィールドがISO文字列に変換されています。
+ * - created_at, updated_at: Date型 → ISO文字列（例: "2024-01-15T10:00:00.000Z"）
+ * - その他のフィールドは元の型のまま保持
+ * インポート/復元時はこの形式から元のHealthData型に変換して保存します。
  */
 export interface SerializedHealthData extends Omit<HealthData, 'created_at' | 'updated_at'> {
   created_at: string
