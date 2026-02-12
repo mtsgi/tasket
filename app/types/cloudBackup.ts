@@ -3,10 +3,21 @@
  * クラウドストレージへのデータバックアップ・復元を管理
  */
 
+import type { HealthData } from './item'
+
 /**
  * サポートするクラウドプロバイダー
  */
 export type CloudProvider = 's3-compatible' | 'webdav' | 'dropbox' | 'azure-blob' | 'custom'
+
+/**
+ * シリアライズされた健康データ（エクスポート形式）
+ * created_atとupdated_atがISO文字列形式
+ */
+export interface SerializedHealthData extends Omit<HealthData, 'created_at' | 'updated_at'> {
+  created_at: string
+  updated_at: string
+}
 
 /**
  * クラウドバックアップ設定のデータ構造
@@ -62,5 +73,5 @@ export interface BackupData {
   routineLogs?: unknown[]
   dayTitles?: unknown[]
   appSettings?: unknown[]
-  healthData?: unknown[]
+  healthData?: SerializedHealthData[]
 }

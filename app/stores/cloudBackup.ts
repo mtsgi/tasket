@@ -398,6 +398,7 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         const lockStore = useLockStore()
         const tutorialStore = useTutorialStore()
 
+        /* eslint-disable @typescript-eslint/no-explicit-any */
         // アイテムをインポート
         for (const itemData of data.items) {
           await itemsStore.createItem({
@@ -454,15 +455,16 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           await lockStore.loadSettings()
           await tutorialStore.loadTutorialState()
         }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
 
         // 健康データをインポート
         if (data.healthData) {
           const { saveHealthData } = await import('~/utils/db')
           for (const healthDataItem of data.healthData) {
             await saveHealthData({
-              ...(healthDataItem as any),
-              created_at: new Date((healthDataItem as any).created_at),
-              updated_at: new Date((healthDataItem as any).updated_at),
+              ...healthDataItem,
+              created_at: new Date(healthDataItem.created_at),
+              updated_at: new Date(healthDataItem.updated_at),
             })
           }
           // 健康データストアを再読み込み
