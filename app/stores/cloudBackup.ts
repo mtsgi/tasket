@@ -398,25 +398,29 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         const lockStore = useLockStore()
         const tutorialStore = useTutorialStore()
 
-        /* eslint-disable @typescript-eslint/no-explicit-any */
         // アイテムをインポート
         for (const itemData of data.items) {
           await itemsStore.createItem({
-            title: (itemData as any).title,
-            amount: (itemData as any).amount,
-            type: (itemData as any).type,
-            scheduled_at: new Date((itemData as any).scheduled_at),
-            notes: (itemData as any).notes || '',
-            mealLog: (itemData as any).mealLog,
+            title: itemData.title,
+            amount: itemData.amount,
+            type: itemData.type,
+            scheduled_at: new Date(itemData.scheduled_at),
+            notes: itemData.notes || '',
+            mealLog: itemData.mealLog,
           })
         }
 
         // 日課をインポート
         if (data.routines) {
+          const { addRoutine } = await import('~/utils/db')
           for (const routineData of data.routines) {
-            await routinesStore.createRoutine({
-              title: (routineData as any).title,
-              yearMonth: (routineData as any).yearMonth,
+            // バックアップに含まれるIDを保持して復元
+            await addRoutine({
+              id: routineData.id,
+              title: routineData.title,
+              yearMonth: routineData.yearMonth,
+              order: routineData.order,
+              created_at: new Date(routineData.created_at),
             })
           }
         }
@@ -426,11 +430,11 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           const { saveRoutineLog } = await import('~/utils/db')
           for (const logData of data.routineLogs) {
             await saveRoutineLog({
-              id: (logData as any).id,
-              routineId: (logData as any).routineId,
-              date: (logData as any).date,
-              status: (logData as any).status || 'unconfirmed',
-              completed_at: (logData as any).completed_at ? new Date((logData as any).completed_at) : null,
+              id: logData.id,
+              routineId: logData.routineId,
+              date: logData.date,
+              status: logData.status || 'unconfirmed',
+              completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
             })
           }
         }
@@ -438,7 +442,7 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         // 日タイトルをインポート
         if (data.dayTitles) {
           for (const dayTitleData of data.dayTitles) {
-            await dayTitlesStore.saveDayTitle((dayTitleData as any).date, (dayTitleData as any).title)
+            await dayTitlesStore.saveDayTitle(dayTitleData.date, dayTitleData.title)
           }
         }
 
@@ -447,15 +451,14 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           const { saveAppSettings } = await import('~/utils/db')
           for (const settingsData of data.appSettings) {
             await saveAppSettings({
-              ...(settingsData as any),
-              updated_at: new Date((settingsData as any).updated_at),
+              ...settingsData,
+              updated_at: new Date(settingsData.updated_at),
             })
           }
           await settingsStore.loadSettings()
           await lockStore.loadSettings()
           await tutorialStore.loadTutorialState()
         }
-        /* eslint-enable @typescript-eslint/no-explicit-any */
 
         // 健康データをインポート
         if (data.healthData) {

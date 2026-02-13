@@ -3,12 +3,60 @@
  * クラウドストレージへのデータバックアップ・復元を管理
  */
 
-import type { HealthData } from './item'
+import type { HealthData, Item, Routine, RoutineLog, DayTitle, AppSettings } from './item'
 
 /**
  * サポートするクラウドプロバイダー
  */
 export type CloudProvider = 's3-compatible' | 'webdav' | 'dropbox' | 'azure-blob' | 'custom'
+
+/**
+ * シリアライズされたアイテムデータ（エクスポート形式）
+ * エクスポート/バックアップ時に使用する形式で、Date型のフィールドがISO文字列に変換されています。
+ * - scheduled_at, created_at: Date型 → ISO文字列
+ * - executed_at: Date | null → string | null
+ */
+export interface SerializedItem extends Omit<Item, 'scheduled_at' | 'executed_at' | 'created_at'> {
+  scheduled_at: string
+  executed_at: string | null
+  created_at: string
+}
+
+/**
+ * シリアライズされた日課データ（エクスポート形式）
+ * エクスポート/バックアップ時に使用する形式で、Date型のフィールドがISO文字列に変換されています。
+ * - created_at: Date型 → ISO文字列
+ */
+export interface SerializedRoutine extends Omit<Routine, 'created_at'> {
+  created_at: string
+}
+
+/**
+ * シリアライズされた日課ログデータ（エクスポート形式）
+ * エクスポート/バックアップ時に使用する形式で、Date型のフィールドがISO文字列に変換されています。
+ * - completed_at: Date | null → string | null
+ */
+export interface SerializedRoutineLog extends Omit<RoutineLog, 'completed_at'> {
+  completed_at: string | null
+}
+
+/**
+ * シリアライズされた日タイトルデータ（エクスポート形式）
+ * エクスポート/バックアップ時に使用する形式で、Date型のフィールドがISO文字列に変換されています。
+ * - created_at: Date型 → ISO文字列
+ */
+export interface SerializedDayTitle extends Omit<DayTitle, 'created_at'> {
+  created_at: string
+}
+
+/**
+ * シリアライズされたアプリ設定データ（エクスポート形式）
+ * エクスポート/バックアップ時に使用する形式で、Date型のフィールドがISO文字列に変換されています。
+ * - updated_at: Date型 → ISO文字列
+ */
+export interface SerializedAppSettings extends Omit<AppSettings, 'updated_at'> {
+  updated_at: string
+}
 
 /**
  * シリアライズされた健康データ（エクスポート形式）
@@ -67,14 +115,15 @@ export interface BackupHistory {
 
 /**
  * バックアップデータの構造（エクスポートと同じ形式）
+ * すべてのDate型フィールドはISO文字列形式でシリアライズされています。
  */
 export interface BackupData {
   version: number
   exportedAt: string
-  items: unknown[]
-  routines?: unknown[]
-  routineLogs?: unknown[]
-  dayTitles?: unknown[]
-  appSettings?: unknown[]
+  items: SerializedItem[]
+  routines?: SerializedRoutine[]
+  routineLogs?: SerializedRoutineLog[]
+  dayTitles?: SerializedDayTitle[]
+  appSettings?: SerializedAppSettings[]
   healthData?: SerializedHealthData[]
 }
