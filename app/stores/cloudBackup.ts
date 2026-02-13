@@ -412,10 +412,15 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
         // 日課をインポート
         if (data.routines) {
+          const { addRoutine } = await import('~/utils/db')
           for (const routineData of data.routines) {
-            await routinesStore.createRoutine({
+            // バックアップに含まれるIDを保持して復元
+            await addRoutine({
+              id: routineData.id,
               title: routineData.title,
               yearMonth: routineData.yearMonth,
+              order: routineData.order,
+              created_at: new Date(routineData.created_at),
             })
           }
         }
@@ -465,6 +470,9 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
               updated_at: new Date(healthDataItem.updated_at),
             })
           }
+          // 健康データストアを再読み込み
+          const healthDataStore = useHealthDataStore()
+          await healthDataStore.fetchHealthData()
         }
 
         await itemsStore.fetchItems()
