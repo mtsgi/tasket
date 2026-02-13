@@ -206,6 +206,8 @@ async function importData(event: Event) {
           completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
         })
       }
+      // 日課と日課ログストアを再読み込み
+      await routinesStore.fetchAllRoutines()
     }
 
     // 日タイトルをインポート（バージョン3以降）
@@ -290,7 +292,8 @@ async function clearAllData() {
     settingsStore.$reset()
     lockStore.$reset()
 
-    showNotification('success', t('すべてのデータを削除しました'))
+    // ページをリロードして完全にクリアされた状態にする
+    window.location.reload()
   }
   catch (error) {
     console.error('データの削除に失敗しました:', error)
