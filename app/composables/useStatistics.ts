@@ -1,8 +1,8 @@
 /**
  * 統計計算コンポーザブル
- * 日次・月次のサマリーや支出ランキングの計算を提供します。
+ * 日次・月次・年次のサマリーや支出ランキングの計算を提供します。
  */
-import type { Item, DailySummary, MonthlySummary, ExpenseRankingItem } from '~/types/item'
+import type { Item, DailySummary, MonthlySummary, YearlySummary, ExpenseRankingItem } from '~/types/item'
 import { formatDate, getDaysInMonth, getStartOfMonth, addDays, getStartOfEffectiveDay, getEndOfEffectiveDay } from '~/utils/dateHelpers'
 import { useSettingsStore } from '~/stores/settings'
 
@@ -61,6 +61,37 @@ export function useStatistics() {
 
     return {
       yearMonth,
+      income,
+      expense,
+      balance: income - expense,
+      completedTasks,
+      pendingTasks,
+    }
+  }
+
+  /**
+   * 年次サマリーを計算
+   * @param items - 対象のアイテムリスト
+   * @param year - 対象年（YYYY）
+   * @returns 年次サマリー
+   */
+  function calculateYearlySummary(items: Item[], year: string): YearlySummary {
+    // 収入の合計を計算
+    const income = items
+      .filter(item => item.type === 'income')
+      .reduce((sum, item) => sum + item.amount, 0)
+
+    // 支出の合計を計算
+    const expense = items
+      .filter(item => item.type === 'expense')
+      .reduce((sum, item) => sum + item.amount, 0)
+
+    // 完了・未完了タスク数をカウント
+    const completedTasks = items.filter(item => item.is_completed).length
+    const pendingTasks = items.filter(item => !item.is_completed).length
+
+    return {
+      year,
       income,
       expense,
       balance: income - expense,
@@ -207,6 +238,7 @@ export function useStatistics() {
   return {
     calculateDailySummary,
     calculateMonthlySummary,
+    calculateYearlySummary,
     calculateExpenseRanking,
     calculateDailyTotals,
     getItemCountByDate,

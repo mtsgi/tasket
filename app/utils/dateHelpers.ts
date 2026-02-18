@@ -23,6 +23,15 @@ export function formatYearMonth(date: Date | string): string {
 }
 
 /**
+ * 日付をYYYY形式の年文字列に変換
+ * @param date - 変換する日付
+ * @returns YYYY形式の文字列
+ */
+export function formatYear(date: Date | string): string {
+  return dayjs(date).format('YYYY')
+}
+
+/**
  * 日付をHH:mm形式の時刻文字列に変換
  * @param date - 変換する日付
  * @returns HH:mm形式の文字列
@@ -56,6 +65,15 @@ export function formatDisplayDate(date: Date | string): string {
  */
 export function formatDisplayYearMonth(date: Date | string): string {
   return dayjs(date).format('YYYY年M月')
+}
+
+/**
+ * 日付を日本語表示形式の年に変換（例: 2025年）
+ * @param date - 変換する日付
+ * @returns 日本語形式の年文字列
+ */
+export function formatDisplayYear(date: Date | string): string {
+  return dayjs(date).format('YYYY年')
 }
 
 /**
@@ -104,6 +122,24 @@ export function getEndOfMonth(date: Date | string): Date {
 }
 
 /**
+ * 指定年の開始日時を取得
+ * @param date - 対象の日付
+ * @returns その年の最初の日時
+ */
+export function getStartOfYear(date: Date | string): Date {
+  return dayjs(date).startOf('year').toDate()
+}
+
+/**
+ * 指定年の終了日時を取得
+ * @param date - 対象の日付
+ * @returns その年の最後の日時
+ */
+export function getEndOfYear(date: Date | string): Date {
+  return dayjs(date).endOf('year').toDate()
+}
+
+/**
  * 日付に日数を加算
  * @param date - 基準日
  * @param days - 加算する日数（負の値で減算）
@@ -121,6 +157,16 @@ export function addDays(date: Date | string, days: number): Date {
  */
 export function addMonths(date: Date | string, months: number): Date {
   return dayjs(date).add(months, 'month').toDate()
+}
+
+/**
+ * 日付に年数を加算
+ * @param date - 基準日
+ * @param years - 加算する年数（負の値で減算）
+ * @returns 計算後の日付
+ */
+export function addYears(date: Date | string, years: number): Date {
+  return dayjs(date).add(years, 'year').toDate()
 }
 
 /**
