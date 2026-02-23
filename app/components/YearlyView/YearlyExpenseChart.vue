@@ -26,6 +26,8 @@ const props = defineProps<{
   monthlySummaries: MonthlySummary[]
 }>()
 
+const { t } = useI18n()
+
 /**
  * 月番号から月名を取得
  */
@@ -47,21 +49,21 @@ const chartData = computed<ChartData<'bar'>>(() => {
     labels,
     datasets: [
       {
-        label: '収入',
+        label: t('収入'),
         data: incomes,
         backgroundColor: 'rgba(76, 175, 80, 0.7)',
         borderColor: 'rgba(76, 175, 80, 1)',
         borderWidth: 1,
       },
       {
-        label: '支出',
+        label: t('支出'),
         data: expenses,
         backgroundColor: 'rgba(244, 67, 54, 0.7)',
         borderColor: 'rgba(244, 67, 54, 1)',
         borderWidth: 1,
       },
       {
-        label: '収支',
+        label: t('収支'),
         data: balances,
         backgroundColor: 'rgba(33, 150, 243, 0.7)',
         borderColor: 'rgba(33, 150, 243, 1)',
