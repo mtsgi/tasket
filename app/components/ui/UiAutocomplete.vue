@@ -3,6 +3,8 @@
  * オートコンプリート機能付き入力コンポーネント
  * 候補リストから選択可能なテキスト入力フィールド
  */
+import { normalizeKana } from '~/utils/formatters'
+
 const props = defineProps<{
   /** v-modelで使用する値 */
   modelValue: string
@@ -33,14 +35,20 @@ const selectedIndex = ref(-1)
  * 入力値でフィルタリングされた候補リスト
  * パフォーマンス最適化のため、入力値がある場合のみフィルタリング
  */
+// 候補リストのかな正規化済みキャッシュ（props.suggestions が変化したときだけ再計算）
+const normalizedSuggestions = computed(() =>
+  props.suggestions.map(s => ({ original: s, normalized: normalizeKana(s.toLowerCase()) })),
+)
+
 const filteredSuggestions = computed(() => {
   if (!props.modelValue || typeof props.modelValue !== 'string' || props.modelValue.length === 0) {
     return []
   }
 
-  const searchTerm = props.modelValue.toLowerCase()
-  return props.suggestions
-    .filter(suggestion => suggestion.toLowerCase().includes(searchTerm))
+  const searchTerm = normalizeKana(props.modelValue.toLowerCase())
+  return normalizedSuggestions.value
+    .filter(({ normalized }) => normalized.includes(searchTerm))
+    .map(({ original }) => original)
     .slice(0, 10) // 最大10件に制限してパフォーマンスを向上
 })
 

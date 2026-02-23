@@ -4,6 +4,15 @@
  */
 
 /**
+ * ひらがなをカタカナに変換する（オートコンプリートの文字種正規化用）
+ * @param str - 変換する文字列
+ * @returns ひらがなをカタカナに変換した文字列
+ */
+export function normalizeKana(str: string): string {
+  return str.replace(/[\u3041-\u3096]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60))
+}
+
+/**
  * 金額を日本円形式にフォーマット（例: ¥1,234）
  * @param amount - フォーマットする金額
  * @returns 日本円形式の文字列
