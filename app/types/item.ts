@@ -102,6 +102,19 @@ export interface MonthlySummary {
 }
 
 /**
+ * 年次サマリーのデータ構造
+ * 特定の年の収支とタスク完了状況をまとめたもの
+ */
+export interface YearlySummary {
+  year: string // 対象年（YYYY形式）
+  income: number // 収入合計
+  expense: number // 支出合計
+  balance: number // 収支差額（収入 - 支出）
+  completedTasks: number // 完了タスク数
+  pendingTasks: number // 未完了タスク数
+}
+
+/**
  * 支出ランキングアイテムのデータ構造
  * 同じタイトルの支出をグループ化してランキング表示するためのもの
  */

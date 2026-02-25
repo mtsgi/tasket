@@ -235,9 +235,12 @@ export default {
   '今日': 'Today',
   '前月へ': 'Previous Month',
   '翌月へ': 'Next Month',
+  '前年へ': 'Previous Year',
+  '翌年へ': 'Next Year',
   '前日へ': 'Previous Day',
   '翌日へ': 'Next Day',
   '月表示へ': 'Monthly View',
+  '年表示へ': 'Yearly View',
 
   // Charts
   '収支推移': 'Balance Trends',
@@ -261,10 +264,17 @@ export default {
   // Expense ranking
   '支出ランキング': 'Expense Ranking',
   '今月の支出が多い項目': 'Top expenses this month',
+  '今年の支出が多い項目': 'Top expenses this year',
   '支出データがありません': 'No expense data',
   '回': 'times',
   'さらに表示': 'Show more',
   '折りたたむ': 'Show less',
+
+  // Yearly Summary
+  '年間サマリー': 'Yearly Summary',
+  '年間収支推移': 'Annual Balance Trends',
+  '月別収支': 'Monthly Balance',
+  '各月の詳細': 'Monthly Details',
 
   // Search
   '検索結果': 'Search Results',

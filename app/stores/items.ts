@@ -7,7 +7,7 @@ import { toRaw } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item, ItemType } from '~/types/item'
 import { getAllItems, addItem, updateItem, deleteItem } from '~/utils/db'
-import { getStartOfMonth, getEndOfMonth, getStartOfEffectiveDay, getEndOfEffectiveDay } from '~/utils/dateHelpers'
+import { getStartOfMonth, getEndOfMonth, getStartOfEffectiveDay, getEndOfEffectiveDay, getStartOfYear, getEndOfYear } from '~/utils/dateHelpers'
 import { useSettingsStore } from '~/stores/settings'
 
 export const useItemsStore = defineStore('items', {
@@ -61,6 +61,24 @@ export const useItemsStore = defineStore('items', {
           .filter((item) => {
             const scheduledAt = new Date(item.scheduled_at)
             return scheduledAt >= startOfMonth && scheduledAt <= endOfMonth
+          })
+          .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+      }
+    },
+
+    /**
+     * 特定の年のアイテムを取得
+     * @param year - 年文字列（YYYY）
+     * @returns その年のアイテムリスト（時刻順）
+     */
+    getItemsByYear: (state) => {
+      return (year: string) => {
+        const startOfYear = getStartOfYear(year + '-01-01')
+        const endOfYear = getEndOfYear(year + '-01-01')
+        return state.items
+          .filter((item) => {
+            const scheduledAt = new Date(item.scheduled_at)
+            return scheduledAt >= startOfYear && scheduledAt <= endOfYear
           })
           .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
       }

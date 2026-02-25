@@ -63,6 +63,11 @@ function goToSearch() {
   router.push('/search')
 }
 
+function goToYear() {
+  const year = yearMonthParam.value.split('-')[0]
+  router.push(`/year/${year}`)
+}
+
 function getItemCountForDate(dateString: string) {
   return getItemCountByDate(items.value, dateString)
 }
@@ -122,6 +127,13 @@ watch(yearMonthParam, async () => {
       >
         <Icon name="mdi:calendar-today" />
         {{ $t('今日') }}
+      </button>
+      <button
+        class="btn btn-secondary"
+        @click="goToYear"
+      >
+        <Icon name="mdi:calendar-range" />
+        {{ $t('年表示へ') }}
       </button>
       <hr>
       <button
