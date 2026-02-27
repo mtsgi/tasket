@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "~/*": ["app/*"],
+      "@/*": ["app/*"]
+    },
+    "types": ["vitest/globals", "node"]
+  },
+  "include": [
+    "./**/*.ts",
+    "../app/**/*.ts",
+    "../i18n/**/*.js",
+    "../nuxt.config.ts",
+    "../vitest.config.ts"
+  ]
+}

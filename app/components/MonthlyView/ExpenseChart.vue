@@ -178,10 +178,8 @@ const chartOptions = {
         if (index === undefined) return
 
         const chart = legend.chart
-        const meta = chart.getDatasetMeta(index)
-
         // 表示状態を切り替え
-        meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null
+        chart.setDatasetVisibility(index, !chart.isDatasetVisible(index))
         chart.update()
 
         // 設定を保存

@@ -19,7 +19,7 @@ const emit = defineEmits<{
  * 月番号から月名を取得
  */
 function getMonthName(yearMonth: string): string {
-  const month = Number.parseInt(yearMonth.split('-')[1])
+  const month = Number.parseInt(yearMonth.split('-')[1] ?? '0')
   return `${month}月`
 }
 

@@ -27,7 +27,7 @@ export function generateSampleData(): SampleDataSet {
   const currentMonth = today.format('YYYY-MM')
 
   // TODOサンプルデータ
-  const todoItems: Omit<Item, 'id' | 'created_at'>[] = [
+  const todoItems: Omit<Item, 'id' | 'created_at' | 'is_important'>[] = [
     {
       title: 'プロジェクト資料作成',
       amount: 0,
@@ -126,7 +126,7 @@ export function generateSampleData(): SampleDataSet {
   ]
 
   // 支出サンプルデータ
-  const expenseItems: Omit<Item, 'id' | 'created_at'>[] = [
+  const expenseItems: Omit<Item, 'id' | 'created_at' | 'is_important'>[] = [
     {
       title: '昼食代',
       amount: 980,
@@ -317,7 +317,7 @@ export function generateSampleData(): SampleDataSet {
   ]
 
   // 収入サンプルデータ
-  const incomeItems: Omit<Item, 'id' | 'created_at'>[] = [
+  const incomeItems: Omit<Item, 'id' | 'created_at' | 'is_important'>[] = [
     {
       title: '給与',
       amount: 280000,
@@ -348,7 +348,10 @@ export function generateSampleData(): SampleDataSet {
   ]
 
   // すべてのアイテムを結合
-  const items = [...todoItems, ...expenseItems, ...incomeItems]
+  const items: Omit<Item, 'id' | 'created_at'>[] = [...todoItems, ...expenseItems, ...incomeItems].map(item => ({
+    ...item,
+    is_important: false,
+  }))
 
   // 日課サンプルデータ（現在の月）
   const routines: Omit<Routine, 'id' | 'created_at'>[] = [

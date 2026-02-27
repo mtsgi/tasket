@@ -59,6 +59,7 @@ export const useTutorialStore = defineStore('tutorial', {
             maxAttempts: 5,
             lockTimeout: 0,
             darkMode: false,
+            darkModeSync: true,
             backgroundImage: 'none',
             dateChangeLine: 0,
             language: 'ja' as const,

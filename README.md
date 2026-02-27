@@ -390,6 +390,8 @@ Tasketは、複数のクラウドストレージプロバイダーへのデー�
 - **PWA**: Service Worker、Manifest
 - **UI**: Vue 3 Composition API
 - **多言語化**: @nuxtjs/i18n (日本語キー、フォールバック対応)
+- **テスト**: Vitest + @nuxt/test-utils
+- **CI**: GitHub Actions (lint + test)
 
 ## セットアップ
 
@@ -420,6 +422,44 @@ npm run build
 ```bash
 npm run preview
 ```
+
+## テスト
+
+ユニットテストの実行:
+
+```bash
+npm run test
+```
+
+ウォッチモード（ファイル変更時に自動再実行）:
+
+```bash
+npm run test:watch
+```
+
+カバレッジ付きテスト:
+
+```bash
+npm run test:coverage
+```
+
+### テスト構成
+
+- **フレームワーク**: Vitest + @nuxt/test-utils
+- **テスト環境**: `environment: 'nuxt'`
+- **設定ファイル**: `vitest.config.ts`
+
+```
+test/
+├── helpers/          # テスト用ヘルパー（ファクトリ、DBモック）
+├── utils/            # ユーティリティ関数テスト
+├── composables/      # コンポーザブルテスト
+└── stores/           # Pinia ストアテスト
+```
+
+### CI
+
+GitHub Actionsで`main`ブランチへのPushおよびPull Request時に自動でlint + testが実行されます。
 
 ## OSSライセンス表記
 
