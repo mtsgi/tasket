@@ -5,7 +5,7 @@
  */
 import type { Item, ItemType } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
-import { formatDate } from '~/utils/dateHelpers'
+import { formatDate, formatYearMonth } from '~/utils/dateHelpers'
 import { clearMealLogRefs } from '~/utils/mealLog'
 import { ALBUM_MAX_PHOTOS } from '~/utils/constants'
 
@@ -55,7 +55,7 @@ const isSubmitting = ref(false)
 
 // オートコンプリート候補を取得（月内の一意のアイテム名）
 const autocompleteSuggestions = computed(() => {
-  return itemsStore.getUniqueItemTitlesByMonth(date.value.slice(0, 7))
+  return itemsStore.getUniqueItemTitlesByMonth(formatYearMonth(date.value))
 })
 
 /**
