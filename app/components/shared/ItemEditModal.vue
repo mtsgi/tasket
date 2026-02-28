@@ -53,6 +53,11 @@ const showPhotoGallery = ref(false)
 
 const isSubmitting = ref(false)
 
+// オートコンプリート候補を取得（月内の一意のアイテム名）
+const autocompleteSuggestions = computed(() => {
+  return itemsStore.getUniqueItemTitlesByMonth(date.value.slice(0, 7))
+})
+
 /**
  * アイテム種別を選択
  */
@@ -275,10 +280,10 @@ function handleAlbumPhotoDeleted(index: number) {
 
       <div class="form-group">
         <label for="edit-title">{{ $t('タイトル') }}</label>
-        <UiInput
+        <UiAutocomplete
           id="edit-title"
           v-model="title"
-          type="text"
+          :suggestions="autocompleteSuggestions"
           :placeholder="$t('アイテム名を入力')"
           required
         />
