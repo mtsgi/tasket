@@ -392,7 +392,6 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
         // データをインポート
         const itemsStore = useItemsStore()
-        const routinesStore = useRoutinesStore()
         const dayTitlesStore = useDayTitlesStore()
         const settingsStore = useSettingsStore()
         const lockStore = useLockStore()

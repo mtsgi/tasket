@@ -246,7 +246,6 @@ export const useHealthDataStore = defineStore('healthData', {
             }
           : {
               id: uuidv4(),
-              date: healthData.date,
               ...healthData,
               created_at: now,
               updated_at: now,

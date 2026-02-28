@@ -319,7 +319,7 @@ async function addSampleData() {
 
     // データを再読み込み
     await itemsStore.fetchItems()
-    await routinesStore.fetchRoutines()
+    await routinesStore.fetchAllRoutines()
     await presetsStore.fetchPresets()
     await healthDataStore.fetchHealthData()
 

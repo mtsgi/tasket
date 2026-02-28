@@ -46,8 +46,8 @@ export const usePresetsStore = defineStore('presets', {
         // 時刻順にソート（日付変更線を考慮）
         return filtered.sort((a, b) => {
           // 時刻文字列（HH:mm）を時間数値に変換
-          const [aHour, aMinute] = a.time.split(':').map(Number)
-          const [bHour, bMinute] = b.time.split(':').map(Number)
+          const [aHour = 0, aMinute = 0] = a.time.split(':').map(Number)
+          const [bHour = 0, bMinute = 0] = b.time.split(':').map(Number)
 
           // 日付変更線からの相対位置を計算
           // 日付変更線より前の時刻は、24時間を加算して後ろに配置

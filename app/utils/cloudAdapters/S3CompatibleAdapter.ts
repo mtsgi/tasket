@@ -16,6 +16,15 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
   }
 
   /**
+   * Uint8ArrayをArrayBufferに変換（SharedArrayBufferを回避するためにコピー）
+   */
+  private toArrayBuffer(data: Uint8Array): ArrayBuffer {
+    const copied = new Uint8Array(data.byteLength)
+    copied.set(data)
+    return copied.buffer
+  }
+
+  /**
    * AWS Signature Version 4を使用してリクエストに署名
    */
   private async signRequest(
@@ -69,7 +78,10 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     // 正規化されたヘッダー
     const sortedHeaderKeys = Object.keys(requestHeaders).sort()
     const canonicalHeaders = sortedHeaderKeys
-      .map(key => `${key.toLowerCase()}:${requestHeaders[key].trim()}\n`)
+      .map((key) => {
+        const headerValue = requestHeaders[key] ?? ''
+        return `${key.toLowerCase()}:${headerValue.trim()}\n`
+      })
       .join('')
 
     const signedHeaders = sortedHeaderKeys.map(key => key.toLowerCase()).join(';')
@@ -133,7 +145,7 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     if (key instanceof Uint8Array) {
       cryptoKey = await crypto.subtle.importKey(
         'raw',
-        key,
+        this.toArrayBuffer(key),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
         ['sign'],
@@ -155,7 +167,7 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
     const msgBuffer = new TextEncoder().encode(message)
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
-      key,
+      this.toArrayBuffer(key),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign'],
@@ -180,7 +192,7 @@ export class S3CompatibleAdapter extends BaseCloudAdapter {
 
     return await crypto.subtle.importKey(
       'raw',
-      kSigning,
+      this.toArrayBuffer(kSigning),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign'],

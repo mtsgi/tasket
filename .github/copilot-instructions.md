@@ -14,6 +14,8 @@ Tasketは、TODO・家計簿・カレンダー・健康管理機能を統合し�
 - **グラフ**: Chart.js (vue-chartjs)
 - **日付操作**: dayjs
 - **PWA**: @vite-pwa/nuxt
+- **テスト**: Vitest + @nuxt/test-utils
+- **CI**: GitHub Actions
 
 ## ディレクトリ構造
 
@@ -35,6 +37,11 @@ i18n/
 └── locales/          # 多言語リソースファイル
     ├── ja.js         # 日本語（ベース言語）
     └── en.js         # 英語
+test/
+├── helpers/          # テスト用ヘルパー（ファクトリ、モック）
+├── utils/            # ユーティリティ関数テスト
+├── composables/      # コンポーザブルテスト
+└── stores/           # Pinia ストアテスト
 ```
 
 ## データモデル
@@ -206,6 +213,15 @@ npm run build
 
 # リント
 npm run lint
+
+# ユニットテスト（1回実行）
+npm run test
+
+# ユニットテスト（ウォッチモード）
+npm run test:watch
+
+# カバレッジ付きテスト
+npm run test:coverage
 ```
 
 ## PWA 対応
@@ -216,8 +232,49 @@ npm run lint
 
 ## テスト
 
+- **テストフレームワーク**: Vitest + @nuxt/test-utils
+- **テスト環境**: `environment: 'nuxt'`（Nuxtのパスエイリアスやauto-importsが自動解決されます）
+- **設定ファイル**: `vitest.config.ts`
 - 重要な機能にはユニットテストを追加してください
-- E2Eテストでユーザーフローを検証してください
+- TypeScript、ESLintのエラーは解消した状態でコミットしてください
+
+### テストディレクトリ構造
+
+```
+test/
+├── setup.ts                    # グローバルセットアップ（DB モック）
+├── helpers/
+│   └── factories.ts            # テストデータファクトリ
+├── utils/                    # ユーティリティ関数テスト
+│   ├── formatters.test.ts
+│   ├── dateHelpers.test.ts
+│   ├── csvExport.test.ts
+│   └── mealLog.test.ts
+├── composables/              # コンポーザブルテスト
+│   └── useStatistics.test.ts
+└── stores/                   # Pinia ストアテスト
+    ├── items.test.ts
+    ├── healthData.test.ts
+    ├── settings.test.ts
+    ├── routines.test.ts
+    ├── presets.test.ts
+    └── dayTitles.test.ts
+```
+
+### テスト作成のガイドライン
+
+- **テストファイル名**: `*.test.ts` で統一
+- **テスト配置**: `test/` ディレクトリ配下にソースと同じ構造で配置
+- **ファクトリ関数**: `test/helpers/factories.ts` のファクトリを使用してテストデータを生成
+- **DB モック**: `test/setup.ts` で `~/utils/db` をグローバルにモック化（`vitest.config.ts` の `setupFiles` で自動読み込み）
+- **Pinia ストアテスト**: `setActivePinia(createPinia())` を `beforeEach` で呼び出す
+- **純粋関数テスト**: ユーティリティ関数はモック不要で直接テスト可能
+
+## CI/CD
+
+- **GitHub Actions**: `.github/workflows/ci.yml` で lint + test を自動実行
+- **トリガー**: `main` ブランチへの push と pull request
+- **Node.js**: v24
 
 ## アクセシビリティ
 

@@ -32,7 +32,7 @@ const { t } = useI18n()
  * 月番号から月名を取得
  */
 function getMonthName(yearMonth: string): string {
-  const month = Number.parseInt(yearMonth.split('-')[1])
+  const month = Number.parseInt(yearMonth.split('-')[1] ?? '0')
   return `${month}月`
 }
 
@@ -89,7 +89,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
         label: (context) => {
           const label = context.dataset.label || ''
           const value = context.parsed.y
-          return `${label}: ${formatCurrency(value)}`
+          return `${label}: ${formatCurrency(Number(value ?? 0))}`
         },
       },
     },

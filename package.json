@@ -9,7 +9,10 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@nuxt/eslint": "^1.11.0",
@@ -33,8 +36,12 @@
   },
   "devDependencies": {
     "@iconify-json/mdi": "^1.2.3",
+    "@nuxt/test-utils": "^4.0.0",
     "@types/node": "^25.0.3",
     "@types/uuid": "^10.0.0",
-    "rollup-plugin-license": "^3.6.0"
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^20.7.0",
+    "rollup-plugin-license": "^3.6.0",
+    "vitest": "^4.0.18"
   }
 }

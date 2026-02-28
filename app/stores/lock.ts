@@ -120,6 +120,7 @@ export const useLockStore = defineStore('lock', {
             id: 'app-settings',
             hasSeenTutorial: false,
             darkMode: false,
+            darkModeSync: true,
             backgroundImage: 'none',
             dateChangeLine: 0,
             language: 'ja' as const,
