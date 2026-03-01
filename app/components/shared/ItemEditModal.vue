@@ -5,7 +5,7 @@
  */
 import type { Item, ItemType } from '~/types/item'
 import { useItemsStore } from '~/stores/items'
-import { formatDate } from '~/utils/dateHelpers'
+import { formatDate, formatYearMonth } from '~/utils/dateHelpers'
 import { clearMealLogRefs } from '~/utils/mealLog'
 import { ALBUM_MAX_PHOTOS } from '~/utils/constants'
 
@@ -52,6 +52,11 @@ const albumPhotos = ref<string[]>(props.item.photos || [])
 const showPhotoGallery = ref(false)
 
 const isSubmitting = ref(false)
+
+// オートコンプリート候補を取得（月内の一意のアイテム名）
+const autocompleteSuggestions = computed(() => {
+  return itemsStore.getUniqueItemTitlesByMonth(formatYearMonth(date.value))
+})
 
 /**
  * アイテム種別を選択
@@ -275,10 +280,10 @@ function handleAlbumPhotoDeleted(index: number) {
 
       <div class="form-group">
         <label for="edit-title">{{ $t('タイトル') }}</label>
-        <UiInput
+        <UiAutocomplete
           id="edit-title"
           v-model="title"
-          type="text"
+          :suggestions="autocompleteSuggestions"
           :placeholder="$t('アイテム名を入力')"
           required
         />
