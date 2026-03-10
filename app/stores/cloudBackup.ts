@@ -397,15 +397,22 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         const lockStore = useLockStore()
         const tutorialStore = useTutorialStore()
 
-        // アイテムをインポート
+        // アイテムをインポート（完了状態・実行日時・IDなどを含む全フィールドを復元）
+        const { addItem } = await import('~/utils/db')
         for (const itemData of data.items) {
-          await itemsStore.createItem({
+          await addItem({
+            id: itemData.id,
             title: itemData.title,
             amount: itemData.amount,
             type: itemData.type,
+            is_completed: itemData.is_completed ?? false,
+            is_important: itemData.is_important ?? false,
             scheduled_at: new Date(itemData.scheduled_at),
+            executed_at: itemData.executed_at ? new Date(itemData.executed_at) : null,
+            created_at: new Date(itemData.created_at),
             notes: itemData.notes || '',
             mealLog: itemData.mealLog,
+            photos: itemData.photos,
           })
         }
 
