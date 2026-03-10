@@ -65,6 +65,9 @@ vi.mock('~/utils/db', () => ({
   updateBackupHistory: vi.fn().mockResolvedValue(undefined),
   deleteBackupHistory: vi.fn().mockResolvedValue(undefined),
 
+  // ユーザーデータ一括操作
+  clearUserData: vi.fn().mockResolvedValue(undefined),
+
   // DB接続
   getDB: vi.fn(),
 }))

@@ -240,7 +240,7 @@ async function restore() {
     return
   }
 
-  const confirmed = confirm(t('本当にこのバックアップから復元しますか？'))
+  const confirmed = confirm(t('本当にこのバックアップから復元しますか？\n現在のすべてのデータは削除され、バックアップのデータで上書きされます。\nこの操作は取り消せません。'))
   if (!confirmed) return
 
   try {

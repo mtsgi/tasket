@@ -594,6 +594,7 @@ export default {
   'バックアップファイルを選択して復元してください': 'Select a backup file to restore',
   'バックアップファイルがありません': 'No backup files found',
   '本当にこのバックアップから復元しますか？': 'Are you sure you want to restore from this backup?',
+  '本当にこのバックアップから復元しますか？\n現在のすべてのデータは削除され、バックアップのデータで上書きされます。\nこの操作は取り消せません。': 'Are you sure you want to restore from this backup?\nAll current data will be deleted and overwritten with the backup data.\nThis action cannot be undone.',
   '本当にこの設定を削除しますか？': 'Are you sure you want to delete this configuration?',
   'AWS S3、MinIO、Wasabi、Cloudflare R2などのS3互換APIをサポート': 'Supports S3-compatible APIs like AWS S3, MinIO, Wasabi, Cloudflare R2',
   '認証情報は安全に暗号化されて保存されます': 'Credentials are securely encrypted and stored',
