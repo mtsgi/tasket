@@ -390,15 +390,19 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         const adapter = this.getAdapter(config)
         const data = await adapter.download(remotePath)
 
+        // 既存のユーザーデータをクリア（競合を防ぐため復元前に削除）
+        const { clearUserData, addItem, addRoutine, saveRoutineLog, saveAppSettings, saveHealthData } = await import('~/utils/db')
+        await clearUserData()
+
         // データをインポート
         const itemsStore = useItemsStore()
+        const routinesStore = useRoutinesStore()
         const dayTitlesStore = useDayTitlesStore()
         const settingsStore = useSettingsStore()
         const lockStore = useLockStore()
         const tutorialStore = useTutorialStore()
 
         // アイテムをインポート（完了状態・実行日時・IDなどを含む全フィールドを復元）
-        const { addItem } = await import('~/utils/db')
         for (const itemData of data.items) {
           await addItem({
             id: itemData.id,
@@ -418,7 +422,6 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
         // 日課をインポート
         if (data.routines) {
-          const { addRoutine } = await import('~/utils/db')
           for (const routineData of data.routines) {
             // バックアップに含まれるIDを保持して復元
             await addRoutine({
@@ -433,7 +436,6 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
         // 日課ログをインポート
         if (data.routineLogs) {
-          const { saveRoutineLog } = await import('~/utils/db')
           for (const logData of data.routineLogs) {
             await saveRoutineLog({
               id: logData.id,
@@ -454,7 +456,6 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
         // アプリ設定をインポート
         if (data.appSettings && data.appSettings.length > 0) {
-          const { saveAppSettings } = await import('~/utils/db')
           for (const settingsData of data.appSettings) {
             await saveAppSettings({
               ...settingsData,
@@ -468,7 +469,6 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
         // 健康データをインポート
         if (data.healthData) {
-          const { saveHealthData } = await import('~/utils/db')
           for (const healthDataItem of data.healthData) {
             await saveHealthData({
               ...healthDataItem,
@@ -481,7 +481,9 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           await healthDataStore.fetchHealthData()
         }
 
+        // 各ストアを再読み込みしてUIに反映
         await itemsStore.fetchItems()
+        await routinesStore.fetchAllRoutines()
       }
       catch (e) {
         this.error = e instanceof Error ? e.message : 'データの復元に失敗しました'

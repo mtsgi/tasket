@@ -643,6 +643,29 @@ export async function getHealthDataByDateRange(startDate: string, endDate: strin
 }
 
 // ============================================
+// ユーザーデータの一括操作
+// ============================================
+
+/**
+ * ユーザーデータをすべてクリア
+ * items, routines, routineLogs, dayTitles, presets, healthData の各ストアを空にします。
+ * クラウドバックアップからの復元前に呼び出すことで、既存データとの競合を防ぎます。
+ */
+export async function clearUserData(): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction(['items', 'routines', 'routineLogs', 'dayTitles', 'presets', 'healthData'], 'readwrite')
+  await Promise.all([
+    tx.objectStore('items').clear(),
+    tx.objectStore('routines').clear(),
+    tx.objectStore('routineLogs').clear(),
+    tx.objectStore('dayTitles').clear(),
+    tx.objectStore('presets').clear(),
+    tx.objectStore('healthData').clear(),
+    tx.done,
+  ])
+}
+
+// ============================================
 // CloudBackupConfigs（クラウドバックアップ設定）関連の操作
 // ============================================
 

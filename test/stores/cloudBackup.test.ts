@@ -214,5 +214,65 @@ describe('useCloudBackupStore', () => {
       // 元のIDが保持されていること（新規生成ではない）
       expect(calledWith.id).toBe('item-1')
     })
+
+    it('復元前に既存データがクリアされること', async () => {
+      const { getCloudBackupConfigById, clearUserData, addItem } = await import('~/utils/db')
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(
+        createMockAdapter(createBackupData()),
+      )
+
+      await store.restore('config-1', '/backup/test.json')
+
+      // clearUserData が addItem より先に呼ばれること
+      expect(vi.mocked(clearUserData)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(addItem)).toHaveBeenCalledTimes(1)
+      const clearOrder = vi.mocked(clearUserData).mock.invocationCallOrder[0]
+      const addOrder = vi.mocked(addItem).mock.invocationCallOrder[0]
+      expect(clearOrder).toBeDefined()
+      expect(addOrder).toBeDefined()
+      expect(clearOrder!).toBeLessThan(addOrder!)
+    })
+
+    it('既存データがある状態でも復元が成功すること', async () => {
+      const { getCloudBackupConfigById, clearUserData, addItem } = await import('~/utils/db')
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+      // clearUserData は成功する（既存データを削除）
+      vi.mocked(clearUserData).mockResolvedValue(undefined)
+      // addItem も成功する（クリア後なので競合なし）
+      vi.mocked(addItem).mockResolvedValue(undefined)
+
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(
+        createMockAdapter(createBackupData()),
+      )
+
+      // 既存データがあっても例外が発生しないこと
+      await expect(store.restore('config-1', '/backup/test.json')).resolves.toBeUndefined()
+      expect(vi.mocked(clearUserData)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(addItem)).toHaveBeenCalledTimes(1)
+    })
+
+    it('routinesStoreのfetchAllRoutinesが復元後に呼ばれること', async () => {
+      const { getCloudBackupConfigById } = await import('~/utils/db')
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+
+      const { useRoutinesStore } = await import('~/stores/routines')
+      const mockFetchAllRoutines = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useRoutinesStore).mockReturnValue({
+        fetchAllRoutines: mockFetchAllRoutines,
+      } as unknown as ReturnType<typeof useRoutinesStore>)
+
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(
+        createMockAdapter(createBackupData()),
+      )
+
+      await store.restore('config-1', '/backup/test.json')
+
+      expect(mockFetchAllRoutines).toHaveBeenCalledTimes(1)
+    })
   })
 })
