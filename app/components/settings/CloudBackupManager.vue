@@ -460,35 +460,11 @@ onMounted(() => {
         v-else
         class="history-list"
       >
-        <div
+        <BackupHistoryItem
           v-for="history in cloudBackupStore.histories.slice(0, 3)"
           :key="history.id"
-          class="history-item"
-        >
-          <div class="history-icon">
-            <Icon
-              :name="history.status === 'success' ? 'mdi:check-circle' : history.status === 'failed' ? 'mdi:alert-circle' : 'mdi:loading'"
-              :class="history.status"
-            />
-          </div>
-          <div class="history-info">
-            <div class="history-header">
-              <span class="history-type">{{ $t(history.type === 'manual' ? '手動' : '自動') }}</span>
-              <span class="history-status">{{ $t(history.status === 'success' ? '成功' : history.status === 'failed' ? '失敗' : '実行中') }}</span>
-            </div>
-            <div class="history-details">
-              <span>{{ formatDateTime(history.created_at) }}</span>
-              <span v-if="history.size">{{ formatFileSize(history.size) }}</span>
-              <span v-if="history.itemCount">{{ history.itemCount }}件</span>
-            </div>
-            <div
-              v-if="history.error"
-              class="history-error"
-            >
-              {{ history.error }}
-            </div>
-          </div>
-        </div>
+          :history="history"
+        />
       </div>
     </div>
 
@@ -499,35 +475,11 @@ onMounted(() => {
       @close="showHistoryModal = false"
     >
       <div class="history-list">
-        <div
+        <BackupHistoryItem
           v-for="history in cloudBackupStore.histories"
           :key="history.id"
-          class="history-item"
-        >
-          <div class="history-icon">
-            <Icon
-              :name="history.status === 'success' ? 'mdi:check-circle' : history.status === 'failed' ? 'mdi:alert-circle' : 'mdi:loading'"
-              :class="history.status"
-            />
-          </div>
-          <div class="history-info">
-            <div class="history-header">
-              <span class="history-type">{{ $t(history.type === 'manual' ? '手動' : '自動') }}</span>
-              <span class="history-status">{{ $t(history.status === 'success' ? '成功' : history.status === 'failed' ? '失敗' : '実行中') }}</span>
-            </div>
-            <div class="history-details">
-              <span>{{ formatDateTime(history.created_at) }}</span>
-              <span v-if="history.size">{{ formatFileSize(history.size) }}</span>
-              <span v-if="history.itemCount">{{ history.itemCount }}件</span>
-            </div>
-            <div
-              v-if="history.error"
-              class="history-error"
-            >
-              {{ history.error }}
-            </div>
-          </div>
-        </div>
+          :history="history"
+        />
       </div>
     </UiModal>
 
