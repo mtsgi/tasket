@@ -14,6 +14,7 @@ const { t } = useI18n()
 const showConfigModal = ref(false)
 const showRestoreModal = ref(false)
 const showManualModal = ref(false)
+const showHistoryModal = ref(false)
 
 // フォーム状態
 const editingConfig = ref<CloudBackupConfig | null>(null)
@@ -439,6 +440,13 @@ onMounted(() => {
           <Icon name="mdi:history" />
           {{ $t('バックアップ履歴') }}
         </h3>
+        <UiButton
+          v-if="cloudBackupStore.histories.length > 0"
+          variant="secondary"
+          @click="showHistoryModal = true"
+        >
+          {{ $t('履歴を表示') }}
+        </UiButton>
       </div>
 
       <div
@@ -453,7 +461,7 @@ onMounted(() => {
         class="history-list"
       >
         <div
-          v-for="history in cloudBackupStore.histories.slice(0, 5)"
+          v-for="history in cloudBackupStore.histories.slice(0, 3)"
           :key="history.id"
           class="history-item"
         >
@@ -483,6 +491,45 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- バックアップ履歴モーダル -->
+    <UiModal
+      :show="showHistoryModal"
+      :title="$t('バックアップ履歴')"
+      @close="showHistoryModal = false"
+    >
+      <div class="history-list">
+        <div
+          v-for="history in cloudBackupStore.histories"
+          :key="history.id"
+          class="history-item"
+        >
+          <div class="history-icon">
+            <Icon
+              :name="history.status === 'success' ? 'mdi:check-circle' : history.status === 'failed' ? 'mdi:alert-circle' : 'mdi:loading'"
+              :class="history.status"
+            />
+          </div>
+          <div class="history-info">
+            <div class="history-header">
+              <span class="history-type">{{ $t(history.type === 'manual' ? '手動' : '自動') }}</span>
+              <span class="history-status">{{ $t(history.status === 'success' ? '成功' : history.status === 'failed' ? '失敗' : '実行中') }}</span>
+            </div>
+            <div class="history-details">
+              <span>{{ formatDateTime(history.created_at) }}</span>
+              <span v-if="history.size">{{ formatFileSize(history.size) }}</span>
+              <span v-if="history.itemCount">{{ history.itemCount }}件</span>
+            </div>
+            <div
+              v-if="history.error"
+              class="history-error"
+            >
+              {{ history.error }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </UiModal>
 
     <!-- 設定モーダル -->
     <UiModal

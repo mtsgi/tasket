@@ -584,6 +584,7 @@ export default {
   '復元に失敗しました': 'Restore failed',
   'バックアップ履歴': 'Backup History',
   'バックアップ履歴はありません': 'No backup history',
+  '履歴を表示': 'Show History',
   '最終バックアップ': 'Last Backup',
   '手動': 'Manual',
   '自動': 'Auto',
