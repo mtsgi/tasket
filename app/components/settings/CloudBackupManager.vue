@@ -14,6 +14,7 @@ const { t } = useI18n()
 const showConfigModal = ref(false)
 const showRestoreModal = ref(false)
 const showManualModal = ref(false)
+const showHistoryModal = ref(false)
 
 // フォーム状態
 const editingConfig = ref<CloudBackupConfig | null>(null)
@@ -439,6 +440,13 @@ onMounted(() => {
           <Icon name="mdi:history" />
           {{ $t('バックアップ履歴') }}
         </h3>
+        <UiButton
+          v-if="cloudBackupStore.histories.length > 0"
+          variant="secondary"
+          @click="showHistoryModal = true"
+        >
+          {{ $t('履歴を表示') }}
+        </UiButton>
       </div>
 
       <div
@@ -452,37 +460,28 @@ onMounted(() => {
         v-else
         class="history-list"
       >
-        <div
-          v-for="history in cloudBackupStore.histories.slice(0, 5)"
+        <BackupHistoryItem
+          v-for="history in cloudBackupStore.histories.slice(0, 3)"
           :key="history.id"
-          class="history-item"
-        >
-          <div class="history-icon">
-            <Icon
-              :name="history.status === 'success' ? 'mdi:check-circle' : history.status === 'failed' ? 'mdi:alert-circle' : 'mdi:loading'"
-              :class="history.status"
-            />
-          </div>
-          <div class="history-info">
-            <div class="history-header">
-              <span class="history-type">{{ $t(history.type === 'manual' ? '手動' : '自動') }}</span>
-              <span class="history-status">{{ $t(history.status === 'success' ? '成功' : history.status === 'failed' ? '失敗' : '実行中') }}</span>
-            </div>
-            <div class="history-details">
-              <span>{{ formatDateTime(history.created_at) }}</span>
-              <span v-if="history.size">{{ formatFileSize(history.size) }}</span>
-              <span v-if="history.itemCount">{{ history.itemCount }}件</span>
-            </div>
-            <div
-              v-if="history.error"
-              class="history-error"
-            >
-              {{ history.error }}
-            </div>
-          </div>
-        </div>
+          :history="history"
+        />
       </div>
     </div>
+
+    <!-- バックアップ履歴モーダル -->
+    <UiModal
+      :show="showHistoryModal"
+      :title="$t('バックアップ履歴')"
+      @close="showHistoryModal = false"
+    >
+      <div class="history-list">
+        <BackupHistoryItem
+          v-for="history in cloudBackupStore.histories"
+          :key="history.id"
+          :history="history"
+        />
+      </div>
+    </UiModal>
 
     <!-- 設定モーダル -->
     <UiModal
@@ -994,77 +993,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.history-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background-color: #fff;
-
-  .dark-mode & {
-    background-color: #2a2a2a;
-    border-color: #444;
-  }
-}
-
-.history-icon {
-  font-size: 24px;
-
-  .success {
-    color: #4caf50;
-  }
-
-  .failed {
-    color: #f44336;
-  }
-
-  .in-progress {
-    color: #4a90d9;
-  }
-}
-
-.history-info {
-  flex: 1;
-}
-
-.history-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-
-  .history-type,
-  .history-status {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-
-  .history-type {
-    background-color: #f5f5f5;
-    color: #666;
-
-    .dark-mode & {
-      background-color: #333;
-      color: #b0b0b0;
-    }
-  }
-}
-
-.history-details {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #999;
-}
-
-.history-error {
-  font-size: 12px;
-  color: #f44336;
-  margin-top: 4px;
 }
 
 .config-form {
