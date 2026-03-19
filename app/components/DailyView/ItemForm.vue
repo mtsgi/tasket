@@ -318,6 +318,7 @@ async function handleSubmit() {
           :suggestions="autocompleteSuggestions"
           :placeholder="$t('アイテム名を入力')"
           required
+          @confirm="handleSubmit"
         />
       </div>
 

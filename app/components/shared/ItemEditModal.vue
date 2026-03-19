@@ -189,16 +189,6 @@ function handleAlbumPhotoDeleted(index: number) {
   // Proxyオブジェクトを避けるため、filterを使用して新しい配列を作成
   albumPhotos.value = albumPhotos.value.filter((_, i) => i !== index)
 }
-
-/**
- * タイトル入力でEnterキーが押された際の処理
- * UiAutocompleteがサジェスト選択で event.preventDefault() を呼んでいる場合はスキップ
- */
-function handleTitleEnter(event: KeyboardEvent) {
-  if (!event.defaultPrevented) {
-    handleSubmit()
-  }
-}
 </script>
 
 <template>
@@ -296,7 +286,7 @@ function handleTitleEnter(event: KeyboardEvent) {
           :suggestions="autocompleteSuggestions"
           :placeholder="$t('アイテム名を入力')"
           required
-          @keydown.enter="handleTitleEnter"
+          @confirm="handleSubmit"
         />
       </div>
 
