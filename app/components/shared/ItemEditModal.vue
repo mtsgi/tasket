@@ -489,6 +489,14 @@ function handleAlbumPhotoDeleted(index: number) {
           :disabled="type === 'todo'"
         />
       </div>
+      <!-- Enterキーでフォームを送信できるようにするための非表示ボタン -->
+      <button
+        type="submit"
+        style="display: none"
+        :disabled="isSubmitting || !title.trim()"
+        aria-hidden="true"
+        tabindex="-1"
+      />
     </form>
     <template #footer>
       <UiButton
