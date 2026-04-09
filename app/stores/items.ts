@@ -138,6 +138,42 @@ export const useItemsStore = defineStore('items', {
     },
 
     /**
+     * すべてのアイテムの一意のタイトルを取得（オートコンプリート・表記揺れ修正ツール用）
+     * 出現回数の多い順、同回数の場合は直近の日時順に並べる
+     * @returns すべてのアイテムの一意タイトルリスト
+     */
+    allUniqueTitles: (state) => {
+      const titleStats = new Map<string, { count: number, latestDate: Date }>()
+
+      state.items
+        .filter(item => item.title.trim().length > 0)
+        .forEach((item) => {
+          const title = item.title.trim()
+          const existing = titleStats.get(title)
+          const scheduledAt = new Date(item.scheduled_at)
+
+          if (existing) {
+            existing.count++
+            if (scheduledAt > existing.latestDate) {
+              existing.latestDate = scheduledAt
+            }
+          }
+          else {
+            titleStats.set(title, { count: 1, latestDate: scheduledAt })
+          }
+        })
+
+      return Array.from(titleStats.entries())
+        .sort((a, b) => {
+          if (b[1].count !== a[1].count) {
+            return b[1].count - a[1].count
+          }
+          return b[1].latestDate.getTime() - a[1].latestDate.getTime()
+        })
+        .map(entry => entry[0])
+    },
+
+    /**
      * キーワードでアイテムを検索
      * @param keyword - 検索キーワード
      * @param type - アイテムタイプでフィルタ（省略可）
@@ -358,6 +394,20 @@ export const useItemsStore = defineStore('items', {
       if (index !== -1) {
         this.items.splice(index, 1)
       }
+    },
+
+    /**
+     * 指定したタイトルを持つすべてのアイテムを新しいタイトルに一括変更
+     * @param fromTitle - 変更前のタイトル
+     * @param toTitle - 変更後のタイトル
+     * @returns 変更されたアイテムの件数
+     */
+    async bulkRenameItems(fromTitle: string, toTitle: string): Promise<number> {
+      const targets = this.items.filter(item => item.title === fromTitle)
+      for (const item of targets) {
+        await this.updateItemById(item.id, { title: toTitle })
+      }
+      return targets.length
     },
   },
 })

@@ -629,4 +629,25 @@ export default {
   'コンテナ名': 'Container Name',
   'Dropboxの設定方法': 'Dropbox Setup Guide',
   'Azure Blob Storageの設定方法': 'Azure Blob Storage Setup Guide',
+
+  // Title normalization tool
+  '表記揺れ修正ツール': 'Title Normalization Tool',
+  '表記揺れのあるアイテムタイトルを一括で修正できます。支出ランキングなどの集計結果のズレを防ぐために活用してください。':
+    'You can bulk fix item titles with spelling variations. Use this to prevent discrepancies in aggregation results such as expense rankings.',
+  '修正対象タイトル': 'Title to Fix',
+  '修正後タイトル': 'New Title',
+  '変更前のタイトルを入力': 'Enter current title',
+  '変更後のタイトルを入力': 'Enter new title',
+  '{count}件が対象': '{count} items matched',
+  '{count}件が既存': '{count} items exist',
+  '一括修正を実行': 'Execute Bulk Fix',
+  '処理中...': 'Processing...',
+  '一括修正の確認': 'Confirm Bulk Fix',
+  '{count}件のタイトルを「{from}」→「{to}」に変更しますがよろしいですか？':
+    'Are you sure you want to rename {count} items from "{from}" to "{to}"?',
+  'この操作は取り消せません。': 'This operation cannot be undone.',
+  '変更する': 'Rename',
+  '{count}件のタイトルを「{from}」から「{to}」に変更しました':
+    'Renamed {count} items from "{from}" to "{to}"',
+  'タイトルの一括変更に失敗しました': 'Failed to bulk rename titles',
 }
