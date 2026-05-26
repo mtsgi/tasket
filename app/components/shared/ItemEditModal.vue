@@ -47,7 +47,7 @@ const mealFat = ref<number | undefined>(props.item.mealLog?.fat)
 const mealPhoto = ref<string | undefined>(props.item.mealLog?.photo)
 const mealMemo = ref(props.item.mealLog?.memo || '')
 
-// アルバム機能の状態（TODO用の写真）
+// アルバム機能の状態（TODO・支出・収入用の写真）
 const albumPhotos = ref<string[]>(props.item.photos || [])
 const showPhotoGallery = ref(false)
 
@@ -428,9 +428,8 @@ function handleAlbumPhotoDeleted(index: number) {
         </div>
       </div>
 
-      <!-- アルバム機能（TODO専用） -->
+      <!-- アルバム機能（TODO・支出・収入対応） -->
       <div
-        v-if="type === 'todo'"
         class="album-section"
       >
         <div class="album-header">
