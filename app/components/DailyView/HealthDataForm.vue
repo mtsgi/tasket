@@ -3,6 +3,8 @@
  * 健康データ入力フォームコンポーネント
  * 日ごとのビューで健康データを入力・編集するためのフォーム
  */
+import type { HealthData } from '~/types/item'
+
 const props = defineProps<{
   date: string // YYYY-MM-DD形式
 }>()
@@ -38,6 +40,105 @@ const healthMemo = ref('')
 
 // 設定から身長を取得
 const settingsStore = useSettingsStore()
+
+type NumericFieldKey = keyof Pick<HealthData,
+  | 'weight'
+  | 'bodyFatPercentage'
+  | 'muscleMass'
+  | 'visceralFatLevel'
+  | 'basalMetabolicRate'
+  | 'bodyWaterPercentage'
+  | 'boneMass'
+  | 'proteinPercentage'
+  | 'systolicBloodPressure'
+  | 'diastolicBloodPressure'
+  | 'heartRate'
+  | 'steps'
+  | 'exerciseMinutes'
+  | 'sleepHours'
+  | 'waterIntake'
+>
+
+const numericFieldFormats: Record<NumericFieldKey, { unit: string, fractionDigits: number }> = {
+  weight: { unit: 'kg', fractionDigits: 1 },
+  bodyFatPercentage: { unit: '%', fractionDigits: 1 },
+  muscleMass: { unit: 'kg', fractionDigits: 1 },
+  visceralFatLevel: { unit: '', fractionDigits: 0 },
+  basalMetabolicRate: { unit: 'kcal/日', fractionDigits: 0 },
+  bodyWaterPercentage: { unit: '%', fractionDigits: 1 },
+  boneMass: { unit: 'kg', fractionDigits: 1 },
+  proteinPercentage: { unit: '%', fractionDigits: 1 },
+  systolicBloodPressure: { unit: 'mmHg', fractionDigits: 0 },
+  diastolicBloodPressure: { unit: 'mmHg', fractionDigits: 0 },
+  heartRate: { unit: 'bpm', fractionDigits: 0 },
+  steps: { unit: '歩', fractionDigits: 0 },
+  exerciseMinutes: { unit: '分', fractionDigits: 0 },
+  sleepHours: { unit: '時間', fractionDigits: 1 },
+  waterIntake: { unit: 'ml', fractionDigits: 0 },
+}
+
+const currentFieldValues = computed<Record<NumericFieldKey, number | undefined>>(() => ({
+  weight: weight.value,
+  bodyFatPercentage: bodyFatPercentage.value,
+  muscleMass: muscleMass.value,
+  visceralFatLevel: visceralFatLevel.value,
+  basalMetabolicRate: basalMetabolicRate.value,
+  bodyWaterPercentage: bodyWaterPercentage.value,
+  boneMass: boneMass.value,
+  proteinPercentage: proteinPercentage.value,
+  systolicBloodPressure: systolicBloodPressure.value,
+  diastolicBloodPressure: diastolicBloodPressure.value,
+  heartRate: heartRate.value,
+  steps: steps.value,
+  exerciseMinutes: exerciseMinutes.value,
+  sleepHours: sleepHours.value,
+  waterIntake: waterIntake.value,
+}))
+
+const previousHealthData = computed(() => healthDataStore.getPreviousHealthDataByDateString(props.date))
+
+function getPreviousValue(field: NumericFieldKey): number | undefined {
+  const value = previousHealthData.value?.[field]
+  return typeof value === 'number' ? value : undefined
+}
+
+function getDiffValue(field: NumericFieldKey): number | undefined {
+  const previousValue = getPreviousValue(field)
+  const currentValue = currentFieldValues.value[field]
+  if (previousValue === undefined || currentValue === undefined) {
+    return undefined
+  }
+  return currentValue - previousValue
+}
+
+function formatFieldValue(field: NumericFieldKey, value: number): string {
+  const format = numericFieldFormats[field]
+  return `${value.toFixed(format.fractionDigits)}${format.unit}`
+}
+
+function formatDiffValue(field: NumericFieldKey): string | undefined {
+  const diffValue = getDiffValue(field)
+  if (diffValue === undefined) {
+    return undefined
+  }
+  const format = numericFieldFormats[field]
+  const sign = diffValue > 0 ? '+' : ''
+  return `${sign}${diffValue.toFixed(format.fractionDigits)}${format.unit}`
+}
+
+function getDiffClass(field: NumericFieldKey): string {
+  const diffValue = getDiffValue(field)
+  if (diffValue === undefined) {
+    return ''
+  }
+  if (diffValue > 0) {
+    return 'diff-positive'
+  }
+  if (diffValue < 0) {
+    return 'diff-negative'
+  }
+  return 'diff-neutral'
+}
 
 // BMIの計算（設定された身長を使用、設定がない場合は170cmをデフォルトとする）
 const bmi = computed(() => {
@@ -161,6 +262,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}kg', { value: '0.0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('weight')"
+            >
+              <template v-if="getPreviousValue('weight') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('weight', getPreviousValue('weight')!) }}
+                <span v-if="formatDiffValue('weight')">
+                  ({{ formatDiffValue('weight') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
           <div class="form-group">
             <label>{{ $t('体脂肪率') }}</label>
@@ -169,6 +284,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}%', { value: '0.0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('bodyFatPercentage')"
+            >
+              <template v-if="getPreviousValue('bodyFatPercentage') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('bodyFatPercentage', getPreviousValue('bodyFatPercentage')!) }}
+                <span v-if="formatDiffValue('bodyFatPercentage')">
+                  ({{ formatDiffValue('bodyFatPercentage') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
         <div
@@ -190,6 +319,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}kg', { value: '0.0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('muscleMass')"
+            >
+              <template v-if="getPreviousValue('muscleMass') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('muscleMass', getPreviousValue('muscleMass')!) }}
+                <span v-if="formatDiffValue('muscleMass')">
+                  ({{ formatDiffValue('muscleMass') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
           <div class="form-group">
             <label>{{ $t('内臓脂肪レベル') }}</label>
@@ -198,6 +341,20 @@ function toggleExpand() {
               type="number"
               placeholder="0"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('visceralFatLevel')"
+            >
+              <template v-if="getPreviousValue('visceralFatLevel') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('visceralFatLevel', getPreviousValue('visceralFatLevel')!) }}
+                <span v-if="formatDiffValue('visceralFatLevel')">
+                  ({{ formatDiffValue('visceralFatLevel') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -208,6 +365,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}kcal/日', { value: '0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('basalMetabolicRate')"
+            >
+              <template v-if="getPreviousValue('basalMetabolicRate') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('basalMetabolicRate', getPreviousValue('basalMetabolicRate')!) }}
+                <span v-if="formatDiffValue('basalMetabolicRate')">
+                  ({{ formatDiffValue('basalMetabolicRate') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -223,6 +394,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}%', { value: '0.0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('bodyWaterPercentage')"
+            >
+              <template v-if="getPreviousValue('bodyWaterPercentage') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('bodyWaterPercentage', getPreviousValue('bodyWaterPercentage')!) }}
+                <span v-if="formatDiffValue('bodyWaterPercentage')">
+                  ({{ formatDiffValue('bodyWaterPercentage') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
           <div class="form-group">
             <label>{{ $t('骨塩量') }}</label>
@@ -231,6 +416,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}kg', { value: '0.0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('boneMass')"
+            >
+              <template v-if="getPreviousValue('boneMass') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('boneMass', getPreviousValue('boneMass')!) }}
+                <span v-if="formatDiffValue('boneMass')">
+                  ({{ formatDiffValue('boneMass') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -241,6 +440,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}%', { value: '0.0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('proteinPercentage')"
+            >
+              <template v-if="getPreviousValue('proteinPercentage') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('proteinPercentage', getPreviousValue('proteinPercentage')!) }}
+                <span v-if="formatDiffValue('proteinPercentage')">
+                  ({{ formatDiffValue('proteinPercentage') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -256,6 +469,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}mmHg', { value: '0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('systolicBloodPressure')"
+            >
+              <template v-if="getPreviousValue('systolicBloodPressure') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('systolicBloodPressure', getPreviousValue('systolicBloodPressure')!) }}
+                <span v-if="formatDiffValue('systolicBloodPressure')">
+                  ({{ formatDiffValue('systolicBloodPressure') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
           <div class="form-group">
             <label>{{ $t('最低血圧') }}</label>
@@ -264,6 +491,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}mmHg', { value: '0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('diastolicBloodPressure')"
+            >
+              <template v-if="getPreviousValue('diastolicBloodPressure') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('diastolicBloodPressure', getPreviousValue('diastolicBloodPressure')!) }}
+                <span v-if="formatDiffValue('diastolicBloodPressure')">
+                  ({{ formatDiffValue('diastolicBloodPressure') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -274,6 +515,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}bpm', { value: '0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('heartRate')"
+            >
+              <template v-if="getPreviousValue('heartRate') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('heartRate', getPreviousValue('heartRate')!) }}
+                <span v-if="formatDiffValue('heartRate')">
+                  ({{ formatDiffValue('heartRate') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -289,6 +544,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}歩', { value: '0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('steps')"
+            >
+              <template v-if="getPreviousValue('steps') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('steps', getPreviousValue('steps')!) }}
+                <span v-if="formatDiffValue('steps')">
+                  ({{ formatDiffValue('steps') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
           <div class="form-group">
             <label>{{ $t('運動時間') }}</label>
@@ -297,6 +566,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}分', { value: '0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('exerciseMinutes')"
+            >
+              <template v-if="getPreviousValue('exerciseMinutes') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('exerciseMinutes', getPreviousValue('exerciseMinutes')!) }}
+                <span v-if="formatDiffValue('exerciseMinutes')">
+                  ({{ formatDiffValue('exerciseMinutes') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -307,6 +590,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}時間', { value: '0.0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('sleepHours')"
+            >
+              <template v-if="getPreviousValue('sleepHours') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('sleepHours', getPreviousValue('sleepHours')!) }}
+                <span v-if="formatDiffValue('sleepHours')">
+                  ({{ formatDiffValue('sleepHours') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
           <div class="form-group">
             <label>{{ $t('水分摂取量') }}</label>
@@ -315,6 +612,20 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}ml', { value: '0' })"
             />
+            <div
+              class="previous-record"
+              :class="getDiffClass('waterIntake')"
+            >
+              <template v-if="getPreviousValue('waterIntake') !== undefined">
+                {{ $t('前回') }}: {{ formatFieldValue('waterIntake', getPreviousValue('waterIntake')!) }}
+                <span v-if="formatDiffValue('waterIntake')">
+                  ({{ formatDiffValue('waterIntake') }})
+                </span>
+              </template>
+              <template v-else>
+                {{ $t('前回記録なし') }}
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -412,6 +723,24 @@ function toggleExpand() {
     display: block;
     margin-bottom: 4px;
     font-size: 12px;
+    color: #666666;
+  }
+}
+
+.previous-record {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #999999;
+
+  &.diff-positive {
+    color: #D32F2F;
+  }
+
+  &.diff-negative {
+    color: #1976D2;
+  }
+
+  &.diff-neutral {
     color: #666666;
   }
 }
