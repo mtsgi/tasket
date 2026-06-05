@@ -40,6 +40,25 @@ export const useHealthDataStore = defineStore('healthData', {
     },
 
     /**
+     * 指定日より前の直近の健康データを取得
+     * @param dateString - 日付文字列（YYYY-MM-DD）
+     * @returns 前回の健康データ、または見つからない場合はundefined
+     */
+    getPreviousHealthDataByDateString: (state) => {
+      return (dateString: string) => {
+        let previousData: HealthData | undefined
+
+        for (const data of state.healthDataList) {
+          if (data.date < dateString && (!previousData || data.date > previousData.date)) {
+            previousData = data
+          }
+        }
+
+        return previousData
+      }
+    },
+
+    /**
      * 特定の月の健康データを取得
      * @param yearMonth - 年月文字列（YYYY-MM）
      * @returns その月の健康データリスト（日付順）

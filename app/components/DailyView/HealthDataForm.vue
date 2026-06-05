@@ -3,6 +3,9 @@
  * 健康データ入力フォームコンポーネント
  * 日ごとのビューで健康データを入力・編集するためのフォーム
  */
+import type { HealthData } from '~/types/item'
+import HealthDataPreviousRecord from './HealthDataPreviousRecord.vue'
+
 const props = defineProps<{
   date: string // YYYY-MM-DD形式
 }>()
@@ -38,6 +41,112 @@ const healthMemo = ref('')
 
 // 設定から身長を取得
 const settingsStore = useSettingsStore()
+
+type NumericFieldKey = keyof Pick<HealthData,
+  | 'weight'
+  | 'bodyFatPercentage'
+  | 'muscleMass'
+  | 'visceralFatLevel'
+  | 'basalMetabolicRate'
+  | 'bodyWaterPercentage'
+  | 'boneMass'
+  | 'proteinPercentage'
+  | 'systolicBloodPressure'
+  | 'diastolicBloodPressure'
+  | 'heartRate'
+  | 'steps'
+  | 'exerciseMinutes'
+  | 'sleepHours'
+  | 'waterIntake'
+>
+
+const numericFieldFormats: Record<NumericFieldKey, { unit: string, fractionDigits: number }> = {
+  weight: { unit: 'kg', fractionDigits: 1 },
+  bodyFatPercentage: { unit: '%', fractionDigits: 1 },
+  muscleMass: { unit: 'kg', fractionDigits: 1 },
+  visceralFatLevel: { unit: '', fractionDigits: 0 },
+  basalMetabolicRate: { unit: 'kcal/日', fractionDigits: 0 },
+  bodyWaterPercentage: { unit: '%', fractionDigits: 1 },
+  boneMass: { unit: 'kg', fractionDigits: 1 },
+  proteinPercentage: { unit: '%', fractionDigits: 1 },
+  systolicBloodPressure: { unit: 'mmHg', fractionDigits: 0 },
+  diastolicBloodPressure: { unit: 'mmHg', fractionDigits: 0 },
+  heartRate: { unit: 'bpm', fractionDigits: 0 },
+  steps: { unit: '歩', fractionDigits: 0 },
+  exerciseMinutes: { unit: '分', fractionDigits: 0 },
+  sleepHours: { unit: '時間', fractionDigits: 1 },
+  waterIntake: { unit: 'ml', fractionDigits: 0 },
+}
+
+const currentFieldValues = computed<Record<NumericFieldKey, number | undefined>>(() => ({
+  weight: weight.value,
+  bodyFatPercentage: bodyFatPercentage.value,
+  muscleMass: muscleMass.value,
+  visceralFatLevel: visceralFatLevel.value,
+  basalMetabolicRate: basalMetabolicRate.value,
+  bodyWaterPercentage: bodyWaterPercentage.value,
+  boneMass: boneMass.value,
+  proteinPercentage: proteinPercentage.value,
+  systolicBloodPressure: systolicBloodPressure.value,
+  diastolicBloodPressure: diastolicBloodPressure.value,
+  heartRate: heartRate.value,
+  steps: steps.value,
+  exerciseMinutes: exerciseMinutes.value,
+  sleepHours: sleepHours.value,
+  waterIntake: waterIntake.value,
+}))
+
+const previousHealthData = computed(() => healthDataStore.getPreviousHealthDataByDateString(props.date))
+
+function getPreviousValue(field: NumericFieldKey): number | undefined {
+  return previousHealthData.value?.[field]
+}
+
+function getDiffValue(field: NumericFieldKey): number | undefined {
+  const previousValue = getPreviousValue(field)
+  const currentValue = currentFieldValues.value[field]
+  if (previousValue === undefined || currentValue === undefined) {
+    return undefined
+  }
+  return currentValue - previousValue
+}
+
+function formatFieldValue(field: NumericFieldKey, value: number): string {
+  const format = numericFieldFormats[field]
+  return `${value.toFixed(format.fractionDigits)}${format.unit}`
+}
+
+function formatPreviousValue(field: NumericFieldKey): string | undefined {
+  const previousValue = getPreviousValue(field)
+  if (previousValue === undefined) {
+    return undefined
+  }
+  return formatFieldValue(field, previousValue)
+}
+
+function formatDiffValue(field: NumericFieldKey): string | undefined {
+  const diffValue = getDiffValue(field)
+  if (diffValue === undefined) {
+    return undefined
+  }
+  const format = numericFieldFormats[field]
+  const sign = diffValue > 0 ? '+' : ''
+  return `${sign}${diffValue.toFixed(format.fractionDigits)}${format.unit}`
+}
+
+function getDiffClass(field: NumericFieldKey): string {
+  const diffValue = getDiffValue(field)
+  if (diffValue === undefined) {
+    return ''
+  }
+  if (diffValue > 0) {
+    return 'diff-positive'
+  }
+  if (diffValue < 0) {
+    return 'diff-negative'
+  }
+  return 'diff-neutral'
+}
 
 // BMIの計算（設定された身長を使用、設定がない場合は170cmをデフォルトとする）
 const bmi = computed(() => {
@@ -161,6 +270,12 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}kg', { value: '0.0' })"
             />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('weight')"
+              :formatted-previous-value="formatPreviousValue('weight')"
+              :formatted-diff-value="formatDiffValue('weight')"
+              :diff-class="getDiffClass('weight')"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('体脂肪率') }}</label>
@@ -168,6 +283,12 @@ function toggleExpand() {
               v-model.number="bodyFatPercentage"
               type="number"
               :placeholder="$t('{value}%', { value: '0.0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('bodyFatPercentage')"
+              :formatted-previous-value="formatPreviousValue('bodyFatPercentage')"
+              :formatted-diff-value="formatDiffValue('bodyFatPercentage')"
+              :diff-class="getDiffClass('bodyFatPercentage')"
             />
           </div>
         </div>
@@ -190,6 +311,12 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}kg', { value: '0.0' })"
             />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('muscleMass')"
+              :formatted-previous-value="formatPreviousValue('muscleMass')"
+              :formatted-diff-value="formatDiffValue('muscleMass')"
+              :diff-class="getDiffClass('muscleMass')"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('内臓脂肪レベル') }}</label>
@@ -197,6 +324,12 @@ function toggleExpand() {
               v-model="visceralFatLevel"
               type="number"
               placeholder="0"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('visceralFatLevel')"
+              :formatted-previous-value="formatPreviousValue('visceralFatLevel')"
+              :formatted-diff-value="formatDiffValue('visceralFatLevel')"
+              :diff-class="getDiffClass('visceralFatLevel')"
             />
           </div>
         </div>
@@ -207,6 +340,12 @@ function toggleExpand() {
               v-model="basalMetabolicRate"
               type="number"
               :placeholder="$t('{value}kcal/日', { value: '0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('basalMetabolicRate')"
+              :formatted-previous-value="formatPreviousValue('basalMetabolicRate')"
+              :formatted-diff-value="formatDiffValue('basalMetabolicRate')"
+              :diff-class="getDiffClass('basalMetabolicRate')"
             />
           </div>
         </div>
@@ -223,6 +362,12 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}%', { value: '0.0' })"
             />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('bodyWaterPercentage')"
+              :formatted-previous-value="formatPreviousValue('bodyWaterPercentage')"
+              :formatted-diff-value="formatDiffValue('bodyWaterPercentage')"
+              :diff-class="getDiffClass('bodyWaterPercentage')"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('骨塩量') }}</label>
@@ -230,6 +375,12 @@ function toggleExpand() {
               v-model.number="boneMass"
               type="number"
               :placeholder="$t('{value}kg', { value: '0.0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('boneMass')"
+              :formatted-previous-value="formatPreviousValue('boneMass')"
+              :formatted-diff-value="formatDiffValue('boneMass')"
+              :diff-class="getDiffClass('boneMass')"
             />
           </div>
         </div>
@@ -240,6 +391,12 @@ function toggleExpand() {
               v-model.number="proteinPercentage"
               type="number"
               :placeholder="$t('{value}%', { value: '0.0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('proteinPercentage')"
+              :formatted-previous-value="formatPreviousValue('proteinPercentage')"
+              :formatted-diff-value="formatDiffValue('proteinPercentage')"
+              :diff-class="getDiffClass('proteinPercentage')"
             />
           </div>
         </div>
@@ -256,6 +413,12 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}mmHg', { value: '0' })"
             />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('systolicBloodPressure')"
+              :formatted-previous-value="formatPreviousValue('systolicBloodPressure')"
+              :formatted-diff-value="formatDiffValue('systolicBloodPressure')"
+              :diff-class="getDiffClass('systolicBloodPressure')"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('最低血圧') }}</label>
@@ -263,6 +426,12 @@ function toggleExpand() {
               v-model="diastolicBloodPressure"
               type="number"
               :placeholder="$t('{value}mmHg', { value: '0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('diastolicBloodPressure')"
+              :formatted-previous-value="formatPreviousValue('diastolicBloodPressure')"
+              :formatted-diff-value="formatDiffValue('diastolicBloodPressure')"
+              :diff-class="getDiffClass('diastolicBloodPressure')"
             />
           </div>
         </div>
@@ -273,6 +442,12 @@ function toggleExpand() {
               v-model="heartRate"
               type="number"
               :placeholder="$t('{value}bpm', { value: '0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('heartRate')"
+              :formatted-previous-value="formatPreviousValue('heartRate')"
+              :formatted-diff-value="formatDiffValue('heartRate')"
+              :diff-class="getDiffClass('heartRate')"
             />
           </div>
         </div>
@@ -289,6 +464,12 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}歩', { value: '0' })"
             />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('steps')"
+              :formatted-previous-value="formatPreviousValue('steps')"
+              :formatted-diff-value="formatDiffValue('steps')"
+              :diff-class="getDiffClass('steps')"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('運動時間') }}</label>
@@ -296,6 +477,12 @@ function toggleExpand() {
               v-model="exerciseMinutes"
               type="number"
               :placeholder="$t('{value}分', { value: '0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('exerciseMinutes')"
+              :formatted-previous-value="formatPreviousValue('exerciseMinutes')"
+              :formatted-diff-value="formatDiffValue('exerciseMinutes')"
+              :diff-class="getDiffClass('exerciseMinutes')"
             />
           </div>
         </div>
@@ -307,6 +494,12 @@ function toggleExpand() {
               type="number"
               :placeholder="$t('{value}時間', { value: '0.0' })"
             />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('sleepHours')"
+              :formatted-previous-value="formatPreviousValue('sleepHours')"
+              :formatted-diff-value="formatDiffValue('sleepHours')"
+              :diff-class="getDiffClass('sleepHours')"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('水分摂取量') }}</label>
@@ -314,6 +507,12 @@ function toggleExpand() {
               v-model="waterIntake"
               type="number"
               :placeholder="$t('{value}ml', { value: '0' })"
+            />
+            <HealthDataPreviousRecord
+              :previous-value="getPreviousValue('waterIntake')"
+              :formatted-previous-value="formatPreviousValue('waterIntake')"
+              :formatted-diff-value="formatDiffValue('waterIntake')"
+              :diff-class="getDiffClass('waterIntake')"
             />
           </div>
         </div>

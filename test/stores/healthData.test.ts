@@ -46,6 +46,28 @@ describe('useHealthDataStore', () => {
       })
     })
 
+    describe('getPreviousHealthDataByDateString', () => {
+      it('指定日より前の直近データを返す', () => {
+        const store = useHealthDataStore()
+        const older = createHealthData({ date: '2025-12-10', weight: 68 })
+        const recent = createHealthData({ date: '2025-12-14', weight: 70 })
+        const sameDay = createHealthData({ date: '2025-12-15', weight: 72 })
+        store.healthDataList = [older, recent, sameDay]
+
+        const result = store.getPreviousHealthDataByDateString('2025-12-15')
+        expect(result).toBeDefined()
+        expect(result!.date).toBe('2025-12-14')
+      })
+
+      it('前回データがない場合はundefinedを返す', () => {
+        const store = useHealthDataStore()
+        store.healthDataList = [createHealthData({ date: '2025-12-15', weight: 72 })]
+
+        const result = store.getPreviousHealthDataByDateString('2025-12-15')
+        expect(result).toBeUndefined()
+      })
+    })
+
     describe('getHealthDataByMonth', () => {
       it('指定月のデータを日付順で返す', () => {
         const store = useHealthDataStore()
