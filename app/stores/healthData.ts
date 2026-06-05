@@ -46,9 +46,15 @@ export const useHealthDataStore = defineStore('healthData', {
      */
     getPreviousHealthDataByDateString: (state) => {
       return (dateString: string) => {
-        return state.healthDataList
-          .filter(data => data.date < dateString)
-          .sort((a, b) => b.date.localeCompare(a.date))[0]
+        let previousData: HealthData | undefined
+
+        for (const data of state.healthDataList) {
+          if (data.date < dateString && (!previousData || data.date > previousData.date)) {
+            previousData = data
+          }
+        }
+
+        return previousData
       }
     },
 

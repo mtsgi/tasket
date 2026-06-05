@@ -438,6 +438,8 @@ export default {
   '運動時間': 'Exercise Time',
   '消費カロリー': 'Calories Burned',
   '水分摂取量': 'Water Intake',
+  '前回': 'Previous',
+  '前回記録なし': 'No previous record',
   '時間': 'hours',
   '歩': 'steps',
   '総歩数': 'Total Steps',
