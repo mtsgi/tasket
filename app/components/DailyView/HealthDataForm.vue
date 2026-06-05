@@ -98,8 +98,7 @@ const currentFieldValues = computed<Record<NumericFieldKey, number | undefined>>
 const previousHealthData = computed(() => healthDataStore.getPreviousHealthDataByDateString(props.date))
 
 function getPreviousValue(field: NumericFieldKey): number | undefined {
-  const value = previousHealthData.value?.[field]
-  return typeof value === 'number' ? value : undefined
+  return previousHealthData.value?.[field]
 }
 
 function getDiffValue(field: NumericFieldKey): number | undefined {
