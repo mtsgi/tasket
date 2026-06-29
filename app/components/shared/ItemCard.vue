@@ -98,7 +98,7 @@ const executionStatus = computed(() => {
 <template>
   <div
     class="item-card card"
-    :class="[`type-${item.type}`, { completed: item.is_completed }]"
+    :class="[`type-${item.type}`, { completed: item.is_completed, important: item.is_important }]"
   >
     <div class="item-header">
       <UiCheckbox
@@ -277,6 +277,8 @@ const executionStatus = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+$important-color: #ffc107; // 重要タスクの強調色（アンバー/ゴールド）
+
 .item-card {
   display: flex;
   align-items: center;
@@ -294,6 +296,19 @@ const executionStatus = computed(() => {
 
   &.type-income {
     border-left: 3px solid #4caf50;
+  }
+
+  // 重要タスクの強調スタイル
+  &.important {
+    border-left: 4px solid $important-color;
+    background: rgba($important-color, 0.07);
+    box-shadow: 0 2px 12px rgba($important-color, 0.18);
+
+    // ダークモード対応
+    .dark-mode & {
+      background: rgba($important-color, 0.1);
+      box-shadow: 0 2px 12px rgba($important-color, 0.25);
+    }
   }
 }
 
@@ -520,7 +535,7 @@ const executionStatus = computed(() => {
   flex-shrink: 0;
 
   .important {
-    color: #ffc107;
+    color: $important-color;
   }
 }
 
