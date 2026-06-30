@@ -522,6 +522,7 @@ async function handleSubmit() {
           type="number"
           :min="0"
           :placeholder="$t('金額を入力')"
+          @keydown.enter.prevent="handleSubmit"
         />
       </div>
 

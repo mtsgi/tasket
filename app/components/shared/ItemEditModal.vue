@@ -488,7 +488,7 @@ function handleAlbumPhotoDeleted(index: number) {
           :min="0"
           :placeholder="$t('金額を入力')"
           :disabled="type === 'todo'"
-          @keydown.enter="handleSubmit"
+          @keydown.enter.prevent="handleSubmit"
         />
       </div>
     </form>
