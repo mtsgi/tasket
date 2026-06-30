@@ -22,6 +22,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  /** Enterキーでサジェスト選択なしに確定した際に発行 */
+  'confirm': []
 }>()
 
 // 候補リストの表示状態
@@ -95,6 +97,21 @@ function selectSuggestion(suggestion: string) {
  * キーボード操作の処理
  */
 function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    const highlighted = selectedIndex.value >= 0 ? filteredSuggestions.value[selectedIndex.value] : undefined
+    if (showSuggestions.value && highlighted) {
+      // サジェストが選択中の場合はそちらを確定
+      event.preventDefault()
+      selectSuggestion(highlighted)
+    }
+    else {
+      // サジェスト選択なしのEnter → 確定イベントを発行
+      event.preventDefault()
+      emit('confirm')
+    }
+    return
+  }
+
   if (!showSuggestions.value || filteredSuggestions.value.length === 0) {
     return
   }
@@ -110,12 +127,6 @@ function handleKeydown(event: KeyboardEvent) {
     case 'ArrowUp':
       event.preventDefault()
       selectedIndex.value = Math.max(selectedIndex.value - 1, -1)
-      break
-    case 'Enter':
-      if (selectedIndex.value >= 0 && filteredSuggestions.value[selectedIndex.value]) {
-        event.preventDefault()
-        selectSuggestion(filteredSuggestions.value[selectedIndex.value]!)
-      }
       break
     case 'Escape':
       showSuggestions.value = false

@@ -286,6 +286,7 @@ function handleAlbumPhotoDeleted(index: number) {
           :suggestions="autocompleteSuggestions"
           :placeholder="$t('アイテム名を入力')"
           required
+          @confirm="handleSubmit"
         />
       </div>
 
@@ -486,6 +487,7 @@ function handleAlbumPhotoDeleted(index: number) {
           :min="0"
           :placeholder="$t('金額を入力')"
           :disabled="type === 'todo'"
+          @keydown.enter.prevent="handleSubmit"
         />
       </div>
     </form>

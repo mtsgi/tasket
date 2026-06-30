@@ -307,6 +307,7 @@ async function handleSubmit() {
           id="time"
           v-model="time"
           type="time"
+          @keydown.enter.prevent
         />
       </div>
 
@@ -317,6 +318,7 @@ async function handleSubmit() {
           :suggestions="autocompleteSuggestions"
           :placeholder="$t('アイテム名を入力')"
           required
+          @confirm="handleSubmit"
         />
       </div>
 
@@ -384,6 +386,7 @@ async function handleSubmit() {
                 v-model.number="mealCalories"
                 type="number"
                 :placeholder="$t('{value}kcal', { value: '0' })"
+                @keydown.enter.prevent
               />
             </div>
           </div>
@@ -396,6 +399,7 @@ async function handleSubmit() {
                 type="number"
                 step="0.1"
                 :placeholder="$t('{value}g', { value: '0' })"
+                @keydown.enter.prevent
               />
             </div>
             <div class="form-group">
@@ -405,6 +409,7 @@ async function handleSubmit() {
                 type="number"
                 step="0.1"
                 :placeholder="$t('{value}g', { value: '0' })"
+                @keydown.enter.prevent
               />
             </div>
             <div class="form-group">
@@ -414,6 +419,7 @@ async function handleSubmit() {
                 type="number"
                 step="0.1"
                 :placeholder="$t('{value}g', { value: '0' })"
+                @keydown.enter.prevent
               />
             </div>
           </div>
@@ -516,6 +522,7 @@ async function handleSubmit() {
           type="number"
           :min="0"
           :placeholder="$t('金額を入力')"
+          @keydown.enter.prevent="handleSubmit"
         />
       </div>
 
