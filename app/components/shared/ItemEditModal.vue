@@ -502,7 +502,6 @@ function applyCalculatedAmount(value: number) {
             variant="secondary"
             class="calculator-button"
             :disabled="type === 'todo'"
-            :aria-label="$t('電卓を開く')"
             @click="showCalculator = true"
           >
             <Icon name="mdi:calculator-variant-outline" />

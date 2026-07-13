@@ -17,7 +17,7 @@ const emit = defineEmits<{
 const display = ref('0')
 const hasError = ref(false)
 const operators = ['+', '-', '×', '÷']
-const operandSplitter = /[+\-×÷]/
+const operandSplitter = new RegExp(`[${operators.map(escapeRegExp).join('')}]`)
 
 const keypadRows = [
   ['C', '⌫', '÷'],
@@ -199,6 +199,13 @@ function normalizeOperatorToken(token: string): string {
 }
 
 /**
+ * RegExp文字列用に演算子をエスケープ
+ */
+function escapeRegExp(token: string): string {
+  return token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
  * 式を評価して表示へ反映
  */
 function calculate() {
@@ -311,6 +318,7 @@ function calculate() {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 
   &:last-child {
+    // 最終行は「0 . =」の3キー構成
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

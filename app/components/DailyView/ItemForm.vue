@@ -531,7 +531,6 @@ async function handleSubmit() {
           <UiButton
             variant="secondary"
             class="calculator-button"
-            :aria-label="$t('電卓を開く')"
             @click="showCalculator = true"
           >
             <Icon name="mdi:calculator-variant-outline" />
