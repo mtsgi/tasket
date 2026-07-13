@@ -35,6 +35,7 @@ const mealMemo = ref('')
 // アルバム機能の状態（TODO用の写真）
 const albumPhotos = ref<string[]>([])
 const showPhotoGallery = ref(false)
+const showCalculator = ref(false)
 
 const isSubmitting = ref(false)
 
@@ -67,6 +68,7 @@ const autocompleteSuggestions = computed(() => {
 function selectType(newType: ItemType) {
   type.value = newType
   showPresetDropdown.value = false // 種別を変更したらドロップダウンを閉じる
+  showCalculator.value = false
 }
 
 /**
@@ -141,6 +143,14 @@ function handleAlbumPhotoAdded(photo: string) {
 function handleAlbumPhotoDeleted(index: number) {
   // Proxyオブジェクトを避けるため、filterを使用して新しい配列を作成
   albumPhotos.value = albumPhotos.value.filter((_, i) => i !== index)
+}
+
+/**
+ * 電卓結果を金額へ反映
+ */
+function applyCalculatedAmount(value: number) {
+  amount.value = value
+  showCalculator.value = false
 }
 
 /**
@@ -510,13 +520,23 @@ async function handleSubmit() {
         class="form-group"
       >
         <label for="amount">{{ $t('金額') }}</label>
-        <UiInput
-          id="amount"
-          v-model="amount"
-          type="number"
-          :min="0"
-          :placeholder="$t('金額を入力')"
-        />
+        <div class="amount-input-with-calculator">
+          <UiInput
+            id="amount"
+            v-model="amount"
+            type="number"
+            :min="0"
+            :placeholder="$t('金額を入力')"
+          />
+          <UiButton
+            variant="secondary"
+            class="calculator-button"
+            @click="showCalculator = true"
+          >
+            <Icon name="mdi:calculator-variant-outline" />
+            {{ $t('電卓') }}
+          </UiButton>
+        </div>
       </div>
 
       <UiButton
@@ -538,6 +558,13 @@ async function handleSubmit() {
       :title="$t('アルバム')"
       @close="showPhotoGallery = false"
       @delete-photo="handleAlbumPhotoDeleted"
+    />
+
+    <UiAmountCalculator
+      :show="showCalculator"
+      :initial-value="amount"
+      @close="showCalculator = false"
+      @apply="applyCalculatedAmount"
     />
   </section>
 </template>
@@ -691,6 +718,24 @@ async function handleSubmit() {
     &:hover {
       background: #333;
     }
+  }
+
+}
+
+.amount-input-with-calculator {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  :deep(.ui-input) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .calculator-button {
+    min-height: 44px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }
 
