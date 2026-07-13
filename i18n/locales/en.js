@@ -180,6 +180,10 @@ export default {
   '種別': 'Type',
   '予定時刻': 'Scheduled Time',
   'プリセットから選択': 'Select from Presets',
+  '電卓': 'Calculator',
+  '電卓を開く': 'Open calculator',
+  '計算式': 'Expression',
+  '計算結果を反映': 'Apply result',
 
   // Item card
   '完了済み': 'Completed',

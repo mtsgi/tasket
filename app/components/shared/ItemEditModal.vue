@@ -50,6 +50,7 @@ const mealMemo = ref(props.item.mealLog?.memo || '')
 // アルバム機能の状態（TODO・支出・収入用の写真）
 const albumPhotos = ref<string[]>(props.item.photos || [])
 const showPhotoGallery = ref(false)
+const showCalculator = ref(false)
 
 const isSubmitting = ref(false)
 
@@ -63,6 +64,7 @@ const autocompleteSuggestions = computed(() => {
  */
 function selectType(newType: ItemType) {
   type.value = newType
+  showCalculator.value = false
 }
 
 /**
@@ -188,6 +190,14 @@ function handleAlbumPhotoAdded(photo: string) {
 function handleAlbumPhotoDeleted(index: number) {
   // Proxyオブジェクトを避けるため、filterを使用して新しい配列を作成
   albumPhotos.value = albumPhotos.value.filter((_, i) => i !== index)
+}
+
+/**
+ * 電卓結果を金額へ反映
+ */
+function applyCalculatedAmount(value: number) {
+  amount.value = value
+  showCalculator.value = false
 }
 </script>
 
@@ -479,14 +489,26 @@ function handleAlbumPhotoDeleted(index: number) {
 
       <div class="form-group">
         <label for="edit-amount">{{ $t('金額') }}</label>
-        <UiInput
-          id="edit-amount"
-          v-model="amount"
-          type="number"
-          :min="0"
-          :placeholder="$t('金額を入力')"
-          :disabled="type === 'todo'"
-        />
+        <div class="amount-input-with-calculator">
+          <UiInput
+            id="edit-amount"
+            v-model="amount"
+            type="number"
+            :min="0"
+            :placeholder="$t('金額を入力')"
+            :disabled="type === 'todo'"
+          />
+          <UiButton
+            variant="secondary"
+            class="calculator-button"
+            :disabled="type === 'todo'"
+            :aria-label="$t('電卓を開く')"
+            @click="showCalculator = true"
+          >
+            <Icon name="mdi:calculator-variant-outline" />
+            {{ $t('電卓') }}
+          </UiButton>
+        </div>
       </div>
     </form>
     <template #footer>
@@ -521,6 +543,13 @@ function handleAlbumPhotoDeleted(index: number) {
       :title="$t('アルバム')"
       @close="showPhotoGallery = false"
       @delete-photo="handleAlbumPhotoDeleted"
+    />
+
+    <UiAmountCalculator
+      :show="showCalculator"
+      :initial-value="amount"
+      @close="showCalculator = false"
+      @apply="applyCalculatedAmount"
     />
   </UiModal>
 </template>
@@ -570,6 +599,17 @@ function handleAlbumPhotoDeleted(index: number) {
   .btn-clear {
     position: absolute;
     right: 8px;
+  }
+}
+
+.amount-input-with-calculator {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .calculator-button {
+    min-height: 44px;
+    white-space: nowrap;
   }
 }
 
