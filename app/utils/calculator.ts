@@ -67,7 +67,8 @@ function tokenizeExpression(expression: string): { numbers: number[], operators:
     }
 
     // 先頭または演算子の直後の - は符号として扱う
-    if (char === '-' && (i === 0 || operatorTokens.includes(expression[i - 1] ?? ''))) {
+    const previousChar = expression[i - 1]
+    if (char === '-' && (i === 0 || (previousChar !== undefined && operatorTokens.includes(previousChar)))) {
       current += char
       continue
     }
