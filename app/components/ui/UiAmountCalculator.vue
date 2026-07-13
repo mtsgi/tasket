@@ -173,7 +173,7 @@ function appendToken(token: string) {
     if (lastOperand.includes('.'))
       return
 
-    if (display.value === '0' || ['+', '-', '×', '÷'].includes(display.value.slice(-1))) {
+    if (display.value === '0' || operators.includes(display.value.slice(-1))) {
       display.value = display.value === '0'
         ? '0.'
         : `${display.value}0.`
@@ -239,7 +239,6 @@ function calculate() {
             :key="key"
             variant="secondary"
             class="keypad-button"
-            :class="{ equals: key === '=' }"
             @click="handleButtonClick(key)"
           >
             {{ key }}
