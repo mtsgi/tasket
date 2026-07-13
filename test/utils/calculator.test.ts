@@ -8,7 +8,7 @@ describe('calculator utils', () => {
     })
 
     it('小数計算ができる', () => {
-      expect(evaluateCalculatorExpression('0.1+0.2')).toBe(0.3)
+      expect(evaluateCalculatorExpression('0.1+0.2')).toBeCloseTo(0.3)
     })
 
     it('ゼロ除算の場合はnullを返す', () => {

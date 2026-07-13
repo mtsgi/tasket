@@ -27,6 +27,7 @@ const keypadRows = [
   ['0', '.', '='],
 ]
 
+// 計算済みの数値のみ反映可能にする（式の入力中は無効）
 const canApply = computed(() => !hasError.value && Number.isFinite(Number(display.value)))
 
 watch(
@@ -174,9 +175,10 @@ function appendToken(token: string) {
       return
 
     if (display.value === '0' || operators.includes(display.value.slice(-1))) {
-      display.value = display.value === '0'
-        ? '0.'
-        : `${display.value}0.`
+      if (display.value === '0')
+        display.value = '0.'
+      else
+        display.value = `${display.value}0.`
       return
     }
   }

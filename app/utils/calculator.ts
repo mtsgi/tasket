@@ -1,3 +1,5 @@
+const operatorTokens = ['+', '-', '*', '/']
+
 /**
  * 電卓入力式を評価して数値結果を返す
  */
@@ -50,12 +52,12 @@ export function backspaceCalculatorExpression(expression: string): string {
  */
 function tokenizeExpression(expression: string): { numbers: number[], operators: string[] } | null {
   const numbers: number[] = []
-  const operators: string[] = []
+  const parsedOperators: string[] = []
   let current = ''
 
   for (let i = 0; i < expression.length; i++) {
     const char = expression[i]
-    const isOperator = ['+', '-', '*', '/'].includes(char)
+    const isOperator = operatorTokens.includes(char)
 
     if (!isOperator) {
       if ((char < '0' || char > '9') && char !== '.')
@@ -65,7 +67,7 @@ function tokenizeExpression(expression: string): { numbers: number[], operators:
     }
 
     // 先頭または演算子の直後の - は符号として扱う
-    if (char === '-' && (i === 0 || ['+', '-', '*', '/'].includes(expression[i - 1] ?? ''))) {
+    if (char === '-' && (i === 0 || operatorTokens.includes(expression[i - 1] ?? ''))) {
       current += char
       continue
     }
@@ -78,7 +80,7 @@ function tokenizeExpression(expression: string): { numbers: number[], operators:
       return null
 
     numbers.push(parsedNumber)
-    operators.push(char)
+    parsedOperators.push(char)
     current = ''
   }
 
@@ -90,7 +92,7 @@ function tokenizeExpression(expression: string): { numbers: number[], operators:
     return null
 
   numbers.push(lastNumber)
-  return { numbers, operators }
+  return { numbers, operators: parsedOperators }
 }
 
 /**
