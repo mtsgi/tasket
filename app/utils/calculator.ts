@@ -104,7 +104,7 @@ function evaluateByPrecedence(
   if (numbers.length === 0)
     return null
 
-  const nextNumbers = [numbers[0] as number]
+  const nextNumbers = [numbers[0]]
   const nextOperators: string[] = []
 
   for (let i = 0; i < operators.length; i++) {

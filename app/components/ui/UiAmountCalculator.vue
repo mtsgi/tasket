@@ -16,6 +16,8 @@ const emit = defineEmits<{
 
 const display = ref('0')
 const hasError = ref(false)
+const operators = ['+', '-', '×', '÷']
+const operandSplitter = /[+\-×÷]/
 
 const keypadRows = [
   ['C', '⌫', '÷'],
@@ -110,7 +112,7 @@ function handleKeydown(event: KeyboardEvent) {
 
   if (['+', '-', '*', '/'].includes(key)) {
     event.preventDefault()
-    appendToken(key === '*' ? '×' : key === '/' ? '÷' : key)
+    appendToken(normalizeOperatorToken(key))
   }
 }
 
@@ -149,8 +151,7 @@ function appendToken(token: string) {
     hasError.value = false
   }
 
-  const normalizedToken = token === '*' ? '×' : token === '/' ? '÷' : token
-  const operators = ['+', '-', '×', '÷']
+  const normalizedToken = normalizeOperatorToken(token)
   const isOperator = operators.includes(normalizedToken)
 
   if (isOperator) {
@@ -168,7 +169,7 @@ function appendToken(token: string) {
   }
 
   if (normalizedToken === '.') {
-    const lastOperand = display.value.split(/[+\-×÷]/).at(-1) ?? ''
+    const lastOperand = display.value.split(operandSplitter).at(-1) ?? ''
     if (lastOperand.includes('.'))
       return
 
@@ -186,6 +187,13 @@ function appendToken(token: string) {
   }
 
   display.value += normalizedToken
+}
+
+/**
+ * 演算子トークンを表示用の記号へ正規化
+ */
+function normalizeOperatorToken(token: string): string {
+  return token === '*' ? '×' : token === '/' ? '÷' : token
 }
 
 /**
