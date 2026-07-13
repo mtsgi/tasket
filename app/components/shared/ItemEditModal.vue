@@ -606,9 +606,15 @@ function applyCalculatedAmount(value: number) {
   gap: 8px;
   align-items: center;
 
+  :deep(.ui-input) {
+    flex: 1;
+    min-width: 0;
+  }
+
   .calculator-button {
     min-height: 44px;
     white-space: nowrap;
+    flex-shrink: 0;
   }
 }
 

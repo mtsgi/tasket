@@ -316,11 +316,6 @@ function calculate() {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-
-  &:last-child {
-    // 最終行は「0 . =」の3キー構成
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 .keypad-button {

@@ -720,15 +720,22 @@ async function handleSubmit() {
     }
   }
 
-  .amount-input-with-calculator {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+}
 
-    .calculator-button {
-      min-height: 44px;
-      white-space: nowrap;
-    }
+.amount-input-with-calculator {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  :deep(.ui-input) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .calculator-button {
+    min-height: 44px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }
 
