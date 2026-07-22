@@ -7,6 +7,7 @@ import { useSettingsStore } from '~/stores/settings'
 import { useLockStore } from '~/stores/lock'
 import PinInput from '~/components/shared/PinInput.vue'
 import PresetManager from '~/components/settings/PresetManager.vue'
+import TitleNormalizeTool from '~/components/settings/TitleNormalizeTool.vue'
 import { useRouter } from 'vue-router'
 
 const settingsStore = useSettingsStore()
@@ -475,6 +476,11 @@ function goBack() {
     <!-- プリセット管理 -->
     <section class="settings-section card">
       <PresetManager />
+    </section>
+
+    <!-- 表記揺れ修正ツール -->
+    <section class="settings-section card">
+      <TitleNormalizeTool />
     </section>
 
     <!-- ロック設定 -->
