@@ -112,7 +112,7 @@ async function handleSubmit() {
       executed_at: executedAt,
       notes: notes.value.trim(),
       mealLog: mealLogData,
-      photos: type.value === 'todo' && albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
+      photos: albumPhotos.value.length > 0 ? albumPhotos.value : undefined,
       is_important: type.value === 'todo' ? isImportant.value : false,
     })
 
