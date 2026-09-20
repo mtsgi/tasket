@@ -253,5 +253,61 @@ describe('useItemsStore', () => {
         expect(store.items[0]!.id).toBe('item-2')
       })
     })
+
+    describe('bulkRenameItems', () => {
+      it('指定タイトルのアイテムをすべて新しいタイトルに変更する', async () => {
+        const store = useItemsStore()
+        store.items = [
+          createItem({ id: 'item-1', title: '昼食' }),
+          createItem({ id: 'item-2', title: '昼食' }),
+          createItem({ id: 'item-3', title: '夕食' }),
+        ]
+
+        const count = await store.bulkRenameItems('昼食', 'ランチ')
+
+        expect(count).toBe(2)
+        expect(store.items[0]!.title).toBe('ランチ')
+        expect(store.items[1]!.title).toBe('ランチ')
+        expect(store.items[2]!.title).toBe('夕食')
+      })
+
+      it('一致するアイテムがない場合は0を返す', async () => {
+        const store = useItemsStore()
+        store.items = [
+          createItem({ id: 'item-1', title: '夕食' }),
+        ]
+
+        const count = await store.bulkRenameItems('昼食', 'ランチ')
+        expect(count).toBe(0)
+      })
+    })
+  })
+
+  describe('allUniqueTitles getter', () => {
+    it('出現回数の多い順にタイトルを返す', () => {
+      const store = useItemsStore()
+      store.items = [
+        createItem({ title: '昼食', scheduled_at: new Date('2025-12-01T12:00:00') }),
+        createItem({ title: '昼食', scheduled_at: new Date('2025-12-02T12:00:00') }),
+        createItem({ title: '朝食', scheduled_at: new Date('2025-12-01T08:00:00') }),
+      ]
+
+      const titles = store.allUniqueTitles
+      expect(titles[0]).toBe('昼食')
+      expect(titles[1]).toBe('朝食')
+    })
+
+    it('空のタイトルは除外する', () => {
+      const store = useItemsStore()
+      store.items = [
+        createItem({ title: '' }),
+        createItem({ title: '  ' }),
+        createItem({ title: '昼食' }),
+      ]
+
+      const titles = store.allUniqueTitles
+      expect(titles).toHaveLength(1)
+      expect(titles[0]).toBe('昼食')
+    })
   })
 })
