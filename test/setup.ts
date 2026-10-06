@@ -7,6 +7,9 @@ import { vi } from 'vitest'
 // ~/utils/db モジュール全体をモック化
 // IndexedDB が存在しないテスト環境で Store テストを可能にする
 vi.mock('~/utils/db', () => ({
+  getAllDailyActivities: vi.fn().mockResolvedValue([]),
+  recordDailyActivity: vi.fn().mockResolvedValue(false),
+  saveDailyActivity: vi.fn().mockResolvedValue(undefined),
   // Item 関連
   getAllItems: vi.fn().mockResolvedValue([]),
   getItemById: vi.fn().mockResolvedValue(undefined),

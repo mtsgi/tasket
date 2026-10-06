@@ -15,6 +15,8 @@ import {
   updateBackupHistory,
 } from '~/utils/db'
 import { encrypt } from '~/utils/encryption'
+import { parseDailyActivities } from '~/utils/streak'
+import { useStreakStore } from '~/stores/streak'
 import { S3CompatibleAdapter } from '~/utils/cloudAdapters/S3CompatibleAdapter'
 import { WebDAVAdapter } from '~/utils/cloudAdapters/WebDAVAdapter'
 import { DropboxAdapter } from '~/utils/cloudAdapters/DropboxAdapter'
@@ -22,7 +24,7 @@ import { AzureBlobAdapter } from '~/utils/cloudAdapters/AzureBlobAdapter'
 import type { BaseCloudAdapter } from '~/utils/cloudAdapters/BaseCloudAdapter'
 
 // バックアップデータのバージョン（データベースバージョンと一致させる）
-const BACKUP_DATA_VERSION = 7
+const BACKUP_DATA_VERSION = 9
 
 export const useCloudBackupStore = defineStore('cloudBackup', {
   /**
@@ -292,16 +294,21 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
           const itemsStore = useItemsStore()
           await itemsStore.fetchItems()
 
-          const { getAllRoutines, getAllRoutineLogs, getAllDayTitles, getAllAppSettings, getAllHealthData } = await import('~/utils/db')
+          const { getAllRoutines, getAllRoutineLogs, getAllDayTitles, getAllAppSettings, getAllHealthData, getAllDailyActivities } = await import('~/utils/db')
           const routines = await getAllRoutines()
           const routineLogs = await getAllRoutineLogs()
           const dayTitles = await getAllDayTitles()
           const appSettings = await getAllAppSettings()
           const healthData = await getAllHealthData()
+          const dailyActivities = await getAllDailyActivities()
 
           const backupData = {
             version: BACKUP_DATA_VERSION,
             exportedAt: new Date().toISOString(),
+            dailyActivities: dailyActivities.map(activity => ({
+              ...activity,
+              firstOpenedAt: activity.firstOpenedAt.toISOString(),
+            })),
             items: itemsStore.items.map(item => ({
               ...item,
               scheduled_at: item.scheduled_at.toISOString(),
@@ -389,10 +396,15 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         // クラウドからダウンロード
         const adapter = this.getAdapter(config)
         const data = await adapter.download(remotePath)
+        const dailyActivities = parseDailyActivities(data.dailyActivities)
 
         // 既存のユーザーデータをクリア（競合を防ぐため復元前に削除）
-        const { clearUserData, addItem, addRoutine, saveRoutineLog, saveAppSettings, saveHealthData } = await import('~/utils/db')
+        const { clearUserData, addItem, addRoutine, saveRoutineLog, saveAppSettings, saveHealthData, saveDailyActivity } = await import('~/utils/db')
         await clearUserData()
+        for (const activity of dailyActivities) await saveDailyActivity(activity)
+        const streakStore = useStreakStore()
+        streakStore.showDailyModal = false
+        await streakStore.refreshHistory()
 
         // データをインポート
         const itemsStore = useItemsStore()
@@ -476,14 +488,13 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
               updated_at: new Date(healthDataItem.updated_at),
             })
           }
-          // 健康データストアを再読み込み
-          const healthDataStore = useHealthDataStore()
-          await healthDataStore.fetchHealthData()
         }
 
         // 各ストアを再読み込みしてUIに反映
+        await useHealthDataStore().fetchHealthData()
         await itemsStore.fetchItems()
         await routinesStore.fetchAllRoutines()
+        await routinesStore.fetchAllRoutineLogs()
       }
       catch (e) {
         this.error = e instanceof Error ? e.message : 'データの復元に失敗しました'

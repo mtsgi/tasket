@@ -51,6 +51,7 @@ vi.mock('~/stores/healthData', () => ({
 vi.mock('~/stores/routines', () => ({
   useRoutinesStore: vi.fn(() => ({
     fetchAllRoutines: vi.fn().mockResolvedValue(undefined),
+    fetchAllRoutineLogs: vi.fn().mockResolvedValue(undefined),
   })),
 }))
 
@@ -110,6 +111,49 @@ describe('useCloudBackupStore', () => {
   })
 
   describe('restore', () => {
+    it('利用履歴の日時を復元し、ストリークを再読み込みする', async () => {
+      const { getCloudBackupConfigById, saveDailyActivity, getAllDailyActivities } = await import('~/utils/db')
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+      const activity = { date: '2026-10-06', firstOpenedAt: '2026-10-06T12:00:00Z', dateChangeLine: 4 }
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(createMockAdapter({
+        ...createBackupData(), version: 9, dailyActivities: [activity],
+      }))
+      await store.restore('config-1', '/backup/test.json')
+      expect(saveDailyActivity).toHaveBeenCalledWith({ ...activity, firstOpenedAt: new Date(activity.firstOpenedAt) })
+      expect(getAllDailyActivities).toHaveBeenCalled()
+    })
+
+    it('不正な利用履歴は既存データを消す前に拒否する', async () => {
+      const { getCloudBackupConfigById, clearUserData } = await import('~/utils/db')
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(createMockAdapter({
+        ...createBackupData(), dailyActivities: [{ date: 'invalid' }],
+      }))
+      await expect(store.restore('config-1', '/backup/test.json')).rejects.toThrow('Invalid daily activity')
+      expect(clearUserData).not.toHaveBeenCalled()
+    })
+
+    it('旧バックアップの復元では利用履歴と通知をクリアし、健康記録も再読み込みする', async () => {
+      const { getCloudBackupConfigById, getAllDailyActivities } = await import('~/utils/db')
+      const { useStreakStore } = await import('~/stores/streak')
+      const { useHealthDataStore } = await import('~/stores/healthData')
+      const health = useHealthDataStore()
+      vi.mocked(useHealthDataStore).mockReturnValue(health)
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+      vi.mocked(getAllDailyActivities).mockResolvedValue([])
+      const streak = useStreakStore()
+      streak.dailyActivities = [{ date: '2026-10-06', firstOpenedAt: new Date(), dateChangeLine: 4 }]
+      streak.showDailyModal = true
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(createMockAdapter(createBackupData()))
+      await store.restore('config-1', '/backup/test.json')
+      expect(streak.dailyActivities).toEqual([])
+      expect(streak.showDailyModal).toBe(false)
+      expect(health.fetchHealthData).toHaveBeenCalledTimes(1)
+    })
+
     it('完了済みTodoアイテムの完了状態を正しく復元する', async () => {
       const { getCloudBackupConfigById, addItem } = await import('~/utils/db')
       vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
@@ -263,6 +307,7 @@ describe('useCloudBackupStore', () => {
       const mockFetchAllRoutines = vi.fn().mockResolvedValue(undefined)
       vi.mocked(useRoutinesStore).mockReturnValue({
         fetchAllRoutines: mockFetchAllRoutines,
+        fetchAllRoutineLogs: vi.fn().mockResolvedValue(undefined),
       } as unknown as ReturnType<typeof useRoutinesStore>)
 
       const store = useCloudBackupStore()
@@ -274,5 +319,22 @@ describe('useCloudBackupStore', () => {
 
       expect(mockFetchAllRoutines).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('クラウドバックアップに利用履歴をISO日時で含める', async () => {
+    const { getCloudBackupConfigById, getAllDailyActivities } = await import('~/utils/db')
+    vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+    vi.mocked(getAllDailyActivities).mockResolvedValue([{
+      date: '2026-10-06', firstOpenedAt: new Date('2026-10-06T12:00:00Z'), dateChangeLine: 4,
+    }])
+    const store = useCloudBackupStore()
+    const adapter = createMockAdapter(createBackupData())
+    vi.mocked(adapter.upload).mockResolvedValue('/backup/test.json')
+    vi.spyOn(store, 'getAdapter').mockReturnValue(adapter)
+    await store.backup('config-1')
+    expect(adapter.upload).toHaveBeenCalledWith(expect.objectContaining({
+      version: 9,
+      dailyActivities: [{ date: '2026-10-06', firstOpenedAt: '2026-10-06T12:00:00.000Z', dateChangeLine: 4 }],
+    }), expect.any(String))
   })
 })

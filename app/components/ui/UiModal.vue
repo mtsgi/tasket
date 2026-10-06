@@ -8,6 +8,7 @@ defineProps<{
   title?: string
   /** 表示状態 */
   show?: boolean
+  dark?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,6 +31,7 @@ function handleOverlayClick(event: MouseEvent) {
       <div
         v-if="show"
         class="ui-modal-overlay"
+        :class="{ 'dark-mode': dark }"
         @click="handleOverlayClick"
       >
         <div class="ui-modal">
