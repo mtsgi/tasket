@@ -3,6 +3,7 @@
  * アプリケーション内のすべてのテキストを定義
  */
 export default {
+  '利用通知を再表示': '利用通知を再表示',
   // Daily activity and recording streaks
   '連続記録': '連続記録',
   'Tasket利用': 'Tasket利用',

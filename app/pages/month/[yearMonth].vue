@@ -171,8 +171,6 @@ watch(yearMonthParam, async () => {
       </button>
     </header>
 
-    <StreakCard :year-month="yearMonthParam" />
-
     <div class="calendar-section">
       <div class="calendar-header-actions">
         <button
@@ -190,6 +188,8 @@ watch(yearMonthParam, async () => {
         @select-date="goToDay"
       />
     </div>
+
+    <StreakCard :year-month="yearMonthParam" />
 
     <CalendarSettings
       :show="showCalendarSettings"

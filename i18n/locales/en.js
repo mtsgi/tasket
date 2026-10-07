@@ -3,6 +3,7 @@
  * English translations for all application text
  */
 export default {
+  '利用通知を再表示': 'Show daily check-in again',
   // Daily activity and recording streaks
   '連続記録': 'Recording streaks',
   'Tasket利用': 'Tasket usage',

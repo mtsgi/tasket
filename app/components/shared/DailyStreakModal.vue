@@ -33,7 +33,7 @@ function close() {
         class="daily-streak__icon"
         aria-hidden="true"
       >
-        {{ streakStore.usage.current >= 30 ? '🏆' : '🔥' }}
+        <Icon :name="streakStore.usage.current >= 30 ? 'mdi:trophy' : 'mdi:fire'" />
       </div>
       <p>{{ t('今日もTasketを開きました') }}</p>
       <p>{{ t('この調子で毎日の記録を続けましょう') }}</p>
@@ -54,6 +54,6 @@ function close() {
 .daily-streak {
   text-align: center;
   p { margin: 12px 0; }
-  &__icon { font-size: 3rem; }
+  &__icon { font-size: 3rem; color: #d86a24; }
 }
 </style>
