@@ -139,6 +139,7 @@ async function retryRecords() {
               :aria-label="t(day.recorded ? '利用済み' : '未利用')"
             >
               <Icon
+                :key="day.recorded ? 'recorded' : 'pending'"
                 :name="day.recorded ? 'mdi:emoticon-excited-outline' : 'mdi:circle-outline'"
                 aria-hidden="true"
               />
