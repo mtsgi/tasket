@@ -54,6 +54,6 @@ function close() {
 .daily-streak {
   text-align: center;
   p { margin: 12px 0; }
-  &__icon { font-size: 3rem; color: #d86a24; }
+  &__icon { font-size: 3rem; color: #4a90d9; }
 }
 </style>

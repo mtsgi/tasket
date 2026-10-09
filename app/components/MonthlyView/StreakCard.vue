@@ -60,7 +60,7 @@ async function retryRecords() {
 </script>
 
 <template>
-  <section class="streak-card">
+  <section class="streak-card card">
     <details class="streak-card__disclosure">
       <summary class="streak-card__summary">
         <Icon
@@ -139,7 +139,7 @@ async function retryRecords() {
               :aria-label="t(day.recorded ? '利用済み' : '未利用')"
             >
               <Icon
-                :name="day.recorded ? 'mdi:circle' : 'mdi:circle-outline'"
+                :name="day.recorded ? 'mdi:emoticon-excited-outline' : 'mdi:circle-outline'"
                 aria-hidden="true"
               />
             </span>
@@ -184,9 +184,10 @@ async function retryRecords() {
         </p>
       </div>
     </details>
-    <button
-      type="button"
-      class="btn btn-secondary btn-icon streak-card__replay"
+    <UiButton
+      variant="secondary"
+      icon
+      class="streak-card__replay"
       :aria-label="t('利用通知を再表示')"
       :title="t('利用通知を再表示')"
       :disabled="!streakStore.usage.recordedToday"
@@ -196,7 +197,7 @@ async function retryRecords() {
         name="mdi:replay"
         aria-hidden="true"
       />
-    </button>
+    </UiButton>
     <p
       v-if="loadError || streakStore.error"
       role="alert"
@@ -215,18 +216,10 @@ async function retryRecords() {
 <style lang="scss" scoped>
 .streak-card {
   position: relative;
-  margin-bottom: 24px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 16px;
 
-  .dark-mode & {
-    background: #2a2a2a;
-    border-color: #444;
-    color: #e0e0e0;
-  }
-
-  h2 { font-size: 1rem; margin: 0; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0; }
 
   &__summary {
     display: flex;
@@ -235,15 +228,16 @@ async function retryRecords() {
     padding: 14px 64px 14px 14px;
     list-style: none;
     min-height: 52px;
+    color: #666;
     &::-webkit-details-marker { display: none; }
     &:focus-visible { outline: 2px solid #4a90d9; outline-offset: -2px; border-radius: 12px; }
   }
-  &__fire { color: #d86a24; font-size: 1.2rem; flex-shrink: 0; }
+  &__fire { font-size: 1.2rem; flex-shrink: 0; }
   &__current { margin-left: auto; font-size: 0.85rem; white-space: nowrap; }
   &__chevron { flex-shrink: 0; transition: transform 0.15s ease; }
   &__disclosure[open] &__chevron { transform: rotate(180deg); }
   &__content { padding: 0 14px 14px; }
-  &__replay { position: absolute; top: 4px; right: 8px; width: 44px; height: 44px; padding: 0; font-size: 1.1rem; }
+  &__replay.ui-btn { position: absolute; top: 4px; right: 8px; width: 44px; height: 44px; padding: 0; font-size: 1.1rem; }
   > p[role="alert"] { padding: 0 14px 14px; }
   @media (prefers-reduced-motion: reduce) { &__chevron { transition: none; } }
 
@@ -257,14 +251,22 @@ async function retryRecords() {
     font-size: 0.9rem;
     > :not(:first-child) { text-align: right; }
   }
-  &__head, &__hint { font-size: 0.8rem; opacity: 0.8; }
+  &__head, &__hint { font-size: 12px; color: #666; }
   &__hint { margin: 8px 0; }
-  &__done { color: #23834f; }
+  &__done { color: #4caf50; }
   &__week { display: flex; justify-content: space-around; margin: 12px 0; }
   &__day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  &__day > span { display: flex; align-items: center; justify-content: center; height: 28px; font-size: 22px; }
+  &__day small { font-size: 11px; color: #666; }
+  &__day > span:not(.streak-card__done) { color: #999; }
   summary { cursor: pointer; }
   &__content summary { padding: 8px 0; }
 
-  .dark-mode &__done { color: #72d7a0; }
+  .dark-mode &__summary, .dark-mode &__head, .dark-mode &__hint, .dark-mode &__day small { color: #b0b0b0; }
+  .dark-mode &__day > span:not(.streak-card__done) { color: #888; }
+
+  @media (max-width: 600px) {
+    h2 { font-size: 14px; }
+  }
 }
 </style>
