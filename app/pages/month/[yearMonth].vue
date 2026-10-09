@@ -13,6 +13,7 @@ import MonthlySummaryComponent from '~/components/MonthlyView/MonthlySummary.vue
 import ExpenseRanking from '~/components/MonthlyView/ExpenseRanking.vue'
 import RoutineAchievementGrid from '~/components/MonthlyView/RoutineAchievementGrid.vue'
 import MonthlyPhotoAlbum from '~/components/MonthlyView/MonthlyPhotoAlbum.vue'
+import StreakCard from '~/components/MonthlyView/StreakCard.vue'
 import type { RoutineLog } from '~/types/item'
 
 const route = useRoute()
@@ -187,6 +188,8 @@ watch(yearMonthParam, async () => {
         @select-date="goToDay"
       />
     </div>
+
+    <StreakCard :year-month="yearMonthParam" />
 
     <CalendarSettings
       :show="showCalendarSettings"

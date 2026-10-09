@@ -9,6 +9,8 @@ import PWAInstallSection from '~/components/shared/PWAInstallSection.vue'
 import CloudBackupManager from '~/components/settings/CloudBackupManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
 import { useRouter } from 'vue-router'
+import { parseDailyActivities } from '~/utils/streak'
+import { useStreakStore } from '~/stores/streak'
 
 const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
@@ -19,6 +21,7 @@ const cloudBackupStore = useCloudBackupStore()
 const tutorialStore = useTutorialStore()
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
+const streakStore = useStreakStore()
 const { t } = useI18n()
 const router = useRouter()
 
@@ -62,10 +65,15 @@ async function exportData() {
     const dayTitles = await getAllDayTitles()
     const appSettings = await getAllAppSettings()
     const healthData = await getAllHealthData()
+    const dailyActivities = await getAllDailyActivities()
 
     const exportPayload = {
-      version: 6, // バージョン6: 健康データを追加
+      version: 9,
       exportedAt: new Date().toISOString(),
+      dailyActivities: dailyActivities.map(activity => ({
+        ...activity,
+        firstOpenedAt: activity.firstOpenedAt.toISOString(),
+      })),
       items: itemsStore.items.map(item => ({
         ...item,
         scheduled_at: item.scheduled_at.toISOString(),
@@ -145,6 +153,7 @@ async function importData(event: Event) {
     if (!data.version || !Array.isArray(data.items)) {
       throw new Error(t('無効なファイル形式です'))
     }
+    const dailyActivities = parseDailyActivities(data.dailyActivities)
 
     // 既存データを確認
     const existingCount = itemsStore.items.length
@@ -253,6 +262,9 @@ async function importData(event: Event) {
       await healthDataStore.fetchHealthData()
     }
 
+    for (const activity of dailyActivities) await saveDailyActivity(activity)
+    await streakStore.refreshHistory()
+    await routinesStore.fetchAllRoutineLogs()
     showNotification('success', t('{count}件のアイテムをインポートしました', { count: data.items.length }))
     await itemsStore.fetchItems()
   }
@@ -298,6 +310,7 @@ async function clearAllData() {
     tutorialStore.$reset()
     settingsStore.$reset()
     lockStore.$reset()
+    streakStore.$reset()
 
     // ページをリロードして完全にクリアされた状態にする
     window.location.reload()

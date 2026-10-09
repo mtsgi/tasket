@@ -4,7 +4,7 @@
  * idb ライブラリを使用してIndexedDBを操作します。
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Item, DayTitle, Routine, RoutineLog, Preset, AppSettings, HealthData } from '~/types/item'
+import type { Item, DayTitle, Routine, RoutineLog, Preset, AppSettings, HealthData, DailyActivity } from '~/types/item'
 import type { CloudBackupConfig, BackupHistory } from '~/types/cloudBackup'
 
 /**
@@ -12,6 +12,10 @@ import type { CloudBackupConfig, BackupHistory } from '~/types/cloudBackup'
  * itemsストア、dayTitlesストア、routinesストア、routineLogsストア、presetsストア、appSettingsストア、healthDataストアを定義
  */
 interface TasketDB extends DBSchema {
+  dailyActivities: {
+    key: string
+    value: DailyActivity
+  }
   // @ts-expect-error idbライブラリの型定義との互換性の問題
   items: {
     key: string
@@ -89,7 +93,7 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 8, {
+    dbPromise = openDB<TasketDB>('tasket-db', 9, {
       upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
@@ -182,10 +186,42 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           const itemsStore = transaction.objectStore('items')
           itemsStore.createIndex('by-is-important', 'is_important')
         }
+        if (oldVersion < 9) {
+          db.createObjectStore('dailyActivities', { keyPath: 'date' })
+        }
       },
     })
   }
   return dbPromise
+}
+
+export async function getAllDailyActivities(): Promise<DailyActivity[]> {
+  const db = await getDB()
+  return (await db.getAll('dailyActivities')).map(activity => ({
+    ...activity,
+    firstOpenedAt: new Date(activity.firstOpenedAt),
+  }))
+}
+
+/** 同一日を複数タブで開いても最初の1回だけ保存・通知する。 */
+export async function recordDailyActivity(activity: DailyActivity): Promise<boolean> {
+  const db = await getDB()
+  const tx = db.transaction('dailyActivities', 'readwrite')
+  const existing = await tx.store.get(activity.date)
+  if (!existing) await tx.store.add(activity)
+  await tx.done
+  return !existing
+}
+
+/** ローカルインポートでは同日のより早い利用履歴を保持する。 */
+export async function saveDailyActivity(activity: DailyActivity): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction('dailyActivities', 'readwrite')
+  const existing = await tx.store.get(activity.date)
+  if (!existing || activity.firstOpenedAt < new Date(existing.firstOpenedAt)) {
+    await tx.store.put(activity)
+  }
+  await tx.done
 }
 
 // ============================================
@@ -648,12 +684,12 @@ export async function getHealthDataByDateRange(startDate: string, endDate: strin
 
 /**
  * ユーザーデータをすべてクリア
- * items, routines, routineLogs, dayTitles, presets, healthData の各ストアを空にします。
+ * items, routines, routineLogs, dayTitles, presets, healthData, dailyActivities の各ストアを空にします。
  * クラウドバックアップからの復元前に呼び出すことで、既存データとの競合を防ぎます。
  */
 export async function clearUserData(): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction(['items', 'routines', 'routineLogs', 'dayTitles', 'presets', 'healthData'], 'readwrite')
+  const tx = db.transaction(['items', 'routines', 'routineLogs', 'dayTitles', 'presets', 'healthData', 'dailyActivities'], 'readwrite')
   await Promise.all([
     tx.objectStore('items').clear(),
     tx.objectStore('routines').clear(),
@@ -661,6 +697,7 @@ export async function clearUserData(): Promise<void> {
     tx.objectStore('dayTitles').clear(),
     tx.objectStore('presets').clear(),
     tx.objectStore('healthData').clear(),
+    tx.objectStore('dailyActivities').clear(),
     tx.done,
   ])
 }
