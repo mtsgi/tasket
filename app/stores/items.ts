@@ -10,6 +10,23 @@ import { getAllItems, addItem, updateItem, deleteItem } from '~/utils/db'
 import { getStartOfMonth, getEndOfMonth, getStartOfEffectiveDay, getEndOfEffectiveDay, getStartOfYear, getEndOfYear } from '~/utils/dateHelpers'
 import { useSettingsStore } from '~/stores/settings'
 
+interface ItemsFetchState {
+  inFlight: Promise<void> | null
+  inFlightToken: object | null
+  generation: number
+}
+
+const itemsFetchStates = new WeakMap<object, ItemsFetchState>()
+
+function getItemsFetchState(store: object): ItemsFetchState {
+  let state = itemsFetchStates.get(store)
+  if (!state) {
+    state = { inFlight: null, inFlightToken: null, generation: 0 }
+    itemsFetchStates.set(store, state)
+  }
+  return state
+}
+
 export const useItemsStore = defineStore('items', {
   /**
    * ストアの状態
@@ -242,19 +259,47 @@ export const useItemsStore = defineStore('items', {
   actions: {
     /**
      * データベースからすべてのアイテムを取得
+     * 進行中の取得がある場合は重複呼び出しを集約し、force指定時は最新データで上書きする
      */
-    async fetchItems() {
+    async fetchItems(options?: { force?: boolean }) {
+      const fetchState = getItemsFetchState(this)
+      if (!options?.force && fetchState.inFlight) {
+        return fetchState.inFlight
+      }
+
+      const generation = ++fetchState.generation
+      const fetchToken = {}
+      fetchState.inFlightToken = fetchToken
       this.isLoading = true
       this.error = null
-      try {
-        this.items = await getAllItems()
+
+      const promise = (async () => {
+        try {
+          const items = await getAllItems()
+          if (fetchState.generation === generation) {
+            this.items = items
+          }
+        }
+        catch (e) {
+          if (fetchState.generation === generation) {
+            this.error = e instanceof Error ? e.message : 'アイテムの取得に失敗しました'
+          }
+        }
+        finally {
+          if (fetchState.inFlightToken === fetchToken) {
+            fetchState.inFlight = null
+            fetchState.inFlightToken = null
+          }
+          if (!fetchState.inFlight) {
+            this.isLoading = false
+          }
+        }
+      })()
+
+      if (fetchState.inFlightToken === fetchToken) {
+        fetchState.inFlight = promise
       }
-      catch (e) {
-        this.error = e instanceof Error ? e.message : 'アイテムの取得に失敗しました'
-      }
-      finally {
-        this.isLoading = false
-      }
+      return promise
     },
 
     /**
@@ -288,6 +333,10 @@ export const useItemsStore = defineStore('items', {
         photos: data.photos ? toRaw(data.photos) : undefined,
       }
       await addItem(newItem)
+      const fetchState = getItemsFetchState(this)
+      fetchState.generation += 1
+      fetchState.inFlight = null
+      fetchState.inFlightToken = null
       this.items.push(newItem)
       return newItem
     },
@@ -313,6 +362,10 @@ export const useItemsStore = defineStore('items', {
           ...updatedData,
         } as Item
         await updateItem(updatedItem)
+        const fetchState = getItemsFetchState(this)
+        fetchState.generation += 1
+        fetchState.inFlight = null
+        fetchState.inFlightToken = null
         this.items[index] = updatedItem
         return updatedItem
       }
@@ -354,6 +407,10 @@ export const useItemsStore = defineStore('items', {
      */
     async deleteItemById(id: string) {
       await deleteItem(id)
+      const fetchState = getItemsFetchState(this)
+      fetchState.generation += 1
+      fetchState.inFlight = null
+      fetchState.inFlightToken = null
       const index = this.items.findIndex(item => item.id === id)
       if (index !== -1) {
         this.items.splice(index, 1)

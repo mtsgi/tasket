@@ -4,6 +4,7 @@
  * クラウドストレージへのバックアップ・復元を管理
  */
 import { useCloudBackupStore } from '~/stores/cloudBackup'
+import { DailyActivityParseError } from '~/utils/streak'
 import type { CloudBackupConfig, CloudProvider } from '~/types/cloudBackup'
 import ProviderSetupManual from './ProviderSetupManual.vue'
 
@@ -250,8 +251,11 @@ async function restore() {
     showNotification('success', t('復元に成功しました'))
     showRestoreModal.value = false
   }
-  catch {
-    showNotification('error', t('復元に失敗しました'))
+  catch (e) {
+    const message = e instanceof DailyActivityParseError
+      ? t(e.i18nKey)
+      : t('復元に失敗しました')
+    showNotification('error', message)
   }
   finally {
     isRestoring.value = false

@@ -7,6 +7,9 @@ import { vi } from 'vitest'
 // ~/utils/db モジュール全体をモック化
 // IndexedDB が存在しないテスト環境で Store テストを可能にする
 vi.mock('~/utils/db', () => ({
+  getAllDailyActivities: vi.fn().mockResolvedValue([]),
+  recordDailyActivity: vi.fn().mockResolvedValue(false),
+  saveDailyActivity: vi.fn().mockResolvedValue(undefined),
   // Item 関連
   getAllItems: vi.fn().mockResolvedValue([]),
   getItemById: vi.fn().mockResolvedValue(undefined),
@@ -69,5 +72,11 @@ vi.mock('~/utils/db', () => ({
   clearUserData: vi.fn().mockResolvedValue(undefined),
 
   // DB接続
+  DB_NAME: 'tasket-db',
+  DB_VERSION: 9,
   getDB: vi.fn(),
+  closeDB: vi.fn(),
+  deleteDB: vi.fn().mockResolvedValue(undefined),
+  isDBUpgradeBlocked: vi.fn(() => false),
+  subscribeDBBlocked: vi.fn(() => vi.fn()),
 }))

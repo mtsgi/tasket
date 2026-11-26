@@ -78,6 +78,14 @@ export const useRoutinesStore = defineStore('routines', {
    * アクション（操作メソッド）
    */
   actions: {
+    async fetchAllRoutineLogs() {
+      const logs = await getAllRoutineLogs()
+      const byDate: Record<string, RoutineLog[]> = {}
+      for (const log of logs) {
+        (byDate[log.date] ??= []).push(log)
+      }
+      this.routineLogs = byDate
+    },
     /**
      * 特定の月の日課をデータベースから取得
      * @param yearMonth - 年月文字列（YYYY-MM）
@@ -202,6 +210,9 @@ export const useRoutinesStore = defineStore('routines', {
      */
     async deleteRoutineById(id: string) {
       await deleteRoutine(id)
+      for (const date of Object.keys(this.routineLogs)) {
+        this.routineLogs[date] = this.routineLogs[date]!.filter(log => log.routineId !== id)
+      }
       const index = this.routines.findIndex(r => r.id === id)
       if (index !== -1) {
         this.routines.splice(index, 1)
