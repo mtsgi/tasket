@@ -27,6 +27,23 @@ import {
 } from '~/utils/healthConnect'
 import dayjs from 'dayjs'
 
+interface HealthDataFetchState {
+  inFlight: Promise<void> | null
+  inFlightToken: object | null
+  generation: number
+}
+
+const healthDataFetchStates = new WeakMap<object, HealthDataFetchState>()
+
+function getHealthDataFetchState(store: object): HealthDataFetchState {
+  let state = healthDataFetchStates.get(store)
+  if (!state) {
+    state = { inFlight: null, inFlightToken: null, generation: 0 }
+    healthDataFetchStates.set(store, state)
+  }
+  return state
+}
+
 export const useHealthDataStore = defineStore('healthData', {
   /**
    * ストアの状態
@@ -212,20 +229,48 @@ export const useHealthDataStore = defineStore('healthData', {
   actions: {
     /**
      * すべての健康データをデータベースから取得
+     * 進行中の取得がある場合は重複呼び出しを集約し、force指定時は最新データで上書きする
      */
-    async fetchHealthData() {
+    async fetchHealthData(options?: { force?: boolean }) {
+      const fetchState = getHealthDataFetchState(this)
+      if (!options?.force && fetchState.inFlight) {
+        return fetchState.inFlight
+      }
+
+      const generation = ++fetchState.generation
+      const fetchToken = {}
+      fetchState.inFlightToken = fetchToken
       this.isLoading = true
       this.error = null
-      try {
-        this.healthDataList = await getAllHealthData()
+
+      const promise = (async () => {
+        try {
+          const dataList = await getAllHealthData()
+          if (fetchState.generation === generation) {
+            this.healthDataList = dataList
+          }
+        }
+        catch (error) {
+          if (fetchState.generation === generation) {
+            this.error = error instanceof Error ? error.message : 'Unknown error'
+          }
+          console.error('Failed to fetch health data:', error)
+        }
+        finally {
+          if (fetchState.inFlightToken === fetchToken) {
+            fetchState.inFlight = null
+            fetchState.inFlightToken = null
+          }
+          if (!fetchState.inFlight) {
+            this.isLoading = false
+          }
+        }
+      })()
+
+      if (fetchState.inFlightToken === fetchToken) {
+        fetchState.inFlight = promise
       }
-      catch (error) {
-        this.error = error instanceof Error ? error.message : 'Unknown error'
-        console.error('Failed to fetch health data:', error)
-      }
-      finally {
-        this.isLoading = false
-      }
+      return promise
     },
 
     /**
@@ -294,6 +339,10 @@ export const useHealthDataStore = defineStore('healthData', {
             }
 
         await saveHealthData(dataToSave)
+        const fetchState = getHealthDataFetchState(this)
+        fetchState.generation += 1
+        fetchState.inFlight = null
+        fetchState.inFlightToken = null
 
         // ストアの状態を更新
         const index = this.healthDataList.findIndex(d => d.id === dataToSave.id)
@@ -483,6 +532,10 @@ export const useHealthDataStore = defineStore('healthData', {
       this.error = null
       try {
         await deleteHealthData(id)
+        const fetchState = getHealthDataFetchState(this)
+        fetchState.generation += 1
+        fetchState.inFlight = null
+        fetchState.inFlightToken = null
         this.healthDataList = this.healthDataList.filter(data => data.id !== id)
       }
       catch (error) {

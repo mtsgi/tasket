@@ -7,13 +7,57 @@
 import LockScreen from '~/components/shared/LockScreen.vue'
 import TutorialModal from '~/components/shared/TutorialModal.vue'
 import PWAInstallBanner from '~/components/shared/PWAInstallBanner.vue'
+import DBBlockedBanner from '~/components/shared/DBBlockedBanner.vue'
+import DailyStreakModal from '~/components/shared/DailyStreakModal.vue'
+import { useStreakStore } from '~/stores/streak'
+import { addDays, getEffectiveDateForTime, getStartOfEffectiveDay } from '~/utils/dateHelpers'
 import { isNativeApp } from '~/utils/healthConnect'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const tutorialStore = useTutorialStore()
+const streakStore = useStreakStore()
 const { setLocale } = useI18n()
 const isNative = isNativeApp()
+const initialized = ref(false)
+let checkInTimer: ReturnType<typeof setTimeout> | undefined
+
+// 日付境界、復帰時、ロック解除時にも判定。非表示・ロック中の利用は数えない。
+async function checkDailyActivity() {
+  if (!initialized.value) return
+  clearTimeout(checkInTimer)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!initialized.value || document.visibilityState === 'hidden' || (lockStore.isLockConfigured && lockStore.isLocked)) {
+      break
+    }
+    const beforeDate = getEffectiveDateForTime(new Date(), settingsStore.dateChangeLine)
+    await streakStore.checkIn()
+    if (!initialized.value || streakStore.isAutoCheckInSuspended) {
+      break
+    }
+    const afterDate = getEffectiveDateForTime(new Date(), settingsStore.dateChangeLine)
+    if (afterDate === beforeDate) {
+      break
+    }
+  }
+  if (!initialized.value) return
+  clearTimeout(checkInTimer)
+  const now = new Date()
+  const date = getEffectiveDateForTime(now, settingsStore.dateChangeLine)
+  const next = getStartOfEffectiveDay(addDays(date, 1), settingsStore.dateChangeLine)
+  checkInTimer = setTimeout(checkDailyActivity, Math.max(100, next.getTime() - now.getTime() + 100))
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState !== 'hidden') {
+    lockStore.checkTimeout()
+    void checkDailyActivity()
+  }
+}
+
+watch(() => [lockStore.isLocked, lockStore.isLockConfigured, settingsStore.dateChangeLine], () => {
+  void checkDailyActivity()
+})
 
 // Service Workerの登録（Web/PWAの本番環境のみ、Capacitorネイティブ環境では登録しない）
 if (import.meta.client && import.meta.env.PROD && !isNative && 'serviceWorker' in navigator) {
@@ -53,19 +97,18 @@ onMounted(async () => {
 
   // 初回起動チェック（チュートリアル自動表示）
   await tutorialStore.checkFirstLaunch()
-
-  // タイムアウトチェック（バックグラウンドから復帰時など）
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        lockStore.checkTimeout()
-      }
-    })
-  }
+  initialized.value = true
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('focus', handleVisibilityChange)
+  await checkDailyActivity()
 })
 
 // クリーンアップ: Object URLを解放
 onUnmounted(() => {
+  initialized.value = false
+  clearTimeout(checkInTimer)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('focus', handleVisibilityChange)
   if (settingsStore.backgroundImageUrl && settingsStore.backgroundImage instanceof File) {
     URL.revokeObjectURL(settingsStore.backgroundImageUrl)
   }
@@ -100,6 +143,9 @@ const showLockScreen = computed(() => {
     <!-- PWAインストールバナー（ネイティブアプリ版では非表示） -->
     <PWAInstallBanner v-if="!isNative" />
 
+    <!-- DBアップグレード／削除ブロック警告バナー -->
+    <DBBlockedBanner />
+
     <!-- ロック画面 -->
     <LockScreen v-if="showLockScreen" />
 
@@ -107,7 +153,10 @@ const showLockScreen = computed(() => {
     <NuxtPage v-show="!showLockScreen" />
 
     <!-- チュートリアルモーダル -->
-    <TutorialModal />
+    <TutorialModal v-if="!showLockScreen" />
+    <DailyStreakModal
+      :show="initialized && !showLockScreen && tutorialStore.hasSeenTutorial && !tutorialStore.isActive && streakStore.showDailyModal"
+    />
   </div>
 </template>
 

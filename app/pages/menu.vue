@@ -10,6 +10,9 @@ import CloudBackupManager from '~/components/settings/CloudBackupManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
 import { exportFileOnAndroid, isAndroidNativeApp, isNativeApp } from '~/utils/healthConnect'
 import { useRouter } from 'vue-router'
+import { DailyActivityParseError, parseDailyActivities } from '~/utils/streak'
+import { deleteDB } from '~/utils/db'
+import { useStreakStore } from '~/stores/streak'
 
 const itemsStore = useItemsStore()
 const routinesStore = useRoutinesStore()
@@ -20,6 +23,7 @@ const cloudBackupStore = useCloudBackupStore()
 const tutorialStore = useTutorialStore()
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
+const streakStore = useStreakStore()
 const { t } = useI18n()
 const router = useRouter()
 const isNative = isNativeApp()
@@ -29,6 +33,9 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // インポート処理中フラグ
 const isImporting = ref(false)
+
+// データ削除処理中フラグ
+const isClearingData = ref(false)
 
 // サンプルデータ追加中フラグ
 const isLoadingSampleData = ref(false)
@@ -64,10 +71,15 @@ async function exportData() {
     const dayTitles = await getAllDayTitles()
     const appSettings = await getAllAppSettings()
     const healthData = await getAllHealthData()
+    const dailyActivities = await getAllDailyActivities()
 
     const exportPayload = {
-      version: 6, // バージョン6: 健康データを追加
+      version: 9,
       exportedAt: new Date().toISOString(),
+      dailyActivities: dailyActivities.map(activity => ({
+        ...activity,
+        firstOpenedAt: activity.firstOpenedAt.toISOString(),
+      })),
       items: itemsStore.items.map(item => ({
         ...item,
         scheduled_at: item.scheduled_at.toISOString(),
@@ -155,6 +167,7 @@ async function importData(event: Event) {
     if (!data.version || !Array.isArray(data.items)) {
       throw new Error(t('無効なファイル形式です'))
     }
+    const dailyActivities = parseDailyActivities(data.dailyActivities)
 
     // 既存データを確認
     const existingCount = itemsStore.items.length
@@ -171,103 +184,119 @@ async function importData(event: Event) {
       }
     }
 
-    // アイテムをインポート（完了状態・実行日時・IDなどを含む全フィールドを復元）
-    const { addItem } = await import('~/utils/db')
-    for (const itemData of data.items) {
-      await addItem({
-        id: itemData.id,
-        title: itemData.title,
-        amount: itemData.amount,
-        type: itemData.type,
-        is_completed: itemData.is_completed ?? false,
-        is_important: itemData.is_important ?? false,
-        scheduled_at: new Date(itemData.scheduled_at),
-        executed_at: itemData.executed_at ? new Date(itemData.executed_at) : null,
-        created_at: new Date(itemData.created_at),
-        notes: itemData.notes || '',
-        mealLog: itemData.mealLog, // 食事ログデータをインポート
-        photos: itemData.photos,
-      })
-    }
-
-    // 日課をインポート（バージョン2以降）
-    if (data.version >= 2 && Array.isArray(data.routines)) {
-      for (const routineData of data.routines) {
-        await routinesStore.createRoutine({
-          title: routineData.title,
-          yearMonth: routineData.yearMonth,
+    // インポート中は自動チェックインを抑止・復元等と排他実行し、完了後に履歴を再取得・再判定する
+    await streakStore.runWithAutoCheckInSuspended(async () => {
+      // アイテムをインポート（完了状態・実行日時・IDなどを含む全フィールドを復元）
+      const { addItem } = await import('~/utils/db')
+      for (const itemData of data.items) {
+        await addItem({
+          id: itemData.id,
+          title: itemData.title,
+          amount: itemData.amount,
+          type: itemData.type,
+          is_completed: itemData.is_completed ?? false,
+          is_important: itemData.is_important ?? false,
+          scheduled_at: new Date(itemData.scheduled_at),
+          executed_at: itemData.executed_at ? new Date(itemData.executed_at) : null,
+          created_at: new Date(itemData.created_at),
+          notes: itemData.notes || '',
+          mealLog: itemData.mealLog, // 食事ログデータをインポート
+          photos: itemData.photos,
         })
       }
-    }
 
-    // 日課ログをインポート（バージョン2以降）
-    if (data.version >= 2 && Array.isArray(data.routineLogs)) {
-      const { saveRoutineLog } = await import('~/utils/db')
-      for (const logData of data.routineLogs) {
-        // 旧形式（バージョン2-3）のデータを新形式（バージョン4）に変換
-        let status: RoutineStatus
-        if (data.version < 4) {
-          // is_completedからstatusに変換
-          status = logData.is_completed ? 'achieved' : 'not_achieved'
+      // 日課をインポート（バージョン2以降）
+      if (data.version >= 2 && Array.isArray(data.routines)) {
+        for (const routineData of data.routines) {
+          await routinesStore.createRoutine({
+            title: routineData.title,
+            yearMonth: routineData.yearMonth,
+          })
         }
-        else {
-          // バージョン4以降はstatusを使用
-          status = logData.status || 'unconfirmed'
+      }
+
+      // 日課ログをインポート（バージョン2以降）
+      if (data.version >= 2 && Array.isArray(data.routineLogs)) {
+        const { saveRoutineLog } = await import('~/utils/db')
+        for (const logData of data.routineLogs) {
+          // 旧形式（バージョン2-3）のデータを新形式（バージョン4）に変換
+          let status: RoutineStatus
+          if (data.version < 4) {
+            // is_completedからstatusに変換
+            status = logData.is_completed ? 'achieved' : 'not_achieved'
+          }
+          else {
+            // バージョン4以降はstatusを使用
+            status = logData.status || 'unconfirmed'
+          }
+
+          await saveRoutineLog({
+            id: logData.id,
+            routineId: logData.routineId,
+            date: logData.date,
+            status,
+            completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
+          })
         }
-
-        await saveRoutineLog({
-          id: logData.id,
-          routineId: logData.routineId,
-          date: logData.date,
-          status,
-          completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
-        })
+        // 日課と日課ログストアを再読み込み
+        await routinesStore.fetchAllRoutines()
       }
-      // 日課と日課ログストアを再読み込み
-      await routinesStore.fetchAllRoutines()
-    }
 
-    // 日タイトルをインポート（バージョン3以降）
-    if (data.version >= 3 && Array.isArray(data.dayTitles)) {
-      for (const dayTitleData of data.dayTitles) {
-        await dayTitlesStore.saveDayTitle(dayTitleData.date, dayTitleData.title)
+      // 日タイトルをインポート（バージョン3以降）
+      if (data.version >= 3 && Array.isArray(data.dayTitles)) {
+        for (const dayTitleData of data.dayTitles) {
+          await dayTitlesStore.saveDayTitle(dayTitleData.date, dayTitleData.title)
+        }
       }
-    }
 
-    // アプリ設定をインポート（バージョン5以降）
-    if (data.version >= 5 && Array.isArray(data.appSettings) && data.appSettings.length > 0) {
-      const { saveAppSettings } = await import('~/utils/db')
-      for (const settingsData of data.appSettings) {
-        await saveAppSettings({
-          ...settingsData,
-          updated_at: new Date(settingsData.updated_at),
-        })
+      // アプリ設定をインポート（バージョン5以降）
+      if (data.version >= 5 && Array.isArray(data.appSettings) && data.appSettings.length > 0) {
+        const { saveAppSettings } = await import('~/utils/db')
+        for (const settingsData of data.appSettings) {
+          await saveAppSettings({
+            ...settingsData,
+            updated_at: new Date(settingsData.updated_at),
+          })
+        }
+        // 設定を再読み込み
+        await settingsStore.loadSettings()
+        await lockStore.loadSettings()
+        await tutorialStore.loadTutorialState()
       }
-      // 設定を再読み込み
-      await settingsStore.loadSettings()
-      await lockStore.loadSettings()
-      await tutorialStore.loadTutorialState()
-    }
 
-    // 健康データをインポート（バージョン6以降）
-    if (data.version >= 6 && Array.isArray(data.healthData)) {
-      const { saveHealthData } = await import('~/utils/db')
-      for (const healthDataItem of data.healthData) {
-        await saveHealthData({
-          ...healthDataItem,
-          created_at: new Date(healthDataItem.created_at),
-          updated_at: new Date(healthDataItem.updated_at),
-        })
+      // 健康データをインポート（バージョン6以降）
+      if (data.version >= 6 && Array.isArray(data.healthData)) {
+        const { saveHealthData } = await import('~/utils/db')
+        const { calculateTotalSleepHours, normalizeSleepSessionsForDate } = await import('~/utils/sleepSessions')
+        for (const healthDataItem of data.healthData) {
+          const normalizedSessions = healthDataItem.sleepSessions !== undefined
+            ? normalizeSleepSessionsForDate(healthDataItem.date, healthDataItem.sleepSessions)
+            : undefined
+          const sleepHours = normalizedSessions && normalizedSessions.length > 0
+            ? calculateTotalSleepHours(normalizedSessions, healthDataItem.date)
+            : healthDataItem.sleepHours
+          await saveHealthData({
+            ...healthDataItem,
+            ...(normalizedSessions !== undefined ? { sleepSessions: normalizedSessions } : {}),
+            ...(sleepHours !== undefined ? { sleepHours } : {}),
+            created_at: new Date(healthDataItem.created_at),
+            updated_at: new Date(healthDataItem.updated_at),
+          })
+        }
+        // 健康データストアを再読み込み
+        await healthDataStore.fetchHealthData({ force: true })
       }
-      // 健康データストアを再読み込み
-      await healthDataStore.fetchHealthData()
-    }
 
+      for (const activity of dailyActivities) await saveDailyActivity(activity)
+      await routinesStore.fetchAllRoutineLogs()
+      await itemsStore.fetchItems({ force: true })
+    })
     showNotification('success', t('{count}件のアイテムをインポートしました', { count: data.items.length }))
-    await itemsStore.fetchItems()
   }
   catch (e) {
-    const message = e instanceof Error ? e.message : t('インポートに失敗しました')
+    const message = e instanceof DailyActivityParseError
+      ? t(e.i18nKey)
+      : e instanceof Error ? e.message : t('インポートに失敗しました')
     showNotification('error', message)
   }
   finally {
@@ -285,36 +314,34 @@ async function clearAllData() {
 
   if (!confirmed) return
 
+  isClearingData.value = true
   try {
-    // IndexedDBデータベースを完全に削除
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.deleteDatabase('tasket-db')
-      request.onsuccess = () => resolve()
-      request.onerror = () => reject(request.error)
-      request.onblocked = () => {
-        console.warn('データベースの削除がブロックされました')
-        // ブロックされてもresolveして続行
-        resolve()
-      }
-    })
+    await streakStore.runWithAutoCheckInSuspended(async () => {
+      // IndexedDBデータベースを完全に削除（他タブでブロックされた場合は完了まで待機）
+      await deleteDB()
 
-    // すべてのPiniaストアをリセット
-    itemsStore.$reset()
-    routinesStore.$reset()
-    dayTitlesStore.$reset()
-    presetsStore.$reset()
-    healthDataStore.$reset()
-    cloudBackupStore.$reset()
-    tutorialStore.$reset()
-    settingsStore.$reset()
-    lockStore.$reset()
+      // すべてのPiniaストアをリセット
+      itemsStore.$reset()
+      routinesStore.$reset()
+      dayTitlesStore.$reset()
+      presetsStore.$reset()
+      healthDataStore.$reset()
+      cloudBackupStore.$reset()
+      tutorialStore.$reset()
+      settingsStore.$reset()
+      lockStore.$reset()
+      streakStore.$reset()
 
-    // ページをリロードして完全にクリアされた状態にする
-    window.location.reload()
+      // ページをリロードして完全にクリアされた状態にする
+      window.location.reload()
+    }, { reevaluateAfter: false })
   }
   catch (error) {
     console.error('データの削除に失敗しました:', error)
     showNotification('error', t('データの削除に失敗しました'))
+  }
+  finally {
+    isClearingData.value = false
   }
 }
 
@@ -335,10 +362,10 @@ async function addSampleData() {
     const result = await loadSampleData()
 
     // データを再読み込み
-    await itemsStore.fetchItems()
+    await itemsStore.fetchItems({ force: true })
     await routinesStore.fetchAllRoutines()
     await presetsStore.fetchPresets()
-    await healthDataStore.fetchHealthData()
+    await healthDataStore.fetchHealthData({ force: true })
 
     showNotification(
       'success',
@@ -497,7 +524,7 @@ function goBack() {
         <UiButton
           variant="secondary"
           block
-          :disabled="isImporting"
+          :disabled="isImporting || isClearingData || streakStore.isAutoCheckInSuspended"
           @click="openImportDialog"
         >
           <Icon name="mdi:import" />
@@ -534,6 +561,7 @@ function goBack() {
         <UiButton
           variant="danger"
           block
+          :disabled="isClearingData || isImporting || streakStore.isAutoCheckInSuspended"
           @click="clearAllData"
         >
           <Icon name="mdi:delete-forever" />

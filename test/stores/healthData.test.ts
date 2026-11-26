@@ -218,5 +218,48 @@ describe('useHealthDataStore', () => {
         expect(store.healthDataList[0]!.id).toBe('health-2')
       })
     })
+
+    describe('fetchHealthData 重複排除と世代管理', () => {
+      it('同時呼び出し時は in-flight Promise を共有し DB 取得を 1 回に集約する', async () => {
+        const { getAllHealthData } = await import('~/utils/db')
+        let resolveFetch!: (list: ReturnType<typeof createHealthData>[]) => void
+        vi.mocked(getAllHealthData).mockImplementationOnce(() => new Promise((resolve) => {
+          resolveFetch = resolve
+        }))
+
+        const store = useHealthDataStore()
+        const p1 = store.fetchHealthData()
+        const p2 = store.fetchHealthData()
+        const p3 = store.fetchHealthData()
+        const fetched = [createHealthData({ id: 'health-shared', date: '2026-10-07', weight: 65 })]
+        resolveFetch(fetched)
+        await Promise.all([p1, p2, p3])
+
+        expect(getAllHealthData).toHaveBeenCalledTimes(1)
+        expect(store.healthDataList).toEqual(fetched)
+      })
+
+      it('復元・インポート前の in-flight 取得結果が force 再取得後のストアを上書きしない', async () => {
+        const { getAllHealthData } = await import('~/utils/db')
+        let resolveStale!: (list: ReturnType<typeof createHealthData>[]) => void
+        vi.mocked(getAllHealthData)
+          .mockImplementationOnce(() => new Promise((resolve) => {
+            resolveStale = resolve
+          }))
+          .mockResolvedValueOnce([createHealthData({ id: 'health-restored', date: '2026-10-07', weight: 61 })])
+
+        const store = useHealthDataStore()
+        const staleFetch = store.fetchHealthData()
+        await store.fetchHealthData({ force: true })
+        expect(store.healthDataList[0]!.id).toBe('health-restored')
+
+        // 古い取得が後から解決しても上書きされない
+        resolveStale([createHealthData({ id: 'health-stale', date: '2026-10-01', weight: 70 })])
+        await staleFetch
+        expect(store.healthDataList).toHaveLength(1)
+        expect(store.healthDataList[0]!.id).toBe('health-restored')
+        expect(store.isLoading).toBe(false)
+      })
+    })
   })
 })

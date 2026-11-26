@@ -6,6 +6,13 @@
  */
 export type ItemType = 'todo' | 'expense' | 'income'
 
+/** 実効日付ごとの初回利用履歴 */
+export interface DailyActivity {
+  date: string
+  firstOpenedAt: Date
+  dateChangeLine: number
+}
+
 /**
  * アイテムのデータ構造
  * すべてのタスクと収支を統一的に管理するためのインターフェース

@@ -3,7 +3,11 @@
  * クラウドストレージへのデータバックアップ・復元を管理
  */
 
-import type { HealthData, Item, Routine, RoutineLog, DayTitle, AppSettings } from './item'
+import type { HealthData, Item, Routine, RoutineLog, DayTitle, AppSettings, DailyActivity } from './item'
+
+export interface SerializedDailyActivity extends Omit<DailyActivity, 'firstOpenedAt'> {
+  firstOpenedAt: string
+}
 
 /**
  * サポートするクラウドプロバイダー
@@ -126,4 +130,5 @@ export interface BackupData {
   dayTitles?: SerializedDayTitle[]
   appSettings?: SerializedAppSettings[]
   healthData?: SerializedHealthData[]
+  dailyActivities?: SerializedDailyActivity[]
 }
