@@ -8,6 +8,7 @@ import RoutineManager from '~/components/shared/RoutineManager.vue'
 import PWAInstallSection from '~/components/shared/PWAInstallSection.vue'
 import CloudBackupManager from '~/components/settings/CloudBackupManager.vue'
 import { loadSampleData } from '~/utils/sampleData'
+import { exportFileOnAndroid, isAndroidNativeApp, isNativeApp } from '~/utils/healthConnect'
 import { useRouter } from 'vue-router'
 
 const itemsStore = useItemsStore()
@@ -21,6 +22,7 @@ const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const { t } = useI18n()
 const router = useRouter()
+const isNative = isNativeApp()
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -102,15 +104,23 @@ async function exportData() {
       })),
     }
 
-    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `tasket-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const jsonContent = JSON.stringify(exportPayload, null, 2)
+    const filename = `tasket-backup-${new Date().toISOString().split('T')[0]}.json`
+
+    if (isAndroidNativeApp()) {
+      await exportFileOnAndroid(filename, jsonContent, 'application/json')
+    }
+    else {
+      const blob = new Blob([jsonContent], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }
 
     showNotification('success', t('データのエクスポートが完了しました'))
   }
@@ -407,8 +417,11 @@ function goBack() {
       </UiButton>
     </section>
 
-    <!-- PWAインストール -->
-    <section class="menu-section card">
+    <!-- PWAインストール（ネイティブアプリ版では非表示） -->
+    <section
+      v-if="!isNative"
+      class="menu-section card"
+    >
       <h2>
         <Icon name="mdi:application-import" />
         {{ $t('アプリとしてインストール') }}

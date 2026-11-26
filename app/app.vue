@@ -7,14 +7,16 @@
 import LockScreen from '~/components/shared/LockScreen.vue'
 import TutorialModal from '~/components/shared/TutorialModal.vue'
 import PWAInstallBanner from '~/components/shared/PWAInstallBanner.vue'
+import { isNativeApp } from '~/utils/healthConnect'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const tutorialStore = useTutorialStore()
 const { setLocale } = useI18n()
+const isNative = isNativeApp()
 
-// Service Workerの登録（本番環境のみ）
-if (import.meta.client && import.meta.env.PROD && 'serviceWorker' in navigator) {
+// Service Workerの登録（Web/PWAの本番環境のみ、Capacitorネイティブ環境では登録しない）
+if (import.meta.client && import.meta.env.PROD && !isNative && 'serviceWorker' in navigator) {
   navigator.serviceWorker
     .register('/sw.js')
     .then((registration) => {
@@ -95,8 +97,8 @@ const showLockScreen = computed(() => {
     :class="{ 'dark-mode': settingsStore.darkMode }"
     :style="backgroundStyle"
   >
-    <!-- PWAインストールバナー -->
-    <PWAInstallBanner />
+    <!-- PWAインストールバナー（ネイティブアプリ版では非表示） -->
+    <PWAInstallBanner v-if="!isNative" />
 
     <!-- ロック画面 -->
     <LockScreen v-if="showLockScreen" />

@@ -5,14 +5,144 @@
  */
 import { useSettingsStore } from '~/stores/settings'
 import { useLockStore } from '~/stores/lock'
+import { useHealthDataStore } from '~/stores/healthData'
 import PinInput from '~/components/shared/PinInput.vue'
 import PresetManager from '~/components/settings/PresetManager.vue'
 import { useRouter } from 'vue-router'
+import dayjs from 'dayjs'
+import {
+  checkHealthConnectAvailability,
+  createEmptyPermissionsMap,
+  getHealthConnectPermissions,
+  isAndroidNativeApp,
+  openHealthConnectSettings,
+  requestHealthConnectPermissions,
+  type HealthConnectAvailabilityResult,
+  type HealthConnectMetricKey,
+  type HealthConnectPermissionsMap,
+} from '~/utils/healthConnect'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
+const healthDataStore = useHealthDataStore()
 const { t, setLocale } = useI18n()
 const router = useRouter()
+
+// Health Connect 関連状態
+const isAndroidApp = computed(() => isAndroidNativeApp())
+const hcAvailability = ref<HealthConnectAvailabilityResult>({
+  available: false,
+  status: 'unavailable',
+  platform: 'web',
+})
+const hcPermissions = ref<HealthConnectPermissionsMap>(createEmptyPermissionsMap())
+const hcAnyReadGranted = ref(false)
+const hcAnyWriteGranted = ref(false)
+const isCheckingHC = ref(false)
+const isSyncingRecentHC = ref(false)
+
+const healthConnectMetricLabels = computed<Array<{ key: HealthConnectMetricKey, label: string }>>(() => [
+  { key: 'steps', label: t('歩数') },
+  { key: 'sleep', label: t('睡眠時間') },
+  { key: 'heartRate', label: t('心拍数') },
+  { key: 'weight', label: t('体重') },
+  { key: 'bodyFatPercentage', label: t('体脂肪率') },
+  { key: 'waterIntake', label: t('水分摂取量') },
+  { key: 'exerciseMinutes', label: t('運動時間') },
+])
+
+const formattedLastSyncedAt = computed(() => {
+  const raw = settingsStore.healthConnectSettings?.lastSyncedAt
+  if (!raw) {
+    return t('未同期')
+  }
+  const parsed = dayjs(raw)
+  return parsed.isValid() ? parsed.format('YYYY/MM/DD HH:mm') : t('未同期')
+})
+
+async function refreshHealthConnectStatus() {
+  if (!isAndroidApp.value) {
+    return
+  }
+  isCheckingHC.value = true
+  try {
+    hcAvailability.value = await checkHealthConnectAvailability()
+    if (hcAvailability.value.available) {
+      const permResult = await getHealthConnectPermissions()
+      hcPermissions.value = permResult.permissions
+      hcAnyReadGranted.value = permResult.anyReadGranted
+      hcAnyWriteGranted.value = permResult.anyWriteGranted
+    }
+  }
+  catch (e) {
+    console.error('Failed to check Health Connect status:', e)
+  }
+  finally {
+    isCheckingHC.value = false
+  }
+}
+
+async function handleHealthConnectToggle() {
+  await nextTick()
+  const enabled = settingsStore.healthConnectSettings.enabled
+  await settingsStore.updateHealthConnectSettings({ enabled })
+
+  if (enabled && isAndroidApp.value && hcAvailability.value.available) {
+    if (!hcAnyReadGranted.value && !hcAnyWriteGranted.value) {
+      await handleRequestHealthConnectPermissions()
+    }
+  }
+}
+
+async function handleRequestHealthConnectPermissions() {
+  if (!isAndroidApp.value) {
+    return
+  }
+  isCheckingHC.value = true
+  try {
+    const permResult = await requestHealthConnectPermissions()
+    hcPermissions.value = permResult.permissions
+    hcAnyReadGranted.value = permResult.anyReadGranted
+    hcAnyWriteGranted.value = permResult.anyWriteGranted
+  }
+  catch (e) {
+    console.error('Failed to request Health Connect permissions:', e)
+    alert(t('Health Connectの権限要求に失敗しました'))
+  }
+  finally {
+    isCheckingHC.value = false
+  }
+}
+
+async function handleOpenHealthConnectSettings() {
+  try {
+    await openHealthConnectSettings()
+  }
+  catch (e) {
+    console.error('Failed to open Health Connect settings:', e)
+  }
+}
+
+async function handleBulkSyncHealthConnect() {
+  if (!isAndroidApp.value) {
+    return
+  }
+  isSyncingRecentHC.value = true
+  try {
+    const result = await healthDataStore.syncRecentFromHealthConnect(30)
+    await settingsStore.updateHealthConnectSettings({
+      lastSyncedAt: new Date().toISOString(),
+    })
+    alert(t('直近30日分のデータを同期しました（更新日数: {days}日）', { days: result.syncedDaysCount }))
+  }
+  catch (e) {
+    console.error('Failed to bulk sync from Health Connect:', e)
+    alert(t('Health Connectからのデータ取得に失敗しました'))
+  }
+  finally {
+    isSyncingRecentHC.value = false
+  }
+}
 
 // ファイル入力用ref
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -311,6 +441,7 @@ onMounted(async () => {
   if (settingsStore.language) {
     await setLocale(settingsStore.language)
   }
+  await refreshHealthConnectStatus()
 })
 
 function goBack() {
@@ -468,6 +599,133 @@ function goBack() {
             @change="handleHeightChange"
           >
           <span class="unit">cm</span>
+        </div>
+      </div>
+
+      <!-- Health Connect連携設定 -->
+      <div class="health-connect-settings-block">
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>
+              <Icon name="mdi:sync" />
+              {{ $t('Health Connect連携') }}
+            </h3>
+            <p>
+              {{ $t('AndroidのHealth Connectと健康データ（歩数・睡眠時間・心拍数・体重・体脂肪率・水分摂取量・運動時間）を双方向連携します') }}
+            </p>
+          </div>
+          <label
+            v-if="isAndroidApp && hcAvailability.available"
+            class="toggle-switch"
+          >
+            <input
+              v-model="settingsStore.healthConnectSettings.enabled"
+              type="checkbox"
+              @change="handleHealthConnectToggle"
+            >
+            <span class="slider" />
+          </label>
+        </div>
+
+        <!-- Web/PWA版での案内表示 -->
+        <div
+          v-if="!isAndroidApp"
+          class="hc-info-banner"
+        >
+          <Icon name="mdi:cellphone-information" />
+          <span>
+            {{ $t('Androidアプリ版でのみ利用可能です（Web/PWA版では手動での健康データ記録を引き続きご利用いただけます）') }}
+          </span>
+        </div>
+
+        <!-- Android版: Health Connect未インストール・要更新時 -->
+        <div
+          v-else-if="hcAvailability.status === 'provider_update_required'"
+          class="hc-info-banner warning"
+        >
+          <Icon name="mdi:alert-circle-outline" />
+          <span>
+            {{ $t('Health Connectアプリのインストールまたはアップデートが必要です') }}
+          </span>
+        </div>
+
+        <!-- Android版: Health Connect非対応端末時 -->
+        <div
+          v-else-if="!hcAvailability.available"
+          class="hc-info-banner warning"
+        >
+          <Icon name="mdi:alert-circle-outline" />
+          <span>
+            {{ $t('この端末ではHealth Connectを利用できません') }}
+          </span>
+        </div>
+
+        <!-- Android版: Health Connect利用可能時 -->
+        <div
+          v-else
+          class="hc-android-controls"
+        >
+          <div class="hc-sync-meta">
+            <span>{{ $t('最終同期日時') }}: {{ formattedLastSyncedAt }}</span>
+          </div>
+
+          <!-- 項目ごとの権限状態バッジ -->
+          <div class="hc-permissions-grid">
+            <div
+              v-for="metric in healthConnectMetricLabels"
+              :key="metric.key"
+              class="hc-permission-item"
+            >
+              <span class="metric-name">{{ metric.label }}</span>
+              <div class="permission-badges">
+                <span
+                  class="perm-badge"
+                  :class="{ granted: hcPermissions[metric.key]?.read }"
+                >
+                  {{ $t('読取') }}: {{ hcPermissions[metric.key]?.read ? $t('許可') : $t('未許可') }}
+                </span>
+                <span
+                  class="perm-badge"
+                  :class="{ granted: hcPermissions[metric.key]?.write }"
+                >
+                  {{ $t('書込') }}: {{ hcPermissions[metric.key]?.write ? $t('許可') : $t('未許可') }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hc-control-buttons">
+            <UiButton
+              variant="secondary"
+              block
+              :disabled="isCheckingHC || isSyncingRecentHC"
+              @click="handleRequestHealthConnectPermissions"
+            >
+              <Icon name="mdi:shield-check-outline" />
+              {{ $t('アクセス権限を許可・確認') }}
+            </UiButton>
+
+            <UiButton
+              variant="secondary"
+              block
+              :disabled="isCheckingHC || isSyncingRecentHC"
+              @click="handleOpenHealthConnectSettings"
+            >
+              <Icon name="mdi:open-in-new" />
+              {{ $t('Health Connect設定を開く') }}
+            </UiButton>
+
+            <UiButton
+              v-if="settingsStore.healthConnectSettings.enabled"
+              variant="primary"
+              block
+              :disabled="isCheckingHC || isSyncingRecentHC"
+              @click="handleBulkSyncHealthConnect"
+            >
+              <Icon name="mdi:cloud-download-outline" />
+              {{ isSyncingRecentHC ? $t('同期中') + '...' : $t('直近30日分をHealth Connectから一括取得') }}
+            </UiButton>
+          </div>
         </div>
       </div>
     </section>
@@ -1094,6 +1352,131 @@ function goBack() {
     &.active {
       background-color: rgba(74, 144, 217, 0.15);
     }
+  }
+}
+
+.health-connect-settings-block {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+
+  .dark-mode & {
+    border-color: #444;
+  }
+
+  .setting-info h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.hc-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: rgba(74, 144, 217, 0.1);
+  border: 1px solid rgba(74, 144, 217, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #555;
+  margin-top: 8px;
+
+  .dark-mode & {
+    background-color: rgba(74, 144, 217, 0.15);
+    color: #b0b0b0;
+  }
+
+  &.warning {
+    background-color: rgba(255, 152, 0, 0.1);
+    border-color: rgba(255, 152, 0, 0.35);
+    color: #d97706;
+
+    .dark-mode & {
+      color: #fbbf24;
+    }
+  }
+}
+
+.hc-android-controls {
+  margin-top: 12px;
+
+  .hc-sync-meta {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 12px;
+
+    .dark-mode & {
+      color: #b0b0b0;
+    }
+  }
+
+  .hc-permissions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+
+    .dark-mode & {
+      background-color: #222;
+      border-color: #444;
+    }
+  }
+
+  .hc-permission-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+
+    .metric-name {
+      font-weight: 500;
+      color: #333;
+
+      .dark-mode & {
+        color: #e0e0e0;
+      }
+    }
+
+    .permission-badges {
+      display: flex;
+      gap: 6px;
+    }
+
+    .perm-badge {
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      background-color: #e0e0e0;
+      color: #666;
+
+      .dark-mode & {
+        background-color: #333;
+        color: #999;
+      }
+
+      &.granted {
+        background-color: rgba(76, 175, 80, 0.15);
+        color: #2e7d32;
+
+        .dark-mode & {
+          background-color: rgba(76, 175, 80, 0.25);
+          color: #81c784;
+        }
+      }
+    }
+  }
+
+  .hc-control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 }
 

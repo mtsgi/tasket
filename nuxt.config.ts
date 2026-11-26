@@ -13,7 +13,7 @@ export default defineNuxtConfig({
       title: 'Tasket',
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'description', content: 'TODO・家計簿・カレンダー統合ライフマネジメントアプリ' },
         { name: 'theme-color', content: '#4a90d9' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },

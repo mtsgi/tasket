@@ -175,6 +175,7 @@ Tasketは「TODOアイテムに日時や金額を持たせる」というシン�
 | `bodyTemperature` | number | 体温（℃） |
 | `spo2` | number | 血中酸素濃度（%） |
 | `sleepHours` | number | 睡眠時間（時間） |
+| `sleepSessions` | array | 睡眠セッション一覧（`startTime`, `endTime` の複数時間帯） |
 | `steps` | number | 歩数 |
 | `exerciseMinutes` | number | 運動時間（分） |
 | `caloriesBurned` | number | 消費カロリー（kcal） |
@@ -182,6 +183,7 @@ Tasketは「TODOアイテムに日時や金額を持たせる」というシン�
 | `menstrualCycle` | string \| null | 生理周期 |
 | `medicationRecord` | string | 服薬記録 |
 | `healthMemo` | string | 体調メモ |
+| `healthConnectSync` | object | Health Connect同期メタデータ（競合保護・二重書き込み防止用） |
 | `created_at` | Date | 作成日時 |
 | `updated_at` | Date | 更新日時 |
 
@@ -459,7 +461,57 @@ test/
 
 ### CI
 
-GitHub Actionsで`main`ブランチへのPushおよびPull Request時に自動でlint + testが実行されます。
+GitHub Actionsで`main`ブランチへのPushおよびPull Request時に自動でlint + test（`ci.yml`）およびAndroid Debug APKのビルド・Artifactsアップロード（`build-android.yml`）が実行されます。
+
+## Androidアプリ（Capacitor & Health Connect連携）
+
+TasketはCapacitorを使用してWeb/PWA版と共通のソースコードからAndroidネイティブアプリとしてビルドできます。Android版ではAndroidの **Health Connect** と健康データを双方向連携できます。
+
+### Health Connect双方向連携の対象データ（全7項目）
+
+| 項目 | Health Connectレコード型 | Tasketフィールド | 読み取り（HC → Tasket） | 書き込み（Tasket → HC） |
+|---|---|---|---|---|
+| **歩数** | `StepsRecord` | `steps` | 集計API（`COUNT_TOTAL`）による当日合計 | `clientRecordId` で当日区間レコードをUpsert |
+| **睡眠時間** | `SleepSessionRecord` | `sleepSessions` / `sleepHours` | 当日起床セッション一覧を `sleepSessions` に格納し合計時間を自動反映 | `sleepSessions`（開始・終了時刻）がある場合のみ実時刻でUpsert |
+| **心拍数** | `HeartRateRecord` | `heartRate` | 当日全サンプルの平均値（整数bpm） | `clientRecordId` で代表時刻サンプルをUpsert |
+| **体重** | `WeightRecord` | `weight` | 当日の最新測定値（kg） | `clientRecordId` で代表時刻レコードをUpsert |
+| **体脂肪率** | `BodyFatRecord` | `bodyFatPercentage` | 当日の最新測定値（%） | `clientRecordId` で代表時刻レコードをUpsert |
+| **水分摂取量** | `HydrationRecord` | `waterIntake` | 集計API（`VOLUME_TOTAL`）による当日合計（ml） | `clientRecordId` で当日区間レコードをUpsert |
+| **運動時間** | `ExerciseSessionRecord` | `exerciseMinutes` | 集計API（`EXERCISE_DURATION_TOTAL`）による当日合計（分） | `clientRecordId` で運動セッションレコードをUpsert |
+
+### 連携・利用手順
+
+1. Android版Tasketを起動し、**メニュー → 設定 → 健康管理** の「Health Connect連携」をONにします。
+2. 「アクセス権限を許可・確認」から、連携したい健康データの読み取り・書き込み権限を許可します（一部の項目・読み取りのみの部分許可でも動作します）。
+3. **一括取得**: 設定画面の「直近30日分をHealth Connectから一括取得」ボタンを押すと、過去30日間のデータを取得してTasketに反映します。
+4. **日次画面での取得・書き込み**: 日次画面の「健康データ」フォームを展開すると、以下のボタンが表示されます。
+   - **Health Connectから取得**: 表示中の日のデータを取得し、Tasketで未入力または前回HC同期値から未変更の項目を更新して即時保存します（手動編集済みの項目は上書きされません）。
+   - **Health Connectへ書き込み**: 現在のフォーム入力値をローカル保存した上で、新規入力または変更された項目のみをHealth ConnectへUpsertします。
+
+### Android版のビルド手順
+
+必要な環境:
+- Node.js 24
+- JDK 21
+- Android SDK（API 36 / Build-Tools 35.0.0）
+
+Webアセットの生成とAndroidプロジェクトへの同期:
+
+```bash
+npm run android:sync
+```
+
+Android Studioでプロジェクトを開く場合:
+
+```bash
+npm run android:open
+```
+
+コマンドラインからDebug APK（`android/app/build/outputs/apk/debug/app-debug.apk`）をビルドする場合:
+
+```bash
+npm run android:apk:debug
+```
 
 ## OSSライセンス表記
 

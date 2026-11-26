@@ -152,6 +152,39 @@ export interface MealLog {
 }
 
 /**
+ * 睡眠セッションのデータ構造
+ * 1日の中の各睡眠時間帯（夜間睡眠や昼寝などの分割睡眠）を記録
+ */
+export interface SleepSession {
+  startTime: string // 開始日時（ISO 8601形式）または時刻（HH:mm形式）
+  endTime: string // 終了日時（ISO 8601形式）または時刻（HH:mm形式）
+}
+
+/**
+ * Health Connectとの同期状態メタデータ
+ * 手動入力値の上書き防止および未変更データの二重書き込み（循環同期）防止に使用
+ */
+export interface HealthConnectSyncMetadata {
+  steps?: number
+  sleepHours?: number
+  sleepSessions?: SleepSession[]
+  heartRate?: number
+  weight?: number
+  bodyFatPercentage?: number
+  waterIntake?: number
+  exerciseMinutes?: number
+  syncedAt?: string
+}
+
+/**
+ * Health Connect連携設定
+ */
+export interface HealthConnectSettings {
+  enabled: boolean // Health Connect連携の有効/無効
+  lastSyncedAt?: string | null // 最終同期日時（ISO 8601形式）
+}
+
+/**
  * 健康データのデータ構造
  * 日ごとの健康状態を記録
  */
@@ -180,6 +213,7 @@ export interface HealthData {
 
   // 活動量
   sleepHours?: number // 睡眠時間（時間）
+  sleepSessions?: SleepSession[] // 睡眠セッション一覧（開始・終了時刻）
   steps?: number // 歩数
   exerciseMinutes?: number // 運動時間（分）
   caloriesBurned?: number // 消費カロリー（kcal）
@@ -191,6 +225,9 @@ export interface HealthData {
   // その他
   medicationRecord?: string // 服薬記録
   healthMemo?: string // 体調に関する自由記録メモ
+
+  // Health Connect同期メタデータ（オプション、既存データ・バックアップ互換）
+  healthConnectSync?: HealthConnectSyncMetadata
 
   created_at: Date // 作成日時
   updated_at: Date // 更新日時
@@ -288,6 +325,7 @@ export interface AppSettings {
     pointRadius?: 'small' | 'medium' | 'large' // データポイントのサイズ
     fillArea?: boolean // グラフエリアの塗りつぶし
   }
+  healthConnectSettings?: HealthConnectSettings
 
   // 収支推移グラフ設定
   expenseChartSettings?: ExpenseChartSettings

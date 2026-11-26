@@ -182,6 +182,23 @@ describe('useHealthDataStore', () => {
         expect(result.id).toBe('existing-id')
         expect(result.weight).toBe(70)
       })
+
+      it('睡眠セッション（sleepSessions）が指定された場合に正規化してsleepHoursを自動計算する', async () => {
+        const { getHealthDataByDate, saveHealthData } = await import('~/utils/db')
+        vi.mocked(getHealthDataByDate).mockResolvedValue(undefined)
+
+        const store = useHealthDataStore()
+        const result = await store.saveHealthDataItem({
+          date: '2025-12-15',
+          sleepSessions: [
+            { startTime: '23:30', endTime: '07:00' },
+          ],
+        })
+
+        expect(saveHealthData).toHaveBeenCalledOnce()
+        expect(result.sleepHours).toBe(7.5)
+        expect(result.sleepSessions).toHaveLength(1)
+      })
     })
 
     describe('deleteHealthDataItem', () => {

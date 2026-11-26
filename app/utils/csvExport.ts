@@ -3,6 +3,7 @@
  * 健康データをCSV形式でエクスポートする機能を提供
  */
 import type { HealthData } from '~/types/item'
+import { exportFileOnAndroid, isAndroidNativeApp } from '~/utils/healthConnect'
 import dayjs from 'dayjs'
 
 /**
@@ -122,13 +123,18 @@ function escapeCsvValue(value: string): string {
 }
 
 /**
- * CSVファイルとしてダウンロード
+ * CSVファイルとしてダウンロード（Androidネイティブ版ではネイティブ保存/共有を実行）
  * @param csvContent - CSV形式の文字列
  * @param filename - ファイル名（拡張子なし）
  */
-export function downloadCSV(csvContent: string, filename: string): void {
+export async function downloadCSV(csvContent: string, filename: string): Promise<void> {
   // BOM付きUTF-8でエンコード（Excelで文字化けを防ぐため）
   const bom = '\uFEFF'
+  if (isAndroidNativeApp()) {
+    await exportFileOnAndroid(`${filename}.csv`, bom + csvContent, 'text/csv')
+    return
+  }
+
   const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' })
 
   // ダウンロードリンクを生成

@@ -180,5 +180,22 @@ describe('useSettingsStore', () => {
         expect(store.height).toBeUndefined()
       })
     })
+
+    describe('updateHealthConnectSettings', () => {
+      it('Health Connect設定を更新する', async () => {
+        const { getAppSettings } = await import('~/utils/db')
+        vi.mocked(getAppSettings).mockResolvedValue(undefined)
+
+        const store = useSettingsStore()
+        expect(store.healthConnectSettings.enabled).toBe(false)
+
+        await store.updateHealthConnectSettings({
+          enabled: true,
+          lastSyncedAt: '2025-12-15T10:00:00.000Z',
+        })
+        expect(store.healthConnectSettings.enabled).toBe(true)
+        expect(store.healthConnectSettings.lastSyncedAt).toBe('2025-12-15T10:00:00.000Z')
+      })
+    })
   })
 })

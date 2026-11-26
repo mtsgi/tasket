@@ -12,6 +12,19 @@ import {
   deleteHealthData,
   getHealthDataByDateRange,
 } from '~/utils/db'
+import {
+  calculateTotalSleepHours,
+  normalizeSleepSessionsForDate,
+} from '~/utils/sleepSessions'
+import {
+  applyWrittenFieldsToSyncMetadata,
+  buildHealthConnectWritePayload,
+  mergeHealthConnectDailyData,
+  readHealthConnectDailyData,
+  readHealthConnectDateRangeData,
+  writeHealthConnectDailyData,
+  type HealthConnectMetricKey,
+} from '~/utils/healthConnect'
 import dayjs from 'dayjs'
 
 export const useHealthDataStore = defineStore('healthData', {
@@ -256,16 +269,26 @@ export const useHealthDataStore = defineStore('healthData', {
         // 既存のデータを確認
         const existingData = await getHealthDataByDate(healthData.date)
 
+        // sleepSessionsが指定されている場合は正規化し、合計からsleepHoursを自動計算
+        const normalizedPayload: Partial<HealthData> & { date: string } = { ...healthData }
+        if (healthData.sleepSessions !== undefined) {
+          const normalizedSessions = normalizeSleepSessionsForDate(healthData.date, healthData.sleepSessions)
+          normalizedPayload.sleepSessions = normalizedSessions
+          if (normalizedSessions.length > 0) {
+            normalizedPayload.sleepHours = calculateTotalSleepHours(normalizedSessions, healthData.date)
+          }
+        }
+
         const now = new Date()
         const dataToSave: HealthData = existingData
           ? {
               ...existingData,
-              ...healthData,
+              ...normalizedPayload,
               updated_at: now,
             }
           : {
               id: uuidv4(),
-              ...healthData,
+              ...normalizedPayload,
               created_at: now,
               updated_at: now,
             }
@@ -286,6 +309,164 @@ export const useHealthDataStore = defineStore('healthData', {
       catch (error) {
         this.error = error instanceof Error ? error.message : 'Unknown error'
         console.error('Failed to save health data:', error)
+        throw error
+      }
+      finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * 指定日の健康データをHealth Connectから読み取ってマージ保存
+     * @param date - 日付文字列（YYYY-MM-DD）
+     */
+    async syncDateFromHealthConnect(date: string): Promise<{
+      data: HealthData | undefined
+      updatedFields: HealthConnectMetricKey[]
+      skippedManualFields: HealthConnectMetricKey[]
+    }> {
+      this.isLoading = true
+      this.error = null
+      try {
+        const incoming = await readHealthConnectDailyData(date)
+        const existing = await getHealthDataByDate(date)
+        const { mergedData, updatedFields, skippedManualFields, hasChanges } = mergeHealthConnectDailyData(
+          existing,
+          incoming,
+          date,
+        )
+
+        if (!existing && !hasChanges) {
+          return {
+            data: undefined,
+            updatedFields,
+            skippedManualFields,
+          }
+        }
+
+        const saved = await this.saveHealthDataItem(mergedData)
+        return {
+          data: saved,
+          updatedFields,
+          skippedManualFields,
+        }
+      }
+      catch (error) {
+        this.error = error instanceof Error ? error.message : 'Unknown error'
+        console.error('Failed to sync date from Health Connect:', error)
+        throw error
+      }
+      finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * 直近N日分（デフォルト30日）の健康データをHealth Connectから一括取得してマージ保存
+     * @param days - 取得する日数（デフォルト30）
+     */
+    async syncRecentFromHealthConnect(days = 30): Promise<{
+      syncedDaysCount: number
+      updatedFieldsCount: number
+    }> {
+      this.isLoading = true
+      this.error = null
+      try {
+        const endDate = dayjs().format('YYYY-MM-DD')
+        const startDate = dayjs().subtract(Math.max(1, days) - 1, 'day').format('YYYY-MM-DD')
+        const dailyList = await readHealthConnectDateRangeData(startDate, endDate)
+
+        let syncedDaysCount = 0
+        let updatedFieldsCount = 0
+
+        for (const incoming of dailyList) {
+          const existing = await getHealthDataByDate(incoming.date)
+          const { mergedData, updatedFields, hasChanges } = mergeHealthConnectDailyData(
+            existing,
+            incoming,
+            incoming.date,
+          )
+          if (hasChanges) {
+            await this.saveHealthDataItem(mergedData)
+            syncedDaysCount++
+            updatedFieldsCount += updatedFields.length
+          }
+        }
+
+        return {
+          syncedDaysCount,
+          updatedFieldsCount,
+        }
+      }
+      catch (error) {
+        this.error = error instanceof Error ? error.message : 'Unknown error'
+        console.error('Failed to sync recent data from Health Connect:', error)
+        throw error
+      }
+      finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * 指定日のフォーム入力値をローカルDBへ保存した上で、新規・変更項目をHealth Connectへ書き込む
+     * @param healthDataInput - フォームから渡された健康データ
+     */
+    async writeDateToHealthConnect(healthDataInput: Partial<HealthData> & { date: string }): Promise<{
+      data: HealthData
+      writtenFields: HealthConnectMetricKey[]
+      skippedPermissionFields: HealthConnectMetricKey[]
+      nothingToWrite: boolean
+    }> {
+      this.isLoading = true
+      this.error = null
+      try {
+        const existing = await getHealthDataByDate(healthDataInput.date)
+        const previousSync = existing?.healthConnectSync
+
+        // まず現在のフォーム入力値をIndexedDBへ保存
+        const savedData = await this.saveHealthDataItem(healthDataInput)
+
+        // 前回HC同期値との差分を計算
+        const { payload, targetFields } = buildHealthConnectWritePayload(savedData, previousSync)
+        if (targetFields.length === 0) {
+          return {
+            data: savedData,
+            writtenFields: [],
+            skippedPermissionFields: [],
+            nothingToWrite: true,
+          }
+        }
+
+        const writeResult = await writeHealthConnectDailyData(savedData.date, payload)
+        if (writeResult.writtenFields.length > 0) {
+          const updatedSync = applyWrittenFieldsToSyncMetadata(
+            { ...savedData, healthConnectSync: previousSync },
+            writeResult.writtenFields,
+            payload,
+          )
+          const finalData = await this.saveHealthDataItem({
+            ...savedData,
+            healthConnectSync: updatedSync,
+          })
+          return {
+            data: finalData,
+            writtenFields: writeResult.writtenFields,
+            skippedPermissionFields: writeResult.skippedPermissionFields,
+            nothingToWrite: false,
+          }
+        }
+
+        return {
+          data: savedData,
+          writtenFields: writeResult.writtenFields,
+          skippedPermissionFields: writeResult.skippedPermissionFields,
+          nothingToWrite: false,
+        }
+      }
+      catch (error) {
+        this.error = error instanceof Error ? error.message : 'Unknown error'
+        console.error('Failed to write date to Health Connect:', error)
         throw error
       }
       finally {
