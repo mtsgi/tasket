@@ -368,28 +368,96 @@ export const useHealthDataStore = defineStore('healthData', {
     /**
      * 指定日の健康データをHealth Connectから読み取ってマージ保存
      * @param date - 日付文字列（YYYY-MM-DD）
+     * @param options - フォームで未保存編集中の項目（dirtyMetrics）などの保護オプション
      */
-    async syncDateFromHealthConnect(date: string): Promise<{
+    async syncDateFromHealthConnect(
+      date: string,
+      options?: { dirtyMetrics?: Iterable<HealthConnectMetricKey> },
+    ): Promise<{
       data: HealthData | undefined
       updatedFields: HealthConnectMetricKey[]
       skippedManualFields: HealthConnectMetricKey[]
+      skippedPermissionFields: HealthConnectMetricKey[]
+      failedFields: HealthConnectMetricKey[]
+      fieldErrors: Partial<Record<HealthConnectMetricKey, string>>
+      allFailed: boolean
+      allPermissionDenied: boolean
     }> {
       this.isLoading = true
       this.error = null
       try {
         const incoming = await readHealthConnectDailyData(date)
         const existing = await getHealthDataByDate(date)
-        const { mergedData, updatedFields, skippedManualFields, hasChanges } = mergeHealthConnectDailyData(
+        const mergeResult = mergeHealthConnectDailyData(
           existing,
           incoming,
           date,
+          options,
         )
+
+        const {
+          mergedData,
+          updatedFields,
+          skippedManualFields,
+          skippedPermissionFields,
+          failedFields,
+          fieldErrors,
+          hasChanges,
+          hasMetadataChanges,
+          allFailed,
+          allPermissionDenied,
+        } = mergeResult
+
+        if (allFailed) {
+          this.error = 'Failed to read all metrics from Health Connect'
+          return {
+            data: existing,
+            updatedFields: [],
+            skippedManualFields: [],
+            skippedPermissionFields,
+            failedFields,
+            fieldErrors,
+            allFailed: true,
+            allPermissionDenied: false,
+          }
+        }
+
+        if (allPermissionDenied) {
+          return {
+            data: existing,
+            updatedFields: [],
+            skippedManualFields: [],
+            skippedPermissionFields,
+            failedFields,
+            fieldErrors,
+            allFailed: false,
+            allPermissionDenied: true,
+          }
+        }
 
         if (!existing && !hasChanges) {
           return {
             data: undefined,
             updatedFields,
             skippedManualFields,
+            skippedPermissionFields,
+            failedFields,
+            fieldErrors,
+            allFailed: false,
+            allPermissionDenied: false,
+          }
+        }
+
+        if (existing && !hasChanges && !hasMetadataChanges) {
+          return {
+            data: existing,
+            updatedFields,
+            skippedManualFields,
+            skippedPermissionFields,
+            failedFields,
+            fieldErrors,
+            allFailed: false,
+            allPermissionDenied: false,
           }
         }
 
@@ -398,6 +466,11 @@ export const useHealthDataStore = defineStore('healthData', {
           data: saved,
           updatedFields,
           skippedManualFields,
+          skippedPermissionFields,
+          failedFields,
+          fieldErrors,
+          allFailed: false,
+          allPermissionDenied: false,
         }
       }
       catch (error) {
@@ -417,6 +490,10 @@ export const useHealthDataStore = defineStore('healthData', {
     async syncRecentFromHealthConnect(days = 30): Promise<{
       syncedDaysCount: number
       updatedFieldsCount: number
+      failedDaysCount: number
+      partialFailedFieldsCount: number
+      allFailed: boolean
+      allPermissionDenied: boolean
     }> {
       this.isLoading = true
       this.error = null
@@ -427,24 +504,63 @@ export const useHealthDataStore = defineStore('healthData', {
 
         let syncedDaysCount = 0
         let updatedFieldsCount = 0
+        let failedDaysCount = 0
+        let partialFailedFieldsCount = 0
+        let permissionDeniedDaysCount = 0
 
         for (const incoming of dailyList) {
           const existing = await getHealthDataByDate(incoming.date)
-          const { mergedData, updatedFields, hasChanges } = mergeHealthConnectDailyData(
+          const {
+            mergedData,
+            updatedFields,
+            failedFields,
+            hasChanges,
+            hasMetadataChanges,
+            allFailed,
+            allPermissionDenied,
+          } = mergeHealthConnectDailyData(
             existing,
             incoming,
             incoming.date,
           )
-          if (hasChanges) {
-            await this.saveHealthDataItem(mergedData)
-            syncedDaysCount++
-            updatedFieldsCount += updatedFields.length
+
+          if (allFailed) {
+            failedDaysCount++
+            partialFailedFieldsCount += failedFields.length
+            continue
           }
+          if (allPermissionDenied) {
+            permissionDeniedDaysCount++
+            continue
+          }
+          if (failedFields.length > 0) {
+            partialFailedFieldsCount += failedFields.length
+          }
+
+          if (hasChanges || (existing && hasMetadataChanges)) {
+            await this.saveHealthDataItem(mergedData)
+            if (hasChanges) {
+              syncedDaysCount++
+              updatedFieldsCount += updatedFields.length
+            }
+          }
+        }
+
+        const totalDays = dailyList.length
+        const allFailed = totalDays > 0 && failedDaysCount === totalDays
+        const allPermissionDenied = totalDays > 0 && permissionDeniedDaysCount === totalDays
+
+        if (allFailed) {
+          this.error = 'Failed to read all days from Health Connect'
         }
 
         return {
           syncedDaysCount,
           updatedFieldsCount,
+          failedDaysCount,
+          partialFailedFieldsCount,
+          allFailed,
+          allPermissionDenied,
         }
       }
       catch (error) {
@@ -465,6 +581,10 @@ export const useHealthDataStore = defineStore('healthData', {
       data: HealthData
       writtenFields: HealthConnectMetricKey[]
       skippedPermissionFields: HealthConnectMetricKey[]
+      invalidFields: HealthConnectMetricKey[]
+      failedFields: HealthConnectMetricKey[]
+      fieldErrors: Partial<Record<HealthConnectMetricKey, string>>
+      localOnlyFields: HealthConnectMetricKey[]
       nothingToWrite: boolean
     }> {
       this.isLoading = true
@@ -477,22 +597,32 @@ export const useHealthDataStore = defineStore('healthData', {
         const savedData = await this.saveHealthDataItem(healthDataInput)
 
         // 前回HC同期値との差分を計算
-        const { payload, targetFields } = buildHealthConnectWritePayload(savedData, previousSync)
+        const { payload, targetFields, localOnlyFields } = buildHealthConnectWritePayload(savedData, previousSync)
         if (targetFields.length === 0) {
           return {
             data: savedData,
             writtenFields: [],
             skippedPermissionFields: [],
+            invalidFields: [],
+            failedFields: [],
+            fieldErrors: {},
+            localOnlyFields,
             nothingToWrite: true,
           }
         }
 
         const writeResult = await writeHealthConnectDailyData(savedData.date, payload)
-        if (writeResult.writtenFields.length > 0) {
+        const invalidFields = writeResult.invalidFields ?? []
+        const failedFields = writeResult.failedFields ?? []
+        const fieldErrors = writeResult.fieldErrors ?? {}
+        const hasPendingSleepDeletes = (writeResult.pendingDeleteSleepClientRecordIds?.length ?? 0) > 0
+
+        if (writeResult.writtenFields.length > 0 || hasPendingSleepDeletes) {
           const updatedSync = applyWrittenFieldsToSyncMetadata(
             { ...savedData, healthConnectSync: previousSync },
             writeResult.writtenFields,
             payload,
+            writeResult,
           )
           const finalData = await this.saveHealthDataItem({
             ...savedData,
@@ -502,6 +632,10 @@ export const useHealthDataStore = defineStore('healthData', {
             data: finalData,
             writtenFields: writeResult.writtenFields,
             skippedPermissionFields: writeResult.skippedPermissionFields,
+            invalidFields,
+            failedFields,
+            fieldErrors,
+            localOnlyFields,
             nothingToWrite: false,
           }
         }
@@ -510,6 +644,10 @@ export const useHealthDataStore = defineStore('healthData', {
           data: savedData,
           writtenFields: writeResult.writtenFields,
           skippedPermissionFields: writeResult.skippedPermissionFields,
+          invalidFields,
+          failedFields,
+          fieldErrors,
+          localOnlyFields,
           nothingToWrite: false,
         }
       }

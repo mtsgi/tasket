@@ -8,7 +8,7 @@ import {
   mergeHealthConnectDailyData,
 } from '~/utils/healthConnect'
 import { createHealthData } from '../helpers/factories'
-import { normalizeSleepSessionsForDate } from '~/utils/sleepSessions'
+import { createSleepSessionDrafts, normalizeSleepSessionsForDate } from '~/utils/sleepSessions'
 
 describe('healthConnect utilities', () => {
   describe('mergeHealthConnectDailyData', () => {
@@ -54,16 +54,18 @@ describe('healthConnect utilities', () => {
       expect(result.mergedData.healthConnectSync?.weight).toBe(68.4)
     })
 
-    it('Tasket側で手動編集された項目は上書きせず保護し、前回HC同期値のままの項目のみ更新する', () => {
+    it('Tasket側で手動編集された項目および未保存フォーム入力（dirtyMetrics）は保護し、未変更項目のみ更新する', () => {
       const existing = createHealthData({
         date: '2025-12-15',
         weight: 67.0, // 手動で68.0から67.0に変更済み
         steps: 5000, // 前回HC同期値のまま
+        waterIntake: 1000, // 前回HC同期値のまま（ただしフォーム上で未保存編集中としてdirty指定）
         muscleMass: 52.3, // 連携対象外フィールド
         healthMemo: '快調',
         healthConnectSync: {
           weight: 68.0,
           steps: 5000,
+          waterIntake: 1000,
         },
       })
 
@@ -71,70 +73,368 @@ describe('healthConnect utilities', () => {
         existing,
         {
           date: '2025-12-15',
-          weight: 69.0, // HC側の値（Tasket側が手動変更済みなのでスキップされるべき）
+          weight: 69.0, // HC側の値（Tasket側が手動変更済みなのでスキップ）
           steps: 9200, // HC側の新しい歩数（更新されるべき）
+          waterIntake: 1500, // フォーム上で未保存編集中（dirtyMetrics）のためスキップされるべき
           heartRate: 66, // Tasket側が未入力（補完されるべき）
+        },
+        '2025-12-15',
+        { dirtyMetrics: ['waterIntake'] },
+      )
+
+      expect(result.mergedData.weight).toBe(67.0)
+      expect(result.mergedData.waterIntake).toBe(1000)
+      expect(result.skippedManualFields).toContain('weight')
+      expect(result.skippedManualFields).toContain('waterIntake')
+      expect(result.mergedData.steps).toBe(9200)
+      expect(result.mergedData.heartRate).toBe(66)
+      expect(result.updatedFields).toEqual(['steps', 'heartRate'])
+      expect(result.mergedData.muscleMass).toBe(52.3)
+      expect(result.mergedData.healthMemo).toBe('快調')
+    })
+
+    it('同一データの繰り返し同期では変更なし（hasChanges: false）となり循環同期しない', () => {
+      const first = mergeHealthConnectDailyData(
+        undefined,
+        {
+          date: '2025-12-15',
+          steps: 7000,
+          waterIntake: 1200,
+          externalValues: { steps: 7000, waterIntake: 1000 },
+          tasketValues: { steps: 0, waterIntake: 200 },
+        },
+        '2025-12-15',
+      )
+      expect(first.hasChanges).toBe(true)
+
+      const existing = createHealthData({
+        ...first.mergedData,
+        date: '2025-12-15',
+      })
+
+      const second = mergeHealthConnectDailyData(
+        existing,
+        {
+          date: '2025-12-15',
+          steps: 7000,
+          waterIntake: 1200,
+          externalValues: { steps: 7000, waterIntake: 1000 },
+          tasketValues: { steps: 0, waterIntake: 200 },
+        },
+        '2025-12-15',
+      )
+      expect(second.hasChanges).toBe(false)
+      expect(second.updatedFields).toEqual([])
+    })
+
+    it('全項目が読み取り失敗（allFailed）または全権限未許可（allPermissionDenied）の場合は同期成功として扱わない', () => {
+      const existing = createHealthData({
+        date: '2025-12-15',
+        weight: 65.0,
+        bodyFatPercentage: undefined,
+      })
+
+      const failedResult = mergeHealthConnectDailyData(
+        existing,
+        {
+          date: '2025-12-15',
+          readFields: [],
+          emptyFields: [],
+          failedFields: ['steps', 'sleep', 'heartRate', 'weight', 'bodyFatPercentage', 'waterIntake', 'exerciseMinutes'],
+          fieldErrors: { steps: 'RemoteException' },
+        },
+        '2025-12-15',
+      )
+      expect(failedResult.allFailed).toBe(true)
+      expect(failedResult.hasChanges).toBe(false)
+      expect(failedResult.mergedData.healthConnectSync).toBeUndefined()
+
+      const deniedResult = mergeHealthConnectDailyData(
+        existing,
+        {
+          date: '2025-12-15',
+          readFields: [],
+          emptyFields: [],
+          skippedPermissionFields: ['steps', 'sleep', 'heartRate', 'weight', 'bodyFatPercentage', 'waterIntake', 'exerciseMinutes'],
+          failedFields: [],
+        },
+        '2025-12-15',
+      )
+      expect(deniedResult.allPermissionDenied).toBe(true)
+      expect(deniedResult.hasChanges).toBe(false)
+      expect(deniedResult.mergedData.healthConnectSync).toBeUndefined()
+    })
+
+    it('一部の項目のみ取得失敗した場合でも成功した項目はマージされ、失敗項目は既存値を維持する', () => {
+      const existing = createHealthData({
+        date: '2025-12-15',
+        weight: 65.0,
+        steps: 4000,
+        healthConnectSync: {
+          weight: 65.0,
+          steps: 4000,
+        },
+      })
+
+      const partialResult = mergeHealthConnectDailyData(
+        existing,
+        {
+          date: '2025-12-15',
+          steps: 8000,
+          readFields: ['steps'],
+          emptyFields: ['sleep', 'heartRate', 'bodyFatPercentage', 'waterIntake', 'exerciseMinutes'],
+          failedFields: ['weight'],
+          fieldErrors: { weight: 'IOException' },
         },
         '2025-12-15',
       )
 
-      expect(result.mergedData.weight).toBe(67.0)
-      expect(result.skippedManualFields).toContain('weight')
-      expect(result.mergedData.steps).toBe(9200)
-      expect(result.mergedData.heartRate).toBe(66)
-      expect(result.updatedFields).toEqual(['steps', 'heartRate'])
-      // 対象外フィールドも破壊されない
-      expect(result.mergedData.muscleMass).toBe(52.3)
-      expect(result.mergedData.healthMemo).toBe('快調')
+      expect(partialResult.allFailed).toBe(false)
+      expect(partialResult.hasChanges).toBe(true)
+      expect(partialResult.updatedFields).toEqual(['steps'])
+      expect(partialResult.mergedData.steps).toBe(8000)
+      expect(partialResult.mergedData.weight).toBe(65.0)
+      expect(partialResult.failedFields).toEqual(['weight'])
     })
   })
 
-  describe('buildHealthConnectWritePayload', () => {
-    it('前回HC同期値から変更がない項目は書き込み対象から除外し、新規・変更項目のみ抽出する', () => {
-      const sessions = normalizeSleepSessionsForDate('2025-12-15', [
-        { startTime: '23:00', endTime: '06:30' },
-      ])
-      const healthData = createHealthData({
-        date: '2025-12-15',
-        steps: 8000, // 未変更
-        weight: 67.5, // 68.0から変更
-        heartRate: 62, // 新規入力
-        sleepHours: 7.5,
-        sleepSessions: sessions, // 新規セッション
-        healthConnectSync: {
-          steps: 8000,
-          weight: 68.0,
-          bodyFatPercentage: 20,
+  describe('他アプリ由来データの取得・編集・書き込み・再取得（二重計上・循環同期防止 P1-3）', () => {
+    it('他アプリで記録された水分摂取量1,000mlを取得後、Tasketで1,200mlへ編集・書き込み・再取得しても2,200mlに二重計上されない', () => {
+      // 1. 他アプリ由来の 1,000ml を取得
+      const read1 = mergeHealthConnectDailyData(
+        undefined,
+        {
+          date: '2025-12-15',
+          waterIntake: 1000,
+          externalValues: { waterIntake: 1000 },
+          tasketValues: { waterIntake: 0 },
+          readFields: ['waterIntake'],
         },
-      })
+        '2025-12-15',
+      )
+      expect(read1.mergedData.waterIntake).toBe(1000)
 
-      const { payload, targetFields } = buildHealthConnectWritePayload(healthData)
-
-      expect(targetFields).toEqual(['heartRate', 'weight', 'sleep'])
-      expect(payload.steps).toBeUndefined()
-      expect(payload.weight).toBe(67.5)
-      expect(payload.heartRate).toBe(62)
-      expect(payload.sleepSessions).toEqual(sessions)
-    })
-
-    it('sleepSessionsが空でsleepHoursのみ手入力されている場合は睡眠のHC書き込みをスキップする', () => {
-      const healthData = createHealthData({
+      // 2. ユーザーが Tasket で 1,200ml に編集
+      const editedData = createHealthData({
+        ...read1.mergedData,
         date: '2025-12-15',
         weight: undefined,
         bodyFatPercentage: undefined,
-        sleepHours: 7.0,
-        sleepSessions: [],
+        waterIntake: 1200,
       })
 
-      const { payload, targetFields } = buildHealthConnectWritePayload(healthData)
+      const { payload, targetFields } = buildHealthConnectWritePayload(editedData)
+      expect(targetFields).toEqual(['waterIntake'])
+      expect(payload.waterIntake).toBe(1200)
+      expect(payload.externalValues?.waterIntake).toBe(1000)
 
+      // 3. Kotlin側で差分 200ml (1200 - 1000) が Upsert され、メタデータを更新
+      const updatedSync = applyWrittenFieldsToSyncMetadata(
+        editedData,
+        ['waterIntake'],
+        payload,
+        {
+          writtenFields: ['waterIntake'],
+          skippedPermissionFields: [],
+          externalValues: { waterIntake: 1000 },
+          tasketValues: { waterIntake: 200 },
+          clientRecordVersions: { waterIntake: 1700000000001 },
+        },
+      )
+      const afterWriteData = createHealthData({
+        ...editedData,
+        healthConnectSync: updatedSync,
+      })
+
+      // 再書き込みチェック：変更がないため targetFields は空になる
+      const rewriteCheck = buildHealthConnectWritePayload(afterWriteData)
+      expect(rewriteCheck.targetFields).toEqual([])
+
+      // 4. Health Connect から再取得（他アプリ 1,000ml + Tasket 200ml = 1,200ml）
+      const read2 = mergeHealthConnectDailyData(
+        afterWriteData,
+        {
+          date: '2025-12-15',
+          waterIntake: 1200,
+          externalValues: { waterIntake: 1000 },
+          tasketValues: { waterIntake: 200 },
+          clientRecordVersions: { waterIntake: 1700000000001 },
+          readFields: ['waterIntake'],
+        },
+        '2025-12-15',
+      )
+      expect(read2.hasChanges).toBe(false)
+      expect(read2.mergedData.waterIntake).toBe(1200)
+    })
+
+    it('他アプリで記録された1,000mlをTasketで800mlへ減少修正した場合、Tasketレコードを削除した上で再取得時も800mlをローカル保護する', () => {
+      const initial = createHealthData({
+        date: '2025-12-15',
+        weight: undefined,
+        bodyFatPercentage: undefined,
+        waterIntake: 800,
+        healthConnectSync: {
+          waterIntake: 1000,
+          externalValues: { waterIntake: 1000 },
+          tasketValues: { waterIntake: 0 },
+        },
+      })
+
+      const { payload, targetFields } = buildHealthConnectWritePayload(initial)
+      expect(targetFields).toEqual(['waterIntake'])
+
+      const syncAfterWrite = applyWrittenFieldsToSyncMetadata(
+        initial,
+        ['waterIntake'],
+        payload,
+        {
+          writtenFields: ['waterIntake'],
+          skippedPermissionFields: [],
+          externalValues: { waterIntake: 1000 },
+          tasketValues: { waterIntake: 0 },
+        },
+      )
+      const savedAfterWrite = createHealthData({
+        ...initial,
+        healthConnectSync: syncAfterWrite,
+      })
+
+      // Health Connect 上には他アプリの 1,000ml が残っているが、再取得しても Tasket 側の 800ml が上書きされない
+      const readAgain = mergeHealthConnectDailyData(
+        savedAfterWrite,
+        {
+          date: '2025-12-15',
+          waterIntake: 1000,
+          externalValues: { waterIntake: 1000 },
+          tasketValues: { waterIntake: 0 },
+          readFields: ['waterIntake'],
+        },
+        '2025-12-15',
+      )
+      expect(readAgain.mergedData.waterIntake).toBe(800)
+      expect(readAgain.skippedManualFields).toContain('waterIntake')
+    })
+
+    it('他アプリ由来の心拍数サンプルが存在する日は心拍数のHC書き込みをスキップし、ローカル優先値として保護する', () => {
+      const data = createHealthData({
+        date: '2025-12-15',
+        weight: undefined,
+        bodyFatPercentage: undefined,
+        heartRate: 75, // 70から手動編集
+        healthConnectSync: {
+          heartRate: 70,
+          hasExternalHeartRate: true,
+        },
+      })
+
+      const { targetFields, localOnlyFields } = buildHealthConnectWritePayload(data)
       expect(targetFields).toEqual([])
+      expect(localOnlyFields).toEqual(['heartRate'])
+
+      // 再取得しても手動編集した 75 bpm が保護される
+      const readAgain = mergeHealthConnectDailyData(
+        data,
+        {
+          date: '2025-12-15',
+          heartRate: 70,
+          hasExternalHeartRate: true,
+          readFields: ['heartRate'],
+        },
+        '2025-12-15',
+      )
+      expect(readAgain.mergedData.heartRate).toBe(75)
+      expect(readAgain.skippedManualFields).toContain('heartRate')
+    })
+  })
+
+  describe('睡眠セッションの時刻精度保持・追加・削除・失敗再試行 (P1-2, P2-4)', () => {
+    it('未編集の他アプリ由来睡眠セッションは秒以下の精度を維持し、変更済みと誤判定されてHealth Connectへ書き戻されない', () => {
+      const externalSession = {
+        startTime: '2025-12-14T14:20:35.500Z',
+        endTime: '2025-12-14T21:50:12.250Z',
+        id: 'ext-sleep-1',
+        dataOrigin: 'com.fitbit.FitbitMobile',
+        source: 'external' as const,
+      }
+
+      // 1. Health Connect から取得
+      const merged = mergeHealthConnectDailyData(
+        undefined,
+        {
+          date: '2025-12-15',
+          sleepSessions: [externalSession],
+          readFields: ['sleep'],
+        },
+        '2025-12-15',
+      )
+
+      // 2. フォームの HH:mm ドラフトを経由して再度ビルド（ユーザーは睡眠を未編集、体重のみ入力）
+      const formDrafts = createSleepSessionDrafts(merged.mergedData.sleepSessions)
+      const normalizedFromForm = normalizeSleepSessionsForDate('2025-12-15', formDrafts)
+
+      const dataAfterForm = createHealthData({
+        ...merged.mergedData,
+        date: '2025-12-15',
+        weight: 66.5,
+        bodyFatPercentage: undefined,
+        sleepSessions: normalizedFromForm,
+      })
+
+      const { payload, targetFields } = buildHealthConnectWritePayload(dataAfterForm)
+      // 体重のみが書き込み対象となり、未編集の睡眠セッションは書き戻されない
+      expect(targetFields).toEqual(['weight'])
       expect(payload.sleepSessions).toBeUndefined()
+    })
+
+    it('Tasketで作成した睡眠セッションを全削除した場合、空配列を送信してHealth Connect上のTasketセッションを削除する', () => {
+      const prevTasketSessions = normalizeSleepSessionsForDate('2025-12-15', [
+        { startTime: '23:00', endTime: '06:30', source: 'tasket', clientRecordId: 'tasket-sleep-2025-12-15-0' },
+      ])
+      const data = createHealthData({
+        date: '2025-12-15',
+        weight: undefined,
+        bodyFatPercentage: undefined,
+        sleepSessions: [],
+        sleepHours: undefined,
+        healthConnectSync: {
+          sleepSessions: prevTasketSessions,
+          sleepHours: 7.5,
+          tasketSleepClientRecordIds: ['tasket-sleep-2025-12-15-0'],
+        },
+      })
+
+      const { payload, targetFields } = buildHealthConnectWritePayload(data)
+      expect(targetFields).toEqual(['sleep'])
+      expect(payload.sleepSessions).toEqual([])
+      expect(payload.previousSleepClientRecordIds).toContain('tasket-sleep-2025-12-15-0')
+    })
+
+    it('睡眠セッション削除が一部失敗して pendingDeleteSleepClientRecordIds が残った場合、次回書き込み時に再試行対象になる', () => {
+      const sessions = normalizeSleepSessionsForDate('2025-12-15', [
+        { startTime: '23:30', endTime: '07:00', source: 'tasket' },
+      ])
+      const data = createHealthData({
+        date: '2025-12-15',
+        weight: undefined,
+        bodyFatPercentage: undefined,
+        sleepSessions: sessions,
+        sleepHours: 7.5,
+        healthConnectSync: {
+          sleepSessions: sessions,
+          sleepHours: 7.5,
+          tasketSleepClientRecordIds: ['tasket-sleep-2025-12-15-0'],
+          pendingDeleteSleepClientRecordIds: ['tasket-sleep-2025-12-15-1'],
+        },
+      })
+
+      const { payload, targetFields } = buildHealthConnectWritePayload(data)
+      expect(targetFields).toEqual(['sleep'])
+      expect(payload.previousSleepClientRecordIds).toContain('tasket-sleep-2025-12-15-1')
     })
   })
 
   describe('applyWrittenFieldsToSyncMetadata', () => {
-    it('書き込みに成功した項目のみhealthConnectSyncメタデータを更新する', () => {
+    it('書き込みに成功した項目のみhealthConnectSyncメタデータとclientRecordVersionsを更新し、失敗項目は除外する', () => {
       const sessions = normalizeSleepSessionsForDate('2025-12-15', [
         { startTime: '23:30', endTime: '07:00' },
       ])
@@ -148,11 +448,19 @@ describe('healthConnect utilities', () => {
 
       const syncMeta = applyWrittenFieldsToSyncMetadata(
         healthData,
-        ['weight', 'sleep'], // stepsは書き込み権限がなくスキップされたケース
+        ['weight', 'sleep'],
         {
           weight: 67.5,
           steps: 10000,
           sleepSessions: sessions,
+        },
+        {
+          writtenFields: ['weight', 'sleep'],
+          skippedPermissionFields: ['steps'],
+          clientRecordVersions: {
+            weight: 1700000000100,
+            sleep: 1700000000100,
+          },
         },
       )
 
@@ -160,6 +468,7 @@ describe('healthConnect utilities', () => {
       expect(syncMeta.sleepSessions).toEqual(sessions)
       expect(syncMeta.sleepHours).toBe(7.5)
       expect(syncMeta.steps).toBeUndefined()
+      expect(syncMeta.clientRecordVersions?.weight).toBe(1700000000100)
       expect(syncMeta.syncedAt).toBeDefined()
     })
   })

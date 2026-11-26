@@ -11,6 +11,16 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'mock-health-uuid'),
 }))
 
+vi.mock('~/utils/healthConnect', async () => {
+  const actual = await vi.importActual<typeof import('~/utils/healthConnect')>('~/utils/healthConnect')
+  return {
+    ...actual,
+    readHealthConnectDailyData: vi.fn(),
+    readHealthConnectDateRangeData: vi.fn(),
+    writeHealthConnectDailyData: vi.fn(),
+  }
+})
+
 describe('useHealthDataStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -259,6 +269,127 @@ describe('useHealthDataStore', () => {
         expect(store.healthDataList).toHaveLength(1)
         expect(store.healthDataList[0]!.id).toBe('health-restored')
         expect(store.isLoading).toBe(false)
+      })
+    })
+
+    describe('Health Connect 双方向同期アクション', () => {
+      it('syncDateFromHealthConnect: 部分失敗時は成功した項目のみ保存し、dirtyMetrics指定項目は保護する', async () => {
+        const { getHealthDataByDate, saveHealthData } = await import('~/utils/db')
+        const { readHealthConnectDailyData } = await import('~/utils/healthConnect')
+
+        const existing = createHealthData({
+          id: 'hc-1',
+          date: '2025-12-15',
+          weight: 66.0,
+          steps: 4000,
+          waterIntake: 1000,
+          healthConnectSync: {
+            weight: 66.0,
+            steps: 4000,
+            waterIntake: 1000,
+          },
+        })
+        vi.mocked(getHealthDataByDate).mockResolvedValue(existing)
+        vi.mocked(readHealthConnectDailyData).mockResolvedValue({
+          date: '2025-12-15',
+          steps: 9500,
+          waterIntake: 1600,
+          readFields: ['steps', 'waterIntake'],
+          failedFields: ['weight'],
+          fieldErrors: { weight: 'Read error' },
+        })
+
+        const store = useHealthDataStore()
+        // waterIntake はフォームで未保存編集中として dirtyMetrics に指定
+        const result = await store.syncDateFromHealthConnect('2025-12-15', {
+          dirtyMetrics: ['waterIntake'],
+        })
+
+        expect(result.allFailed).toBe(false)
+        expect(result.updatedFields).toEqual(['steps'])
+        expect(result.skippedManualFields).toContain('waterIntake')
+        expect(result.failedFields).toEqual(['weight'])
+        expect(result.data?.steps).toBe(9500)
+        expect(result.data?.waterIntake).toBe(1000)
+        expect(result.data?.weight).toBe(66.0)
+        expect(saveHealthData).toHaveBeenCalledOnce()
+      })
+
+      it('syncDateFromHealthConnect: 全項目失敗時（allFailed）は保存せずエラー状態を設定する', async () => {
+        const { getHealthDataByDate, saveHealthData } = await import('~/utils/db')
+        const { readHealthConnectDailyData } = await import('~/utils/healthConnect')
+
+        vi.mocked(getHealthDataByDate).mockResolvedValue(undefined)
+        vi.mocked(readHealthConnectDailyData).mockResolvedValue({
+          date: '2025-12-15',
+          readFields: [],
+          emptyFields: [],
+          failedFields: ['steps', 'sleep', 'heartRate', 'weight', 'bodyFatPercentage', 'waterIntake', 'exerciseMinutes'],
+        })
+
+        const store = useHealthDataStore()
+        const result = await store.syncDateFromHealthConnect('2025-12-15')
+
+        expect(result.allFailed).toBe(true)
+        expect(store.error).toBeTruthy()
+        expect(saveHealthData).not.toHaveBeenCalled()
+      })
+
+      it('writeDateToHealthConnect: 同一レコードの初回書き込み・再編集・再書き込みとバージョン更新を行う', async () => {
+        const { getHealthDataByDate, saveHealthData } = await import('~/utils/db')
+        const { writeHealthConnectDailyData } = await import('~/utils/healthConnect')
+
+        const dbState: { current?: ReturnType<typeof createHealthData> } = {}
+        vi.mocked(getHealthDataByDate).mockImplementation(async () => dbState.current)
+        vi.mocked(saveHealthData).mockImplementation(async (saved) => {
+          dbState.current = saved
+        })
+
+        const store = useHealthDataStore()
+
+        // 1. 初回書き込み
+        vi.mocked(writeHealthConnectDailyData).mockResolvedValueOnce({
+          writtenFields: ['weight', 'waterIntake'],
+          skippedPermissionFields: [],
+          externalValues: { waterIntake: 1000 },
+          tasketValues: { weight: 65.0, waterIntake: 200 },
+          clientRecordVersions: { weight: 1001, waterIntake: 1001 },
+        })
+
+        const write1 = await store.writeDateToHealthConnect({
+          date: '2025-12-15',
+          weight: 65.0,
+          waterIntake: 1200,
+        })
+
+        expect(write1.nothingToWrite).toBe(false)
+        expect(write1.writtenFields).toEqual(['weight', 'waterIntake'])
+        expect(write1.data.healthConnectSync?.clientRecordVersions?.weight).toBe(1001)
+        expect(write1.data.healthConnectSync?.tasketValues?.waterIntake).toBe(200)
+
+        // 2. 再編集して再書き込み（weight を 65.0 -> 64.8 に変更、waterIntake は 1200 のまま）
+        vi.mocked(writeHealthConnectDailyData).mockResolvedValueOnce({
+          writtenFields: ['weight'],
+          skippedPermissionFields: [],
+          tasketValues: { weight: 64.8 },
+          clientRecordVersions: { weight: 1002 },
+        })
+
+        const write2 = await store.writeDateToHealthConnect({
+          ...dbState.current,
+          date: '2025-12-15',
+          weight: 64.8,
+          waterIntake: 1200,
+        })
+
+        expect(writeHealthConnectDailyData).toHaveBeenLastCalledWith(
+          '2025-12-15',
+          expect.objectContaining({
+            weight: 64.8,
+            clientRecordVersions: expect.objectContaining({ weight: 1001 }),
+          }),
+        )
+        expect(write2.data.healthConnectSync?.clientRecordVersions?.weight).toBe(1002)
       })
     })
   })

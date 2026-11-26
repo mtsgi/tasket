@@ -6,12 +6,17 @@
 import type { HealthData, SleepSession } from '~/types/item'
 import HealthDataPreviousRecord from './HealthDataPreviousRecord.vue'
 import {
+  areSleepSessionsEqual,
   calculateSleepSessionMinutes,
   calculateTotalSleepHours,
-  extractTimeHHmm,
+  createSleepSessionDrafts,
   normalizeSleepSessionsForDate,
 } from '~/utils/sleepSessions'
-import { isAndroidNativeApp } from '~/utils/healthConnect'
+import {
+  HEALTH_CONNECT_SCALAR_METRICS,
+  isAndroidNativeApp,
+  type HealthConnectMetricKey,
+} from '~/utils/healthConnect'
 
 const props = defineProps<{
   date: string // YYYY-MM-DD形式
@@ -237,59 +242,124 @@ watch(
   },
 )
 
-// 既存の健康データをフォームに読み込む
-function loadHealthData() {
-  const data = healthDataStore.getHealthDataByDateString(props.date)
-  if (data) {
-    weight.value = data.weight
-    bodyFatPercentage.value = data.bodyFatPercentage
-    muscleMass.value = data.muscleMass
-    visceralFatLevel.value = data.visceralFatLevel
-    basalMetabolicRate.value = data.basalMetabolicRate
-    bodyWaterPercentage.value = data.bodyWaterPercentage
-    boneMass.value = data.boneMass
-    proteinPercentage.value = data.proteinPercentage
-    systolicBloodPressure.value = data.systolicBloodPressure
-    diastolicBloodPressure.value = data.diastolicBloodPressure
-    heartRate.value = data.heartRate
-    bodyTemperature.value = data.bodyTemperature
-    spo2.value = data.spo2
-    sleepSessionsDraft.value = (data.sleepSessions || []).map(session => ({
-      startTime: extractTimeHHmm(session.startTime),
-      endTime: extractTimeHHmm(session.endTime),
-    }))
-    sleepHours.value = data.sleepHours
-    steps.value = data.steps
-    exerciseMinutes.value = data.exerciseMinutes
-    caloriesBurned.value = data.caloriesBurned
-    waterIntake.value = data.waterIntake
-    menstrualCycle.value = data.menstrualCycle || null
-    medicationRecord.value = data.medicationRecord || ''
-    healthMemo.value = data.healthMemo || ''
+function normalizeOptionalNumber(val: unknown): number | undefined {
+  if (val === undefined || val === null || val === '') {
+    return undefined
   }
-  else {
-    weight.value = undefined
-    bodyFatPercentage.value = undefined
-    muscleMass.value = undefined
-    visceralFatLevel.value = undefined
-    basalMetabolicRate.value = undefined
-    bodyWaterPercentage.value = undefined
-    boneMass.value = undefined
-    proteinPercentage.value = undefined
-    systolicBloodPressure.value = undefined
-    diastolicBloodPressure.value = undefined
-    heartRate.value = undefined
-    bodyTemperature.value = undefined
-    spo2.value = undefined
-    sleepSessionsDraft.value = []
-    sleepHours.value = undefined
-    steps.value = undefined
-    exerciseMinutes.value = undefined
-    caloriesBurned.value = undefined
-    waterIntake.value = undefined
-    menstrualCycle.value = null
-    medicationRecord.value = ''
-    healthMemo.value = ''
+  const num = typeof val === 'number' ? val : Number(val)
+  return Number.isNaN(num) ? undefined : num
+}
+
+/**
+ * 既存の健康データをフォームに読み込む
+ * @param options.preserveFields - 未保存の編集を保持するフィールド名セット
+ */
+function loadHealthData(options?: { preserveFields?: ReadonlySet<string> }) {
+  const preserve = options?.preserveFields
+  const data = healthDataStore.getHealthDataByDateString(props.date)
+
+  if (!preserve?.has('weight')) weight.value = data?.weight
+  if (!preserve?.has('bodyFatPercentage')) bodyFatPercentage.value = data?.bodyFatPercentage
+  if (!preserve?.has('muscleMass')) muscleMass.value = data?.muscleMass
+  if (!preserve?.has('visceralFatLevel')) visceralFatLevel.value = data?.visceralFatLevel
+  if (!preserve?.has('basalMetabolicRate')) basalMetabolicRate.value = data?.basalMetabolicRate
+  if (!preserve?.has('bodyWaterPercentage')) bodyWaterPercentage.value = data?.bodyWaterPercentage
+  if (!preserve?.has('boneMass')) boneMass.value = data?.boneMass
+  if (!preserve?.has('proteinPercentage')) proteinPercentage.value = data?.proteinPercentage
+  if (!preserve?.has('systolicBloodPressure')) systolicBloodPressure.value = data?.systolicBloodPressure
+  if (!preserve?.has('diastolicBloodPressure')) diastolicBloodPressure.value = data?.diastolicBloodPressure
+  if (!preserve?.has('heartRate')) heartRate.value = data?.heartRate
+  if (!preserve?.has('bodyTemperature')) bodyTemperature.value = data?.bodyTemperature
+  if (!preserve?.has('spo2')) spo2.value = data?.spo2
+  if (!preserve?.has('sleep')) {
+    sleepSessionsDraft.value = createSleepSessionDrafts(data?.sleepSessions)
+    sleepHours.value = data?.sleepHours
+  }
+  if (!preserve?.has('steps')) steps.value = data?.steps
+  if (!preserve?.has('exerciseMinutes')) exerciseMinutes.value = data?.exerciseMinutes
+  if (!preserve?.has('caloriesBurned')) caloriesBurned.value = data?.caloriesBurned
+  if (!preserve?.has('waterIntake')) waterIntake.value = data?.waterIntake
+  if (!preserve?.has('menstrualCycle')) menstrualCycle.value = data?.menstrualCycle || null
+  if (!preserve?.has('medicationRecord')) medicationRecord.value = data?.medicationRecord || ''
+  if (!preserve?.has('healthMemo')) healthMemo.value = data?.healthMemo || ''
+}
+
+/**
+ * フォーム内の未保存の編集項目（dirty state）を検出
+ */
+function getDirtyFormState(): {
+  dirtyFields: Set<string>
+  dirtyHcMetrics: Set<HealthConnectMetricKey>
+  hasUnsavedChanges: boolean
+} {
+  const data = healthDataStore.getHealthDataByDateString(props.date)
+  const dirtyFields = new Set<string>()
+  const dirtyHcMetrics = new Set<HealthConnectMetricKey>()
+
+  const numericEntries: Array<[string, unknown, number | undefined]> = [
+    ['weight', weight.value, data?.weight],
+    ['bodyFatPercentage', bodyFatPercentage.value, data?.bodyFatPercentage],
+    ['muscleMass', muscleMass.value, data?.muscleMass],
+    ['visceralFatLevel', visceralFatLevel.value, data?.visceralFatLevel],
+    ['basalMetabolicRate', basalMetabolicRate.value, data?.basalMetabolicRate],
+    ['bodyWaterPercentage', bodyWaterPercentage.value, data?.bodyWaterPercentage],
+    ['boneMass', boneMass.value, data?.boneMass],
+    ['proteinPercentage', proteinPercentage.value, data?.proteinPercentage],
+    ['systolicBloodPressure', systolicBloodPressure.value, data?.systolicBloodPressure],
+    ['diastolicBloodPressure', diastolicBloodPressure.value, data?.diastolicBloodPressure],
+    ['heartRate', heartRate.value, data?.heartRate],
+    ['bodyTemperature', bodyTemperature.value, data?.bodyTemperature],
+    ['spo2', spo2.value, data?.spo2],
+    ['steps', steps.value, data?.steps],
+    ['exerciseMinutes', exerciseMinutes.value, data?.exerciseMinutes],
+    ['caloriesBurned', caloriesBurned.value, data?.caloriesBurned],
+    ['waterIntake', waterIntake.value, data?.waterIntake],
+  ]
+
+  for (const [key, currentRaw, storedVal] of numericEntries) {
+    if (normalizeOptionalNumber(currentRaw) !== normalizeOptionalNumber(storedVal)) {
+      dirtyFields.add(key)
+      if ((HEALTH_CONNECT_SCALAR_METRICS as readonly string[]).includes(key)) {
+        dirtyHcMetrics.add(key as HealthConnectMetricKey)
+      }
+    }
+  }
+
+  // 睡眠（sleepSessions / sleepHours）の未保存変更チェック
+  const currentSessions = normalizeSleepSessionsForDate(props.date, sleepSessionsDraft.value)
+  const storedSessions = normalizeSleepSessionsForDate(props.date, data?.sleepSessions)
+  const hasIncompleteDraftRow = sleepSessionsDraft.value.some((s) => {
+    const hasAnyInput = s.startTime.trim() !== '' || s.endTime.trim() !== ''
+    return hasAnyInput && normalizeSleepSessionsForDate(props.date, [s]).length === 0
+  })
+  const currentEffectiveSleepHours = currentSessions.length > 0
+    ? calculateTotalSleepHours(currentSessions, props.date)
+    : normalizeOptionalNumber(sleepHours.value)
+  const storedSleepHours = normalizeOptionalNumber(data?.sleepHours)
+
+  if (
+    hasIncompleteDraftRow
+    || !areSleepSessionsEqual(currentSessions, storedSessions)
+    || currentEffectiveSleepHours !== storedSleepHours
+  ) {
+    dirtyFields.add('sleep')
+    dirtyHcMetrics.add('sleep')
+  }
+
+  if ((menstrualCycle.value || null) !== (data?.menstrualCycle || null)) {
+    dirtyFields.add('menstrualCycle')
+  }
+  if ((medicationRecord.value || '') !== (data?.medicationRecord || '')) {
+    dirtyFields.add('medicationRecord')
+  }
+  if ((healthMemo.value || '') !== (data?.healthMemo || '')) {
+    dirtyFields.add('healthMemo')
+  }
+
+  return {
+    dirtyFields,
+    dirtyHcMetrics,
+    hasUnsavedChanges: dirtyFields.size > 0,
   }
 }
 
@@ -300,29 +370,29 @@ function buildFormPayload(): Partial<HealthData> & { date: string } {
   const normalizedSessions = normalizeSleepSessionsForDate(props.date, sleepSessionsDraft.value)
   const effectiveSleepHours = normalizedSessions.length > 0
     ? calculateTotalSleepHours(normalizedSessions, props.date)
-    : sleepHours.value
+    : normalizeOptionalNumber(sleepHours.value)
 
   return {
     date: props.date,
-    weight: weight.value,
-    bodyFatPercentage: bodyFatPercentage.value,
-    muscleMass: muscleMass.value,
-    visceralFatLevel: visceralFatLevel.value,
-    basalMetabolicRate: basalMetabolicRate.value,
-    bodyWaterPercentage: bodyWaterPercentage.value,
-    boneMass: boneMass.value,
-    proteinPercentage: proteinPercentage.value,
-    systolicBloodPressure: systolicBloodPressure.value,
-    diastolicBloodPressure: diastolicBloodPressure.value,
-    heartRate: heartRate.value,
-    bodyTemperature: bodyTemperature.value,
-    spo2: spo2.value,
+    weight: normalizeOptionalNumber(weight.value),
+    bodyFatPercentage: normalizeOptionalNumber(bodyFatPercentage.value),
+    muscleMass: normalizeOptionalNumber(muscleMass.value),
+    visceralFatLevel: normalizeOptionalNumber(visceralFatLevel.value),
+    basalMetabolicRate: normalizeOptionalNumber(basalMetabolicRate.value),
+    bodyWaterPercentage: normalizeOptionalNumber(bodyWaterPercentage.value),
+    boneMass: normalizeOptionalNumber(boneMass.value),
+    proteinPercentage: normalizeOptionalNumber(proteinPercentage.value),
+    systolicBloodPressure: normalizeOptionalNumber(systolicBloodPressure.value),
+    diastolicBloodPressure: normalizeOptionalNumber(diastolicBloodPressure.value),
+    heartRate: normalizeOptionalNumber(heartRate.value),
+    bodyTemperature: normalizeOptionalNumber(bodyTemperature.value),
+    spo2: normalizeOptionalNumber(spo2.value),
     sleepHours: effectiveSleepHours,
     sleepSessions: normalizedSessions,
-    steps: steps.value,
-    exerciseMinutes: exerciseMinutes.value,
-    caloriesBurned: caloriesBurned.value,
-    waterIntake: waterIntake.value,
+    steps: normalizeOptionalNumber(steps.value),
+    exerciseMinutes: normalizeOptionalNumber(exerciseMinutes.value),
+    caloriesBurned: normalizeOptionalNumber(caloriesBurned.value),
+    waterIntake: normalizeOptionalNumber(waterIntake.value),
     menstrualCycle: menstrualCycle.value,
     medicationRecord: medicationRecord.value,
     healthMemo: healthMemo.value,
@@ -331,6 +401,9 @@ function buildFormPayload(): Partial<HealthData> & { date: string } {
 
 // 健康データをローカル（IndexedDB）へ保存
 async function saveHealthData() {
+  if (isSaving.value || isSyncingFromHC.value || isWritingToHC.value) {
+    return
+  }
   isSaving.value = true
   try {
     await healthDataStore.saveHealthDataItem(buildFormPayload())
@@ -348,17 +421,57 @@ async function saveHealthData() {
 
 /**
  * Health Connectから当日の健康データを取得してIndexedDBへ即時保存＋フォーム反映
+ * 未保存の手動入力がある場合は確認ダイアログを表示し、承認時は編集中の項目を保護したままマージ反映する
  */
 async function handleReadFromHealthConnect() {
+  if (isSaving.value || isSyncingFromHC.value || isWritingToHC.value) {
+    return
+  }
+
+  const initialDirty = getDirtyFormState()
+  if (initialDirty.hasUnsavedChanges) {
+    const confirmed = window.confirm(
+      $t('未保存の入力内容があります。編集中の項目を保持したまま、未編集の項目のみHealth Connectから取得して反映しますか？'),
+    )
+    if (!confirmed) {
+      return
+    }
+  }
+
+  const targetDate = props.date
   isSyncingFromHC.value = true
   try {
-    const result = await healthDataStore.syncDateFromHealthConnect(props.date)
+    const result = await healthDataStore.syncDateFromHealthConnect(targetDate, {
+      dirtyMetrics: initialDirty.dirtyHcMetrics,
+    })
+
+    if (result.allPermissionDenied) {
+      alert($t('Health Connectの読み取り権限が許可されていません'))
+      return
+    }
+
+    if (result.allFailed) {
+      alert($t('Health Connectからのデータ取得に失敗しました'))
+      return
+    }
+
     await settingsStore.updateHealthConnectSettings({
       lastSyncedAt: new Date().toISOString(),
     })
-    loadHealthData()
 
-    if (result.updatedFields.length > 0) {
+    if (props.date === targetDate) {
+      const currentDirty = getDirtyFormState()
+      const preservedFields = new Set<string>([
+        ...initialDirty.dirtyFields,
+        ...currentDirty.dirtyFields,
+      ])
+      loadHealthData({ preserveFields: preservedFields })
+    }
+
+    if (result.failedFields.length > 0) {
+      alert($t('一部の項目のみHealth Connectから取得しました（取得失敗: {count}項目）', { count: result.failedFields.length }))
+    }
+    else if (result.updatedFields.length > 0) {
       alert($t('Health Connectからデータを取得して保存しました'))
     }
     else {
@@ -378,22 +491,45 @@ async function handleReadFromHealthConnect() {
  * 現在のフォーム入力値をIndexedDBへ保存した上で、新規・変更項目をHealth Connectへ書き込む
  */
 async function handleWriteToHealthConnect() {
+  if (isSaving.value || isSyncingFromHC.value || isWritingToHC.value) {
+    return
+  }
+
+  const targetDate = props.date
   isWritingToHC.value = true
   try {
     const result = await healthDataStore.writeDateToHealthConnect(buildFormPayload())
-    await settingsStore.updateHealthConnectSettings({
-      lastSyncedAt: new Date().toISOString(),
-    })
-    loadHealthData()
+    if (props.date === targetDate) {
+      loadHealthData()
+    }
 
     if (result.nothingToWrite) {
       alert($t('ローカル保存が完了しました（Health Connectへ書き込む新規・変更データはありません）'))
+      return
     }
-    else if (result.writtenFields.length > 0) {
-      alert($t('健康データを保存し、Health Connectへ書き込みました'))
+
+    if (result.writtenFields.length > 0) {
+      await settingsStore.updateHealthConnectSettings({
+        lastSyncedAt: new Date().toISOString(),
+      })
+
+      if (result.failedFields.length > 0 || result.skippedPermissionFields.length > 0) {
+        alert($t('一部の項目のみHealth Connectへ書き込みました'))
+      }
+      else {
+        alert($t('健康データを保存し、Health Connectへ書き込みました'))
+      }
+      return
+    }
+
+    if (result.failedFields.length > 0) {
+      alert($t('Health Connectへの書き込みに失敗しました'))
+    }
+    else if (result.skippedPermissionFields.length > 0) {
+      alert($t('ローカル保存は完了しましたが、Health Connectの書き込み権限が許可されていないため書き込みをスキップしました'))
     }
     else {
-      alert($t('ローカル保存は完了しましたが、Health Connectの書き込み権限が許可されていないため書き込みをスキップしました'))
+      alert($t('ローカル保存が完了しました（Health Connectへ書き込む新規・変更データはありません）'))
     }
   }
   catch (error) {

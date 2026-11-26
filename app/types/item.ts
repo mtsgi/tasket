@@ -159,12 +159,39 @@ export interface MealLog {
 }
 
 /**
+ * 睡眠セッションのデータ由来種別
+ * - tasket: Tasketで作成またはHealth ConnectへTasketが書き込んだセッション
+ * - external: 他アプリがHealth Connectへ書き込んだ未編集セッション
+ * - manual: 他アプリ由来のセッションをTasket上でローカル編集したセッション
+ */
+export type SleepSessionSource = 'tasket' | 'external' | 'manual'
+
+/**
  * 睡眠セッションのデータ構造
  * 1日の中の各睡眠時間帯（夜間睡眠や昼寝などの分割睡眠）を記録
  */
 export interface SleepSession {
   startTime: string // 開始日時（ISO 8601形式）または時刻（HH:mm形式）
   endTime: string // 終了日時（ISO 8601形式）または時刻（HH:mm形式）
+  id?: string // Health Connect上のレコードID（オプション）
+  clientRecordId?: string // Tasketが付与したclientRecordId（オプション）
+  clientRecordVersion?: number // Tasketが付与したclientRecordVersion（オプション）
+  dataOrigin?: string // 作成元パッケージ名（オプション）
+  source?: SleepSessionSource // セッションの由来（オプション）
+  originalStartTime?: string // フォーム表示前の元ISO開始日時（秒以下の精度保持用・オプション）
+  originalEndTime?: string // フォーム表示前の元ISO終了日時（秒以下の精度保持用・オプション）
+}
+
+/**
+ * Health Connectにおける項目別の数値マップ（由来別集計用）
+ */
+export interface HealthConnectMetricValueMap {
+  steps?: number
+  waterIntake?: number
+  exerciseMinutes?: number
+  heartRate?: number
+  weight?: number
+  bodyFatPercentage?: number
 }
 
 /**
@@ -180,6 +207,18 @@ export interface HealthConnectSyncMetadata {
   bodyFatPercentage?: number
   waterIntake?: number
   exerciseMinutes?: number
+  /** 他アプリ（DataOrigin != Tasket）由来の集計・測定値 */
+  externalValues?: HealthConnectMetricValueMap
+  /** Tasket自身（DataOrigin == Tasket）がHealth Connectへ書き込んだ値 */
+  tasketValues?: HealthConnectMetricValueMap
+  /** 他アプリ由来の心拍数サンプルが存在するか */
+  hasExternalHeartRate?: boolean
+  /** 項目ごとの最終書き込み clientRecordVersion */
+  clientRecordVersions?: Partial<Record<'steps' | 'sleep' | 'heartRate' | 'weight' | 'bodyFatPercentage' | 'waterIntake' | 'exerciseMinutes', number>>
+  /** TasketがHealth Connect上に作成済みの睡眠セッションclientRecordId一覧（削除漏れ・再試行管理用） */
+  tasketSleepClientRecordIds?: string[]
+  /** 削除失敗により次回再試行が必要な睡眠セッションclientRecordId一覧 */
+  pendingDeleteSleepClientRecordIds?: string[]
   syncedAt?: string
 }
 

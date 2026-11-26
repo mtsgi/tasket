@@ -130,10 +130,25 @@ async function handleBulkSyncHealthConnect() {
   isSyncingRecentHC.value = true
   try {
     const result = await healthDataStore.syncRecentFromHealthConnect(30)
+    if (result.allPermissionDenied) {
+      alert(t('Health Connectの読み取り権限が許可されていません'))
+      return
+    }
+    if (result.allFailed) {
+      alert(t('Health Connectからのデータ取得に失敗しました'))
+      return
+    }
+
     await settingsStore.updateHealthConnectSettings({
       lastSyncedAt: new Date().toISOString(),
     })
-    alert(t('直近30日分のデータを同期しました（更新日数: {days}日）', { days: result.syncedDaysCount }))
+
+    if (result.partialFailedFieldsCount > 0 || result.failedDaysCount > 0) {
+      alert(t('直近30日分のデータを一部同期しました（更新日数: {days}日）', { days: result.syncedDaysCount }))
+    }
+    else {
+      alert(t('直近30日分のデータを同期しました（更新日数: {days}日）', { days: result.syncedDaysCount }))
+    }
   }
   catch (e) {
     console.error('Failed to bulk sync from Health Connect:', e)

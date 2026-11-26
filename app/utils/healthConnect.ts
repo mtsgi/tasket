@@ -3,7 +3,12 @@
  * Capacitorネイティブプラグインの呼び出しと、日次健康データの競合解決マージ・差分書き込み計算を提供します。
  */
 import { Capacitor, registerPlugin } from '@capacitor/core'
-import type { HealthData, HealthConnectSyncMetadata, SleepSession } from '~/types/item'
+import type {
+  HealthData,
+  HealthConnectMetricValueMap,
+  HealthConnectSyncMetadata,
+  SleepSession,
+} from '~/types/item'
 import {
   areSleepSessionsEqual,
   calculateTotalSleepHours,
@@ -27,6 +32,11 @@ export type HealthConnectMetricKey
  */
 export type HealthConnectScalarMetricKey = Exclude<HealthConnectMetricKey, 'sleep'>
 
+/**
+ * 加算・累積型の連携項目キー（他アプリ記録との差分書き込み対象）
+ */
+export type HealthConnectAdditiveMetricKey = 'steps' | 'waterIntake' | 'exerciseMinutes'
+
 export const HEALTH_CONNECT_METRICS: HealthConnectMetricKey[] = [
   'steps',
   'sleep',
@@ -42,6 +52,12 @@ export const HEALTH_CONNECT_SCALAR_METRICS: HealthConnectScalarMetricKey[] = [
   'heartRate',
   'weight',
   'bodyFatPercentage',
+  'waterIntake',
+  'exerciseMinutes',
+]
+
+export const HEALTH_CONNECT_ADDITIVE_METRICS: HealthConnectAdditiveMetricKey[] = [
+  'steps',
   'waterIntake',
   'exerciseMinutes',
 ]
@@ -76,7 +92,7 @@ export interface HealthConnectPermissionsResult {
 }
 
 /**
- * Health Connectから取得した1日分の集計データ
+ * Health Connectから取得した1日分の集計データおよびステータス情報
  */
 export interface HealthConnectDailyPayload {
   date: string
@@ -88,6 +104,26 @@ export interface HealthConnectDailyPayload {
   bodyFatPercentage?: number
   waterIntake?: number
   exerciseMinutes?: number
+  /** 他アプリ（DataOrigin != Tasket）由来の項目別集計値 */
+  externalValues?: HealthConnectMetricValueMap
+  /** Tasket自身（DataOrigin == Tasket）由来の項目別集計値 */
+  tasketValues?: HealthConnectMetricValueMap
+  /** 他アプリ由来の心拍数サンプルが存在するか */
+  hasExternalHeartRate?: boolean
+  /** TasketレコードのclientRecordVersionマップ */
+  clientRecordVersions?: Partial<Record<HealthConnectMetricKey, number>>
+  /** Tasketが作成済みの睡眠セッションclientRecordId一覧 */
+  tasketSleepClientRecordIds?: string[]
+  /** 読み取りに成功し値が存在した項目 */
+  readFields?: HealthConnectMetricKey[]
+  /** 読み取りに成功したが当日データが0件だった項目 */
+  emptyFields?: HealthConnectMetricKey[]
+  /** 読み取り権限が未許可のためスキップされた項目 */
+  skippedPermissionFields?: HealthConnectMetricKey[]
+  /** 読み取り中にエラーが発生した項目 */
+  failedFields?: HealthConnectMetricKey[]
+  /** 項目別のエラー詳細メッセージ */
+  fieldErrors?: Partial<Record<HealthConnectMetricKey, string>>
 }
 
 /**
@@ -108,6 +144,12 @@ export interface HealthConnectWritePayload {
   bodyFatPercentage?: number
   waterIntake?: number
   exerciseMinutes?: number
+  /** 前回同期時点で把握している他アプリ由来の集計値 */
+  externalValues?: HealthConnectMetricValueMap
+  /** 前回同期時点の項目別 clientRecordVersion */
+  clientRecordVersions?: Partial<Record<HealthConnectMetricKey, number>>
+  /** 前回同期時点でTasketが管理していた睡眠セッションclientRecordId一覧 */
+  previousSleepClientRecordIds?: string[]
 }
 
 /**
@@ -116,6 +158,14 @@ export interface HealthConnectWritePayload {
 export interface HealthConnectWriteResult {
   writtenFields: HealthConnectMetricKey[]
   skippedPermissionFields: HealthConnectMetricKey[]
+  invalidFields?: HealthConnectMetricKey[]
+  failedFields?: HealthConnectMetricKey[]
+  fieldErrors?: Partial<Record<HealthConnectMetricKey, string>>
+  externalValues?: HealthConnectMetricValueMap
+  tasketValues?: HealthConnectMetricValueMap
+  clientRecordVersions?: Partial<Record<HealthConnectMetricKey, number>>
+  tasketSleepClientRecordIds?: string[]
+  pendingDeleteSleepClientRecordIds?: string[]
 }
 
 /**
@@ -300,25 +350,80 @@ export async function exportFileOnAndroid(
   return result.saved
 }
 
+function isAdditiveMetric(field: HealthConnectScalarMetricKey): field is HealthConnectAdditiveMetricKey {
+  return (HEALTH_CONNECT_ADDITIVE_METRICS as readonly string[]).includes(field)
+}
+
+/**
+ * 睡眠セッションがTasketからHealth Connectへの書き込み対象（Tasket作成）かどうかを判定
+ * 他アプリ由来（'external'）や他アプリ由来をローカル編集したもの（'manual'）は書き戻さない
+ */
+export function isTasketWritableSleepSession(session: SleepSession): boolean {
+  const source = session.source ?? 'tasket'
+  return source === 'tasket'
+}
+
+export interface MergeHealthConnectOptions {
+  /** フォーム上で未保存のまま編集中の項目（上書き保護対象） */
+  dirtyMetrics?: Iterable<HealthConnectMetricKey>
+}
+
+export interface MergeHealthConnectResult {
+  mergedData: Partial<HealthData> & { date: string }
+  updatedFields: HealthConnectMetricKey[]
+  skippedManualFields: HealthConnectMetricKey[]
+  skippedPermissionFields: HealthConnectMetricKey[]
+  failedFields: HealthConnectMetricKey[]
+  fieldErrors: Partial<Record<HealthConnectMetricKey, string>>
+  hasChanges: boolean
+  hasMetadataChanges: boolean
+  allFailed: boolean
+  allPermissionDenied: boolean
+}
+
 /**
  * Health Connectから取得した1日分のデータをTasketの既存HealthDataにマージする
  * ルール:
  * - 項目単位で判定し、Tasket側が未入力（undefined）または前回HC同期値（healthConnectSync）と同じ項目のみHC最新値で更新
- * - Tasket側で手動入力・編集済みの項目は保護し、勝手に上書きしない
- * - 対象7項目以外の既存フィールド（筋肉量、内臓脂肪、体調メモ等）はすべてそのまま保持する
+ * - フォームで未保存編集中の項目（dirtyMetrics）およびTasket側で手動編集済みの項目は保護し、上書きしない
+ * - 加算型項目で他アプリ由来合計より小さい値へ手動修正されていた場合もローカル上書きとして保護する
+ * - 読み取り失敗項目（failedFields）や権限未許可項目（skippedPermissionFields）は同期済みとして扱わない
  */
 export function mergeHealthConnectDailyData(
   existing: HealthData | undefined,
   incoming: HealthConnectDailyPayload,
   date: string,
-): {
-  mergedData: Partial<HealthData> & { date: string }
-  updatedFields: HealthConnectMetricKey[]
-  skippedManualFields: HealthConnectMetricKey[]
-  hasChanges: boolean
-} {
+  options?: MergeHealthConnectOptions,
+): MergeHealthConnectResult {
+  const dirtySet = new Set<HealthConnectMetricKey>(options?.dirtyMetrics ?? [])
+  const failedFields: HealthConnectMetricKey[] = [...(incoming.failedFields ?? [])]
+  const skippedPermissionFields: HealthConnectMetricKey[] = [...(incoming.skippedPermissionFields ?? [])]
+  const fieldErrors: Partial<Record<HealthConnectMetricKey, string>> = { ...(incoming.fieldErrors ?? {}) }
+  const failedSet = new Set<HealthConnectMetricKey>(failedFields)
+  const skippedPermSet = new Set<HealthConnectMetricKey>(skippedPermissionFields)
+
+  const hasExplicitStatus
+    = incoming.readFields !== undefined
+      || incoming.emptyFields !== undefined
+      || incoming.failedFields !== undefined
+      || incoming.skippedPermissionFields !== undefined
+
+  const succeededReadCount = (incoming.readFields?.length ?? 0) + (incoming.emptyFields?.length ?? 0)
+  const allPermissionDenied
+    = hasExplicitStatus
+      && skippedPermissionFields.length === HEALTH_CONNECT_METRICS.length
+      && succeededReadCount === 0
+      && failedFields.length === 0
+  const allFailed
+    = hasExplicitStatus
+      && failedFields.length > 0
+      && succeededReadCount === 0
+
   const prevSync: HealthConnectSyncMetadata = {
     ...(existing?.healthConnectSync || {}),
+    externalValues: { ...(existing?.healthConnectSync?.externalValues || {}) },
+    tasketValues: { ...(existing?.healthConnectSync?.tasketValues || {}) },
+    clientRecordVersions: { ...(existing?.healthConnectSync?.clientRecordVersions || {}) },
   }
 
   const mergedData: Partial<HealthData> & { date: string } = {
@@ -328,17 +433,102 @@ export function mergeHealthConnectDailyData(
 
   const updatedFields: HealthConnectMetricKey[] = []
   const skippedManualFields: HealthConnectMetricKey[] = []
+  let hasMetadataChanges = false
+
+  if (allFailed || allPermissionDenied) {
+    return {
+      mergedData,
+      updatedFields,
+      skippedManualFields,
+      skippedPermissionFields,
+      failedFields,
+      fieldErrors,
+      hasChanges: false,
+      hasMetadataChanges: false,
+      allFailed,
+      allPermissionDenied,
+    }
+  }
+
+  // 由来別メタデータ・バージョンの反映（読み取り失敗・権限不足の項目は除外）
+  if (incoming.externalValues) {
+    for (const field of HEALTH_CONNECT_SCALAR_METRICS) {
+      if (failedSet.has(field) || skippedPermSet.has(field)) continue
+      const extVal = incoming.externalValues[field]
+      if (extVal !== undefined && prevSync.externalValues?.[field] !== extVal) {
+        prevSync.externalValues![field] = extVal
+        hasMetadataChanges = true
+      }
+    }
+  }
+  if (incoming.tasketValues) {
+    for (const field of HEALTH_CONNECT_SCALAR_METRICS) {
+      if (failedSet.has(field) || skippedPermSet.has(field)) continue
+      const tasketVal = incoming.tasketValues[field]
+      if (tasketVal !== undefined && prevSync.tasketValues?.[field] !== tasketVal) {
+        prevSync.tasketValues![field] = tasketVal
+        hasMetadataChanges = true
+      }
+    }
+  }
+  if (
+    incoming.hasExternalHeartRate !== undefined
+    && !failedSet.has('heartRate')
+    && !skippedPermSet.has('heartRate')
+    && prevSync.hasExternalHeartRate !== incoming.hasExternalHeartRate
+  ) {
+    prevSync.hasExternalHeartRate = incoming.hasExternalHeartRate
+    hasMetadataChanges = true
+  }
+  if (incoming.clientRecordVersions) {
+    for (const field of HEALTH_CONNECT_METRICS) {
+      if (failedSet.has(field) || skippedPermSet.has(field)) continue
+      const ver = incoming.clientRecordVersions[field]
+      if (typeof ver === 'number' && ver > (prevSync.clientRecordVersions?.[field] ?? 0)) {
+        prevSync.clientRecordVersions![field] = ver
+        hasMetadataChanges = true
+      }
+    }
+  }
+  if (
+    incoming.tasketSleepClientRecordIds !== undefined
+    && !failedSet.has('sleep')
+    && !skippedPermSet.has('sleep')
+  ) {
+    prevSync.tasketSleepClientRecordIds = [...incoming.tasketSleepClientRecordIds]
+    hasMetadataChanges = true
+  }
 
   // スカラー6項目のマージ判定
   for (const field of HEALTH_CONNECT_SCALAR_METRICS) {
+    if (failedSet.has(field) || skippedPermSet.has(field)) {
+      continue
+    }
+
     const incomingVal = incoming[field]
     if (typeof incomingVal !== 'number' || Number.isNaN(incomingVal)) {
       continue
     }
 
+    if (dirtySet.has(field)) {
+      skippedManualFields.push(field)
+      continue
+    }
+
     const currentVal = existing?.[field]
     const lastSyncedVal = prevSync[field]
-    const isUnmodifiedInTasket = currentVal === undefined || currentVal === lastSyncedVal
+    const prevExternalVal = existing?.healthConnectSync?.externalValues?.[field]
+
+    // 加算型項目で他アプリ由来合計より小さい値へ手動修正されていた場合はローカル優先値として保護
+    const isAdditiveLocalReduction
+      = isAdditiveMetric(field)
+        && currentVal !== undefined
+        && prevExternalVal !== undefined
+        && currentVal < prevExternalVal
+
+    const isUnmodifiedInTasket
+      = !isAdditiveLocalReduction
+        && (currentVal === undefined || currentVal === lastSyncedVal)
 
     if (isUnmodifiedInTasket) {
       const valueChanged = currentVal !== incomingVal || prevSync[field] !== incomingVal
@@ -354,40 +544,53 @@ export function mergeHealthConnectDailyData(
   }
 
   // 睡眠（sleepSessions / sleepHours）のマージ判定
-  const incomingSessions = normalizeSleepSessionsForDate(date, incoming.sleepSessions)
-  const incomingSleepHours = incomingSessions.length > 0
-    ? calculateTotalSleepHours(incomingSessions, date)
-    : (typeof incoming.sleepHours === 'number' && !Number.isNaN(incoming.sleepHours) ? incoming.sleepHours : undefined)
+  if (!failedSet.has('sleep') && !skippedPermSet.has('sleep')) {
+    const incomingSessions = normalizeSleepSessionsForDate(date, incoming.sleepSessions)
+    const incomingSleepHours = incomingSessions.length > 0
+      ? calculateTotalSleepHours(incomingSessions, date)
+      : (typeof incoming.sleepHours === 'number' && !Number.isNaN(incoming.sleepHours) ? incoming.sleepHours : undefined)
 
-  if (incomingSessions.length > 0 || incomingSleepHours !== undefined) {
-    const currentSessions = existing?.sleepSessions
-    const currentHours = existing?.sleepHours
-    const hasExistingSleep = (currentSessions && currentSessions.length > 0) || currentHours !== undefined
-
-    const isSleepUnmodifiedInTasket = !hasExistingSleep || (
-      currentHours === prevSync.sleepHours
-      && areSleepSessionsEqual(currentSessions, prevSync.sleepSessions)
-    )
-
-    if (isSleepUnmodifiedInTasket) {
-      const sessionsChanged = !areSleepSessionsEqual(currentSessions, incomingSessions)
-      const hoursChanged = currentHours !== incomingSleepHours
-
-      if (incomingSessions.length > 0) {
-        mergedData.sleepSessions = incomingSessions
-        prevSync.sleepSessions = incomingSessions
+    if (incomingSessions.length > 0 || incomingSleepHours !== undefined) {
+      if (dirtySet.has('sleep')) {
+        skippedManualFields.push('sleep')
       }
-      if (incomingSleepHours !== undefined) {
-        mergedData.sleepHours = incomingSleepHours
-        prevSync.sleepHours = incomingSleepHours
-      }
+      else {
+        const currentSessions = existing?.sleepSessions
+        const currentHours = existing?.sleepHours
+        const hasExistingSleep = (currentSessions && currentSessions.length > 0) || currentHours !== undefined
+        const hasManualEditedExternalSession = (currentSessions ?? []).some(s => s.source === 'manual')
 
-      if (sessionsChanged || hoursChanged) {
-        updatedFields.push('sleep')
+        const isSleepUnmodifiedInTasket
+          = !hasManualEditedExternalSession
+            && (
+              !hasExistingSleep
+              || (
+                currentHours === prevSync.sleepHours
+                && areSleepSessionsEqual(currentSessions, prevSync.sleepSessions)
+              )
+            )
+
+        if (isSleepUnmodifiedInTasket) {
+          const sessionsChanged = !areSleepSessionsEqual(currentSessions, incomingSessions)
+          const hoursChanged = currentHours !== incomingSleepHours
+
+          if (incomingSessions.length > 0) {
+            mergedData.sleepSessions = incomingSessions
+            prevSync.sleepSessions = incomingSessions
+          }
+          if (incomingSleepHours !== undefined) {
+            mergedData.sleepHours = incomingSleepHours
+            prevSync.sleepHours = incomingSleepHours
+          }
+
+          if (sessionsChanged || hoursChanged) {
+            updatedFields.push('sleep')
+          }
+        }
+        else {
+          skippedManualFields.push('sleep')
+        }
       }
-    }
-    else {
-      skippedManualFields.push('sleep')
     }
   }
 
@@ -398,7 +601,13 @@ export function mergeHealthConnectDailyData(
     mergedData,
     updatedFields,
     skippedManualFields,
+    skippedPermissionFields,
+    failedFields,
+    fieldErrors,
     hasChanges: updatedFields.length > 0,
+    hasMetadataChanges,
+    allFailed,
+    allPermissionDenied,
   }
 }
 
@@ -406,7 +615,8 @@ export function mergeHealthConnectDailyData(
  * Tasketの健康データからHealth Connectへ書き込むべき差分ペイロードを構築する
  * ルール:
  * - 新規入力された項目、または前回HC同期値（healthConnectSync）から変更された項目のみ書き込む
- * - 睡眠（sleep）は sleepSessions（開始・終了時刻）が1件以上入力されている場合のみ書き込む（sleepHours単独では書き込まない）
+ * - 心拍数（heartRate）は他アプリ由来の記録が存在する日（hasExternalHeartRate === true）はHCへ書き込まずローカル優先保持とする
+ * - 睡眠（sleep）は Tasket由来の sleepSessions（source !== 'external' && source !== 'manual'）の追加・変更・全削除がある場合、または前回削除未完了のセッションがある場合に書き込む
  */
 export function buildHealthConnectWritePayload(
   healthData: Partial<HealthData> & { date: string },
@@ -414,62 +624,145 @@ export function buildHealthConnectWritePayload(
 ): {
   payload: HealthConnectWritePayload
   targetFields: HealthConnectMetricKey[]
+  localOnlyFields: HealthConnectMetricKey[]
 } {
   const syncMeta = previousSync ?? healthData.healthConnectSync
   const payload: HealthConnectWritePayload = {}
   const targetFields: HealthConnectMetricKey[] = []
+  const localOnlyFields: HealthConnectMetricKey[] = []
 
   for (const field of HEALTH_CONNECT_SCALAR_METRICS) {
     const value = healthData[field]
     if (typeof value === 'number' && !Number.isNaN(value) && value >= 0) {
       if (value !== syncMeta?.[field]) {
+        // 他アプリ由来の心拍数サンプルが存在する日の心拍数編集はTasketローカル優先保持としHCへ書き込まない
+        if (field === 'heartRate' && syncMeta?.hasExternalHeartRate) {
+          localOnlyFields.push('heartRate')
+          continue
+        }
         payload[field] = value
         targetFields.push(field)
       }
     }
   }
 
-  // 睡眠は sleepSessions（開始・終了時刻）がある場合のみ書き込み対象にする
+  // 睡眠セッションの書き込み対象判定（未編集の他アプリ由来 'external' やローカル編集 'manual' はHCへ書き戻さない）
   const normalizedSessions = normalizeSleepSessionsForDate(healthData.date, healthData.sleepSessions)
-  if (normalizedSessions.length > 0) {
-    if (!areSleepSessionsEqual(normalizedSessions, syncMeta?.sleepSessions)) {
-      payload.sleepSessions = normalizedSessions
+  const writableSessions = normalizedSessions.filter(isTasketWritableSleepSession)
+  const prevSyncedSessions = normalizeSleepSessionsForDate(healthData.date, syncMeta?.sleepSessions)
+  const prevWritableSessions = prevSyncedSessions.filter(isTasketWritableSleepSession)
+  const hasPendingDeletes = (syncMeta?.pendingDeleteSleepClientRecordIds?.length ?? 0) > 0
+  const hadPrevTasketSleepIds = (syncMeta?.tasketSleepClientRecordIds?.length ?? 0) > 0
+
+  if (writableSessions.length > 0) {
+    if (!areSleepSessionsEqual(writableSessions, prevWritableSessions) || hasPendingDeletes) {
+      payload.sleepSessions = writableSessions
       targetFields.push('sleep')
+    }
+  }
+  else if (prevWritableSessions.length > 0 || hadPrevTasketSleepIds || hasPendingDeletes) {
+    // 以前Tasket由来の睡眠セッションが存在していたが0件に削除された場合（または削除再試行が必要な場合）
+    payload.sleepSessions = []
+    targetFields.push('sleep')
+  }
+  else if (normalizedSessions.length > 0 && !areSleepSessionsEqual(normalizedSessions, prevSyncedSessions)) {
+    // 他アプリ由来セッションのみをローカル編集('manual')した場合
+    localOnlyFields.push('sleep')
+  }
+
+  if (targetFields.length > 0) {
+    if (syncMeta?.externalValues) {
+      payload.externalValues = { ...syncMeta.externalValues }
+    }
+    if (syncMeta?.clientRecordVersions) {
+      payload.clientRecordVersions = { ...syncMeta.clientRecordVersions }
+    }
+    const prevIds = new Set<string>([
+      ...(syncMeta?.tasketSleepClientRecordIds ?? []),
+      ...(syncMeta?.pendingDeleteSleepClientRecordIds ?? []),
+    ])
+    for (const s of prevWritableSessions) {
+      if (s.clientRecordId) {
+        prevIds.add(s.clientRecordId)
+      }
+    }
+    if (prevIds.size > 0) {
+      payload.previousSleepClientRecordIds = [...prevIds]
     }
   }
 
   return {
     payload,
     targetFields,
+    localOnlyFields,
   }
 }
 
 /**
- * Health Connectへの書き込み成功後に同期メタデータ（healthConnectSync）を更新する
+ * Health Connectへの書き込み結果に基づいて同期メタデータ（healthConnectSync）を更新する
+ * 失敗した項目（failedFields）や権限未許可の項目（skippedPermissionFields）は同期済みとしてマークしない
  */
 export function applyWrittenFieldsToSyncMetadata(
   healthData: Partial<HealthData> & { date: string },
   writtenFields: HealthConnectMetricKey[],
   writtenPayload: HealthConnectWritePayload,
+  writeResult?: Partial<HealthConnectWriteResult>,
 ): HealthConnectSyncMetadata {
+  const failedSet = new Set<HealthConnectMetricKey>(writeResult?.failedFields ?? [])
+  const prevSync = healthData.healthConnectSync || {}
+
   const nextSync: HealthConnectSyncMetadata = {
-    ...(healthData.healthConnectSync || {}),
-    syncedAt: new Date().toISOString(),
+    ...prevSync,
+    externalValues: { ...(prevSync.externalValues || {}), ...(writeResult?.externalValues || {}) },
+    tasketValues: { ...(prevSync.tasketValues || {}), ...(writeResult?.tasketValues || {}) },
+    clientRecordVersions: { ...(prevSync.clientRecordVersions || {}), ...(writeResult?.clientRecordVersions || {}) },
   }
 
+  if (writeResult?.tasketSleepClientRecordIds !== undefined) {
+    nextSync.tasketSleepClientRecordIds = [...writeResult.tasketSleepClientRecordIds]
+  }
+  if (writeResult?.pendingDeleteSleepClientRecordIds !== undefined) {
+    nextSync.pendingDeleteSleepClientRecordIds = [...writeResult.pendingDeleteSleepClientRecordIds]
+  }
+
+  let anySucceeded = false
+
   for (const field of writtenFields) {
+    if (failedSet.has(field)) {
+      continue
+    }
+    anySucceeded = true
+
     if (field === 'sleep') {
-      if (writtenPayload.sleepSessions) {
-        nextSync.sleepSessions = writtenPayload.sleepSessions
-        nextSync.sleepHours = calculateTotalSleepHours(writtenPayload.sleepSessions, healthData.date) ?? healthData.sleepHours
+      const normalizedAll = normalizeSleepSessionsForDate(healthData.date, healthData.sleepSessions)
+      nextSync.sleepSessions = normalizedAll
+      nextSync.sleepHours = calculateTotalSleepHours(normalizedAll, healthData.date) ?? healthData.sleepHours
+      if (writeResult?.tasketSleepClientRecordIds === undefined && writtenPayload.sleepSessions) {
+        nextSync.tasketSleepClientRecordIds = writtenPayload.sleepSessions.map(
+          (s, idx) => s.clientRecordId || `tasket-sleep-${healthData.date}-${idx}`,
+        )
       }
     }
     else {
       const val = writtenPayload[field]
       if (val !== undefined) {
         nextSync[field] = val
+        // プラグイン側から由来別内訳が返らなかった場合のフォールバック計算
+        if (writeResult?.tasketValues?.[field] === undefined) {
+          if (isAdditiveMetric(field)) {
+            const extVal = nextSync.externalValues?.[field] ?? 0
+            nextSync.tasketValues![field] = Math.max(0, val - extVal)
+          }
+          else {
+            nextSync.tasketValues![field] = val
+          }
+        }
       }
     }
+  }
+
+  if (anySucceeded) {
+    nextSync.syncedAt = new Date().toISOString()
   }
 
   return nextSync

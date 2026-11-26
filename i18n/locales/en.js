@@ -715,4 +715,11 @@ export default {
   '同期中': 'Syncing',
   'Health Connectの権限要求に失敗しました': 'Failed to request Health Connect permissions',
   '直近30日分のデータを同期しました（更新日数: {days}日）': 'Synced last 30 days of data (updated days: {days})',
+  '直近30日分のデータを一部同期しました（更新日数: {days}日）': 'Partially synced last 30 days of data (updated days: {days})',
+  '未保存の入力内容があります。編集中の項目を保持したまま、未編集の項目のみHealth Connectから取得して反映しますか？':
+    'You have unsaved changes. Keep your edited fields and fetch only unedited fields from Health Connect?',
+  'Health Connectの読み取り権限が許可されていません': 'Health Connect read permissions are not granted',
+  '一部の項目のみHealth Connectから取得しました（取得失敗: {count}項目）':
+    'Fetched some metrics from Health Connect (failed: {count} metrics)',
+  '一部の項目のみHealth Connectへ書き込みました': 'Partially wrote health data to Health Connect',
 }

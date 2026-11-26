@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.FileProvider
 import androidx.health.connect.client.HealthConnectClient
@@ -19,6 +20,7 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -42,6 +44,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
+import kotlin.reflect.KClass
 
 /**
  * Tasket用 Health Connect 双方向連携・ネイティブファイル出力 Capacitorプラグイン
@@ -52,6 +55,7 @@ import kotlin.math.roundToLong
 class HealthConnectPlugin : Plugin() {
 
     companion object {
+        private const val TAG = "HealthConnectPlugin"
         private const val PROVIDER_PACKAGE_NAME = "com.google.android.apps.healthdata"
 
         private val PERM_READ_STEPS = HealthPermission.getReadPermission(StepsRecord::class)
@@ -99,7 +103,8 @@ class HealthConnectPlugin : Plugin() {
                     val actualGranted = try {
                         val client = HealthConnectClient.getOrCreate(context, PROVIDER_PACKAGE_NAME)
                         client.permissionController.getGrantedPermissions()
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to verify granted permissions after dialog", e)
                         grantedSet
                     }
                     call.resolve(buildPermissionsResult(actualGranted))
@@ -289,7 +294,7 @@ class HealthConnectPlugin : Plugin() {
     }
 
     /**
-     * 指定日（YYYY-MM-DD）の健康データを clientRecordId 付きで Upsert 書き込み
+     * 指定日（YYYY-MM-DD）の健康データを clientRecordId / clientRecordVersion 付きで Upsert 書き込み
      */
     @PluginMethod
     fun writeDailyData(call: PluginCall) {
@@ -426,13 +431,40 @@ class HealthConnectPlugin : Plugin() {
     }
 
     /**
+     * pageToken を用いて対象レコード型の全ページを取得 (P2-7)
+     */
+    private suspend fun <T : Record> readAllRecords(
+        client: HealthConnectClient,
+        recordType: KClass<T>,
+        timeRangeFilter: TimeRangeFilter,
+        dataOriginFilter: Set<DataOrigin> = emptySet()
+    ): List<T> {
+        return HealthConnectSyncHelper.readPaginatedRecords(
+            maxPages = HealthConnectSyncHelper.DEFAULT_MAX_PAGES
+        ) { pageToken ->
+            val response = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = recordType,
+                    timeRangeFilter = timeRangeFilter,
+                    dataOriginFilter = dataOriginFilter,
+                    pageSize = HealthConnectSyncHelper.DEFAULT_PAGE_SIZE,
+                    pageToken = pageToken
+                )
+            )
+            response.records to response.pageToken
+        }
+    }
+
+    /**
      * 1日分（LocalDate）の7項目データをHealth Connectから読み取ってJSObjectに集約
+     * DataOrigin別の内訳（externalValues / tasketValues）、clientRecordVersions、および項目別ステータスも返す
      */
     private suspend fun readSingleDatePayload(
         client: HealthConnectClient,
         granted: Set<String>,
         localDate: LocalDate
     ): JSObject {
+        val myPackageName = context.packageName
         val zoneId = ZoneId.systemDefault()
         val startOfDay = localDate.atStartOfDay(zoneId).toInstant()
         val endOfDay = localDate.plusDays(1).atStartOfDay(zoneId).toInstant()
@@ -441,159 +473,368 @@ class HealthConnectPlugin : Plugin() {
         val payload = JSObject()
         payload.put("date", localDate.toString())
 
-        // 1. 歩数（StepsRecord.COUNT_TOTAL 集計）
+        val externalValues = JSObject()
+        val tasketValues = JSObject()
+        val clientRecordVersions = JSObject()
+        val readFields = JSArray()
+        val emptyFields = JSArray()
+        val skippedPermissionFields = JSArray()
+        val failedFields = JSArray()
+        val fieldErrors = JSObject()
+
+        fun handleReadError(metricKey: String, e: Exception) {
+            if (e is SecurityException) {
+                Log.w(TAG, "Permission denied while reading $metricKey on $localDate", e)
+                skippedPermissionFields.put(metricKey)
+                fieldErrors.put(metricKey, e.message ?: "Permission denied")
+            } else {
+                Log.e(TAG, "Failed to read $metricKey on $localDate", e)
+                failedFields.put(metricKey)
+                fieldErrors.put(metricKey, e.message ?: "Read failed")
+            }
+        }
+
+        // 1. 歩数（他アプリ由来は aggregate で重複排除集計、Tasket由来と分離して合算）
         if (granted.contains(PERM_READ_STEPS)) {
             try {
-                val agg = client.aggregate(
-                    AggregateRequest(
-                        metrics = setOf(StepsRecord.COUNT_TOTAL),
-                        timeRangeFilter = dayFilter
+                val records = readAllRecords(client, StepsRecord::class, dayFilter)
+                val externalOrigins = records
+                    .map { it.metadata.dataOrigin }
+                    .filter { it.packageName != myPackageName }
+                    .toSet()
+                val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+
+                val externalSteps = if (externalOrigins.isNotEmpty()) {
+                    val agg = client.aggregate(
+                        AggregateRequest(
+                            metrics = setOf(StepsRecord.COUNT_TOTAL),
+                            timeRangeFilter = dayFilter,
+                            dataOriginFilter = externalOrigins
+                        )
                     )
-                )
-                val totalSteps = agg[StepsRecord.COUNT_TOTAL]
-                if (totalSteps != null && totalSteps > 0L) {
-                    payload.put("steps", totalSteps.toInt())
+                    (agg[StepsRecord.COUNT_TOTAL] ?: 0L).coerceAtLeast(0L)
+                } else {
+                    0L
                 }
-            } catch (_: Exception) {
+
+                val tasketSteps = tasketRecords.sumOf { it.count }.coerceAtLeast(0L)
+                val totalSteps = externalSteps + tasketSteps
+                val maxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+
+                externalValues.put("steps", externalSteps.toInt())
+                tasketValues.put("steps", tasketSteps.toInt())
+                if (maxVersion > 0L) {
+                    clientRecordVersions.put("steps", maxVersion)
+                }
+
+                if (totalSteps > 0L) {
+                    payload.put("steps", totalSteps.toInt())
+                    readFields.put("steps")
+                } else {
+                    emptyFields.put("steps")
+                }
+            } catch (e: Exception) {
+                handleReadError("steps", e)
             }
+        } else {
+            skippedPermissionFields.put("steps")
         }
 
         // 2. 睡眠時間（前日夜〜当日にまたがるセッションを含め、終了時刻＝起床がその日に含まれるものを集約）
         if (granted.contains(PERM_READ_SLEEP)) {
             try {
                 val sleepQueryFilter = TimeRangeFilter.between(startOfDay.minusSeconds(86400), endOfDay)
-                val response = client.readRecords(
-                    ReadRecordsRequest(
-                        recordType = SleepSessionRecord::class,
-                        timeRangeFilter = sleepQueryFilter
-                    )
-                )
-                val matchingSessions = response.records
+                val records = readAllRecords(client, SleepSessionRecord::class, sleepQueryFilter)
+                val matchingSessions = records
                     .filter { !it.endTime.isBefore(startOfDay) && it.endTime.isBefore(endOfDay) }
-                    .sortedBy { it.startTime }
+                    .sortedWith(compareBy<SleepSessionRecord> { it.startTime }.thenBy { it.endTime })
+
+                val tasketSessions = matchingSessions.filter { it.metadata.dataOrigin.packageName == myPackageName }
+                val maxVersion = tasketSessions.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                if (maxVersion > 0L) {
+                    clientRecordVersions.put("sleep", maxVersion)
+                }
+
+                val tasketIdsArray = JSArray()
+                for (ts in tasketSessions) {
+                    val cid = ts.metadata.clientRecordId
+                    if (!cid.isNullOrBlank()) {
+                        tasketIdsArray.put(cid)
+                    }
+                }
+                payload.put("tasketSleepClientRecordIds", tasketIdsArray)
 
                 if (matchingSessions.isNotEmpty()) {
                     val sessionsArray = JSArray()
-                    var totalSeconds = 0L
+                    val intervals = mutableListOf<Pair<Instant, Instant>>()
                     for (session in matchingSessions) {
+                        val isTasket = session.metadata.dataOrigin.packageName == myPackageName
                         val sessionObj = JSObject()
                         sessionObj.put("startTime", session.startTime.toString())
                         sessionObj.put("endTime", session.endTime.toString())
-                        sessionsArray.put(sessionObj)
-                        val durationSec = session.endTime.epochSecond - session.startTime.epochSecond
-                        if (durationSec > 0) {
-                            totalSeconds += durationSec
+                        if (session.metadata.id.isNotBlank()) {
+                            sessionObj.put("id", session.metadata.id)
                         }
+                        if (!session.metadata.clientRecordId.isNullOrBlank()) {
+                            sessionObj.put("clientRecordId", session.metadata.clientRecordId)
+                        }
+                        if (session.metadata.clientRecordVersion > 0L) {
+                            sessionObj.put("clientRecordVersion", session.metadata.clientRecordVersion)
+                        }
+                        sessionObj.put("dataOrigin", session.metadata.dataOrigin.packageName)
+                        sessionObj.put("source", if (isTasket) "tasket" else "external")
+                        sessionsArray.put(sessionObj)
+                        intervals.add(session.startTime to session.endTime)
                     }
-                    val sleepHours = ((totalSeconds / 3600.0) * 10.0).roundToInt() / 10.0
+
+                    val sleepHours = HealthConnectSyncHelper.mergeAndCalculateSleepHours(intervals)
                     payload.put("sleepSessions", sessionsArray)
                     if (sleepHours > 0.0) {
                         payload.put("sleepHours", sleepHours)
                     }
+                    readFields.put("sleep")
+                } else {
+                    emptyFields.put("sleep")
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                handleReadError("sleep", e)
             }
+        } else {
+            skippedPermissionFields.put("sleep")
         }
 
-        // 3. 心拍数（当日の全サンプルの平均値・整数bpm）
+        // 3. 心拍数（当日 [startOfDay, endOfDay) 内のサンプルのみから平均bpmを算出）
         if (granted.contains(PERM_READ_HEART_RATE)) {
             try {
-                val response = client.readRecords(
-                    ReadRecordsRequest(
-                        recordType = HeartRateRecord::class,
-                        timeRangeFilter = dayFilter
-                    )
-                )
-                val samples = response.records.flatMap { it.samples }
-                if (samples.isNotEmpty()) {
-                    val avgBpm = samples.map { it.beatsPerMinute }.average().roundToInt()
-                    if (avgBpm > 0) {
-                        payload.put("heartRate", avgBpm)
+                val records = readAllRecords(client, HeartRateRecord::class, dayFilter)
+                val maxTasketVersion = records
+                    .filter { it.metadata.dataOrigin.packageName == myPackageName }
+                    .maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+
+                val samples = records.flatMap { record ->
+                    val pkg = record.metadata.dataOrigin.packageName
+                    record.samples.map { sample ->
+                        HealthConnectSyncHelper.HeartRateSampleMeta(
+                            time = sample.time,
+                            beatsPerMinute = sample.beatsPerMinute,
+                            dataOriginPackage = pkg
+                        )
                     }
                 }
-            } catch (_: Exception) {
+
+                val summary = HealthConnectSyncHelper.computeDailyHeartRateSummary(
+                    samples = samples,
+                    startOfDay = startOfDay,
+                    endOfDay = endOfDay,
+                    myPackageName = myPackageName,
+                    maxTasketVersion = maxTasketVersion
+                )
+
+                payload.put("hasExternalHeartRate", summary.hasExternalSamples)
+                if (summary.externalAverageBpm != null) {
+                    externalValues.put("heartRate", summary.externalAverageBpm)
+                }
+                if (summary.tasketAverageBpm != null) {
+                    tasketValues.put("heartRate", summary.tasketAverageBpm)
+                }
+                if (summary.maxTasketVersion > 0L) {
+                    clientRecordVersions.put("heartRate", summary.maxTasketVersion)
+                }
+
+                if (summary.averageBpm != null) {
+                    payload.put("heartRate", summary.averageBpm)
+                    readFields.put("heartRate")
+                } else {
+                    emptyFields.put("heartRate")
+                }
+            } catch (e: Exception) {
+                handleReadError("heartRate", e)
             }
+        } else {
+            skippedPermissionFields.put("heartRate")
         }
 
         // 4. 体重（当日の最新値・小数第1位kg）
         if (granted.contains(PERM_READ_WEIGHT)) {
             try {
-                val response = client.readRecords(
-                    ReadRecordsRequest(
-                        recordType = WeightRecord::class,
-                        timeRangeFilter = dayFilter
-                    )
+                val records = readAllRecords(client, WeightRecord::class, dayFilter)
+                val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+                val externalRecords = records.filter { it.metadata.dataOrigin.packageName != myPackageName }
+
+                val maxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                if (maxVersion > 0L) {
+                    clientRecordVersions.put("weight", maxVersion)
+                }
+
+                externalRecords.maxByOrNull { it.time }?.let { ext ->
+                    val extKg = (ext.weight.inKilograms * 10.0).roundToInt() / 10.0
+                    if (extKg > 0.0) externalValues.put("weight", extKg)
+                }
+                tasketRecords.maxByOrNull { it.time }?.let { tsk ->
+                    val tskKg = (tsk.weight.inKilograms * 10.0).roundToInt() / 10.0
+                    if (tskKg > 0.0) tasketValues.put("weight", tskKg)
+                }
+
+                val latestWeight = records.maxWithOrNull(
+                    compareBy<WeightRecord> { it.time }
+                        .thenBy { it.metadata.dataOrigin.packageName == myPackageName }
                 )
-                val latestWeight = response.records.maxByOrNull { it.time }
                 if (latestWeight != null) {
                     val kg = (latestWeight.weight.inKilograms * 10.0).roundToInt() / 10.0
                     if (kg > 0.0) {
                         payload.put("weight", kg)
+                        readFields.put("weight")
+                    } else {
+                        emptyFields.put("weight")
                     }
+                } else {
+                    emptyFields.put("weight")
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                handleReadError("weight", e)
             }
+        } else {
+            skippedPermissionFields.put("weight")
         }
 
         // 5. 体脂肪率（当日の最新値・小数第1位%）
         if (granted.contains(PERM_READ_BODY_FAT)) {
             try {
-                val response = client.readRecords(
-                    ReadRecordsRequest(
-                        recordType = BodyFatRecord::class,
-                        timeRangeFilter = dayFilter
-                    )
+                val records = readAllRecords(client, BodyFatRecord::class, dayFilter)
+                val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+                val externalRecords = records.filter { it.metadata.dataOrigin.packageName != myPackageName }
+
+                val maxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                if (maxVersion > 0L) {
+                    clientRecordVersions.put("bodyFatPercentage", maxVersion)
+                }
+
+                externalRecords.maxByOrNull { it.time }?.let { ext ->
+                    val extPct = (ext.percentage.value * 10.0).roundToInt() / 10.0
+                    if (extPct > 0.0) externalValues.put("bodyFatPercentage", extPct)
+                }
+                tasketRecords.maxByOrNull { it.time }?.let { tsk ->
+                    val tskPct = (tsk.percentage.value * 10.0).roundToInt() / 10.0
+                    if (tskPct > 0.0) tasketValues.put("bodyFatPercentage", tskPct)
+                }
+
+                val latestBodyFat = records.maxWithOrNull(
+                    compareBy<BodyFatRecord> { it.time }
+                        .thenBy { it.metadata.dataOrigin.packageName == myPackageName }
                 )
-                val latestBodyFat = response.records.maxByOrNull { it.time }
                 if (latestBodyFat != null) {
                     val pct = (latestBodyFat.percentage.value * 10.0).roundToInt() / 10.0
                     if (pct > 0.0) {
                         payload.put("bodyFatPercentage", pct)
+                        readFields.put("bodyFatPercentage")
+                    } else {
+                        emptyFields.put("bodyFatPercentage")
                     }
+                } else {
+                    emptyFields.put("bodyFatPercentage")
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                handleReadError("bodyFatPercentage", e)
             }
+        } else {
+            skippedPermissionFields.put("bodyFatPercentage")
         }
 
-        // 6. 水分摂取量（HydrationRecord.VOLUME_TOTAL 集計・整数ml）
+        // 6. 水分摂取量（他アプリ由来とTasket由来を分離して集計・整数ml）
         if (granted.contains(PERM_READ_HYDRATION)) {
             try {
-                val agg = client.aggregate(
-                    AggregateRequest(
-                        metrics = setOf(HydrationRecord.VOLUME_TOTAL),
-                        timeRangeFilter = dayFilter
-                    )
-                )
-                val totalVolume = agg[HydrationRecord.VOLUME_TOTAL]
-                if (totalVolume != null && totalVolume.inMilliliters > 0.0) {
-                    payload.put("waterIntake", totalVolume.inMilliliters.roundToInt())
+                val records = readAllRecords(client, HydrationRecord::class, dayFilter)
+                val externalRecords = records.filter { it.metadata.dataOrigin.packageName != myPackageName }
+                val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+
+                val externalMl = externalRecords.sumOf { it.volume.inMilliliters }.roundToInt().coerceAtLeast(0)
+                val tasketMl = tasketRecords.sumOf { it.volume.inMilliliters }.roundToInt().coerceAtLeast(0)
+                val totalMl = externalMl + tasketMl
+                val maxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+
+                externalValues.put("waterIntake", externalMl)
+                tasketValues.put("waterIntake", tasketMl)
+                if (maxVersion > 0L) {
+                    clientRecordVersions.put("waterIntake", maxVersion)
                 }
-            } catch (_: Exception) {
+
+                if (totalMl > 0) {
+                    payload.put("waterIntake", totalMl)
+                    readFields.put("waterIntake")
+                } else {
+                    emptyFields.put("waterIntake")
+                }
+            } catch (e: Exception) {
+                handleReadError("waterIntake", e)
             }
+        } else {
+            skippedPermissionFields.put("waterIntake")
         }
 
-        // 7. 運動時間（ExerciseSessionRecord.EXERCISE_DURATION_TOTAL 集計・整数分）
+        // 7. 運動時間（他アプリ由来は aggregate で重複排除集計、Tasket由来と分離して合算・整数分）
         if (granted.contains(PERM_READ_EXERCISE)) {
             try {
-                val agg = client.aggregate(
-                    AggregateRequest(
-                        metrics = setOf(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL),
-                        timeRangeFilter = dayFilter
+                val records = readAllRecords(client, ExerciseSessionRecord::class, dayFilter)
+                val externalOrigins = records
+                    .map { it.metadata.dataOrigin }
+                    .filter { it.packageName != myPackageName }
+                    .toSet()
+                val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+
+                val externalMins = if (externalOrigins.isNotEmpty()) {
+                    val agg = client.aggregate(
+                        AggregateRequest(
+                            metrics = setOf(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL),
+                            timeRangeFilter = dayFilter,
+                            dataOriginFilter = externalOrigins
+                        )
                     )
-                )
-                val totalDuration = agg[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]
-                if (totalDuration != null && totalDuration.toMinutes() > 0L) {
-                    payload.put("exerciseMinutes", totalDuration.toMinutes().toInt())
+                    (agg[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes() ?: 0L).coerceAtLeast(0L).toInt()
+                } else {
+                    0
                 }
-            } catch (_: Exception) {
+
+                val tasketMins = tasketRecords.sumOf {
+                    ((it.endTime.epochSecond - it.startTime.epochSecond) / 60L).coerceAtLeast(0L)
+                }.toInt()
+                val totalMins = externalMins + tasketMins
+                val maxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+
+                externalValues.put("exerciseMinutes", externalMins)
+                tasketValues.put("exerciseMinutes", tasketMins)
+                if (maxVersion > 0L) {
+                    clientRecordVersions.put("exerciseMinutes", maxVersion)
+                }
+
+                if (totalMins > 0) {
+                    payload.put("exerciseMinutes", totalMins)
+                    readFields.put("exerciseMinutes")
+                } else {
+                    emptyFields.put("exerciseMinutes")
+                }
+            } catch (e: Exception) {
+                handleReadError("exerciseMinutes", e)
             }
+        } else {
+            skippedPermissionFields.put("exerciseMinutes")
         }
 
+        payload.put("externalValues", externalValues)
+        payload.put("tasketValues", tasketValues)
+        payload.put("clientRecordVersions", clientRecordVersions)
+        payload.put("readFields", readFields)
+        payload.put("emptyFields", emptyFields)
+        payload.put("skippedPermissionFields", skippedPermissionFields)
+        payload.put("failedFields", failedFields)
+        payload.put("fieldErrors", fieldErrors)
         return payload
     }
 
     /**
-     * 1日分の差分データを clientRecordId 付きで Health Connect へ Upsert 書き込み
+     * 1日分の差分データを clientRecordId / clientRecordVersion 付きで Health Connect へ Upsert 書き込み
+     * - 項目ごとに独立して Upsert / 削除を実行し、一部の項目が失敗しても他項目の書き込みを維持する
+     * - 加算型データ（steps, waterIntake, exerciseMinutes）は他アプリ由来合計との差分のみを Upsert し二重計上を防止
+     * - 睡眠セッションは新しいレコードの insertRecords 成功後にのみ不要な Tasket レコードを削除する
      */
     private suspend fun writeSingleDatePayload(
         client: HealthConnectClient,
@@ -601,213 +842,642 @@ class HealthConnectPlugin : Plugin() {
         localDate: LocalDate,
         dataObj: JSObject
     ): JSObject {
+        val myPackageName = context.packageName
         val dateStr = localDate.toString()
         val zoneId = ZoneId.systemDefault()
-        val pointTime = localDate.atTime(8, 0).atZone(zoneId).toInstant()
-        val pointOffset = zoneId.rules.getOffset(pointTime)
+        val startOfDay = localDate.atStartOfDay(zoneId).toInstant()
+        val endOfDay = localDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+        val dayFilter = TimeRangeFilter.between(startOfDay, endOfDay)
 
-        val recordsToInsert = mutableListOf<Record>()
-        val writtenFields = JSArray()
-        val skippedPermissionFields = JSArray()
+        val nowInstant = Instant.now()
+        val defaultPointTime = if (localDate == LocalDate.now(zoneId)) {
+            nowInstant.coerceIn(startOfDay, endOfDay.minusSeconds(1))
+        } else {
+            localDate.atTime(8, 0).atZone(zoneId).toInstant()
+        }
 
-        // 1. 歩数
-        if (dataObj.has("steps") && !dataObj.isNull("steps")) {
-            val stepsVal = dataObj.optLong("steps", -1L)
-            if (stepsVal > 0L) {
-                if (granted.contains(PERM_WRITE_STEPS)) {
-                    val startTime = localDate.atStartOfDay(zoneId).toInstant()
-                    val endTime = localDate.atTime(23, 59, 59).atZone(zoneId).toInstant()
-                    recordsToInsert.add(
-                        StepsRecord(
-                            startTime = startTime,
-                            startZoneOffset = zoneId.rules.getOffset(startTime),
-                            endTime = endTime,
-                            endZoneOffset = zoneId.rules.getOffset(endTime),
-                            count = stepsVal,
-                            metadata = Metadata(clientRecordId = "tasket-steps-$dateStr")
-                        )
-                    )
-                    writtenFields.put("steps")
-                } else {
-                    skippedPermissionFields.put("steps")
+        val hintExternalObj = dataObj.optJSONObject("externalValues")
+        val hintVersionsObj = dataObj.optJSONObject("clientRecordVersions")
+        val prevSleepIdsJson = dataObj.optJSONArray("previousSleepClientRecordIds")
+        val prevSleepClientRecordIds = mutableListOf<String>()
+        if (prevSleepIdsJson != null) {
+            for (i in 0 until prevSleepIdsJson.length()) {
+                val idStr = prevSleepIdsJson.optString(i, "")
+                if (idStr.isNotBlank()) {
+                    prevSleepClientRecordIds.add(idStr)
                 }
             }
         }
 
-        // 2. 睡眠セッション（sleepSessionsがある場合のみ実時刻でUpsert）
-        if (dataObj.has("sleepSessions") && !dataObj.isNull("sleepSessions")) {
-            val sessionsArray = dataObj.optJSONArray("sleepSessions")
-            if (sessionsArray != null && sessionsArray.length() > 0) {
-                if (granted.contains(PERM_WRITE_SLEEP)) {
-                    var addedCount = 0
-                    for (i in 0 until sessionsArray.length()) {
-                        val sessionItem = sessionsArray.optJSONObject(i) ?: continue
-                        val startStr = sessionItem.optString("startTime", "")
-                        val endStr = sessionItem.optString("endTime", "")
-                        if (startStr.isNotBlank() && endStr.isNotBlank()) {
-                            val startInstant = Instant.parse(startStr)
-                            val endInstant = Instant.parse(endStr)
-                            if (endInstant.isAfter(startInstant)) {
-                                recordsToInsert.add(
-                                    SleepSessionRecord(
-                                        startTime = startInstant,
-                                        startZoneOffset = zoneId.rules.getOffset(startInstant),
-                                        endTime = endInstant,
-                                        endZoneOffset = zoneId.rules.getOffset(endInstant),
+        val writtenFields = JSArray()
+        val skippedPermissionFields = JSArray()
+        val invalidFields = JSArray()
+        val failedFields = JSArray()
+        val fieldErrors = JSObject()
+        val outExternalValues = JSObject()
+        val outTasketValues = JSObject()
+        val outVersions = JSObject()
+        var outTasketSleepIds: JSArray? = null
+        var outPendingDeleteSleepIds: JSArray? = null
+
+        fun handleWriteError(metricKey: String, e: Exception) {
+            if (e is SecurityException) {
+                Log.w(TAG, "Permission denied while writing $metricKey on $localDate", e)
+                skippedPermissionFields.put(metricKey)
+                fieldErrors.put(metricKey, e.message ?: "Permission denied")
+            } else {
+                Log.e(TAG, "Failed to write $metricKey on $localDate", e)
+                failedFields.put(metricKey)
+                fieldErrors.put(metricKey, e.message ?: "Write failed")
+            }
+        }
+
+        // 1. 歩数（加算型：他アプリ由来歩数との差分を Upsert、減少時は Tasket レコードを削除）
+        if (dataObj.has("steps") && !dataObj.isNull("steps")) {
+            val stepsVal = dataObj.optLong("steps", -1L)
+            if (stepsVal < 0L) {
+                invalidFields.put("steps")
+            } else if (!granted.contains(PERM_WRITE_STEPS)) {
+                skippedPermissionFields.put("steps")
+            } else {
+                try {
+                    var externalSteps = hintExternalObj?.optLong("steps", 0L)?.coerceAtLeast(0L) ?: 0L
+                    var existingMaxVersion = 0L
+                    val existingTasketIds = mutableListOf<String>()
+
+                    if (granted.contains(PERM_READ_STEPS)) {
+                        val records = readAllRecords(client, StepsRecord::class, dayFilter)
+                        val externalOrigins = records
+                            .map { it.metadata.dataOrigin }
+                            .filter { it.packageName != myPackageName }
+                            .toSet()
+                        val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+                        existingMaxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                        existingTasketIds.addAll(tasketRecords.mapNotNull { it.metadata.id.takeIf { id -> id.isNotBlank() } })
+
+                        externalSteps = if (externalOrigins.isNotEmpty()) {
+                            val agg = client.aggregate(
+                                AggregateRequest(
+                                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                    timeRangeFilter = dayFilter,
+                                    dataOriginFilter = externalOrigins
+                                )
+                            )
+                            (agg[StepsRecord.COUNT_TOTAL] ?: 0L).coerceAtLeast(0L)
+                        } else {
+                            0L
+                        }
+                    }
+
+                    val requestedVersion = hintVersionsObj?.optLong("steps", 0L) ?: 0L
+                    val nextVersion = HealthConnectSyncHelper.computeNextClientRecordVersion(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        requestedVersion = requestedVersion,
+                        existingMaxVersion = existingMaxVersion
+                    )
+                    val clientRecordId = "tasket-steps-$dateStr"
+
+                    when (val action = HealthConnectSyncHelper.computeAdditiveWriteAction(stepsVal.toDouble(), externalSteps.toDouble())) {
+                        is HealthConnectSyncHelper.AdditiveWriteAction.UpsertDelta -> {
+                            val deltaCount = action.deltaValue.roundToLong().coerceAtLeast(1L)
+                            val startTime = startOfDay
+                            val endTime = localDate.atTime(23, 59, 59).atZone(zoneId).toInstant()
+                            client.insertRecords(
+                                listOf(
+                                    StepsRecord(
+                                        startTime = startTime,
+                                        startZoneOffset = zoneId.rules.getOffset(startTime),
+                                        endTime = endTime,
+                                        endZoneOffset = zoneId.rules.getOffset(endTime),
+                                        count = deltaCount,
                                         metadata = Metadata(
-                                            clientRecordId = "tasket-sleep-$dateStr-$addedCount"
+                                            clientRecordId = clientRecordId,
+                                            clientRecordVersion = nextVersion
                                         )
                                     )
                                 )
-                                addedCount++
-                            }
-                        }
-                    }
-
-                    // 以前のセッション数が多かった場合の余剰clientRecordIdをクリーンアップ
-                    if (addedCount < 10) {
-                        val staleIds = (addedCount until 10).map { "tasket-sleep-$dateStr-$it" }
-                        try {
-                            client.deleteRecords(
-                                recordType = SleepSessionRecord::class,
-                                recordIdsList = emptyList(),
-                                clientRecordIdsList = staleIds
                             )
+                            outExternalValues.put("steps", externalSteps.toInt())
+                            outTasketValues.put("steps", deltaCount.toInt())
+                            outVersions.put("steps", nextVersion)
+                            writtenFields.put("steps")
+                        }
+                        is HealthConnectSyncHelper.AdditiveWriteAction.DeleteTasketRecord -> {
+                            client.deleteRecords(
+                                recordType = StepsRecord::class,
+                                recordIdsList = existingTasketIds,
+                                clientRecordIdsList = listOf(clientRecordId)
+                            )
+                            outExternalValues.put("steps", externalSteps.toInt())
+                            outTasketValues.put("steps", 0)
+                            writtenFields.put("steps")
+                        }
+                    }
+                } catch (e: Exception) {
+                    handleWriteError("steps", e)
+                }
+            }
+        }
+
+        // 2. 睡眠セッション（insertRecords 成功後にのみ不要な Tasket セッションを削除・固定10件制限なし）
+        if (dataObj.has("sleepSessions") && !dataObj.isNull("sleepSessions")) {
+            val sessionsArray = dataObj.optJSONArray("sleepSessions")
+            if (sessionsArray == null) {
+                invalidFields.put("sleep")
+            } else if (!granted.contains(PERM_WRITE_SLEEP)) {
+                skippedPermissionFields.put("sleep")
+            } else {
+                try {
+                    val sleepQueryFilter = TimeRangeFilter.between(startOfDay.minusSeconds(86400), endOfDay)
+                    val existingSleepMetas = if (granted.contains(PERM_READ_SLEEP)) {
+                        val records = readAllRecords(client, SleepSessionRecord::class, sleepQueryFilter)
+                        records
+                            .filter { !it.endTime.isBefore(startOfDay) && it.endTime.isBefore(endOfDay) }
+                            .map { rec ->
+                                HealthConnectSyncHelper.SleepRecordMeta(
+                                    id = rec.metadata.id,
+                                    clientRecordId = rec.metadata.clientRecordId,
+                                    clientRecordVersion = rec.metadata.clientRecordVersion,
+                                    dataOriginPackage = rec.metadata.dataOrigin.packageName,
+                                    startTime = rec.startTime,
+                                    endTime = rec.endTime
+                                )
+                            }
+                    } else {
+                        emptyList()
+                    }
+
+                    val existingMaxVersion = existingSleepMetas
+                        .filter { it.dataOriginPackage == myPackageName }
+                        .maxOfOrNull { it.clientRecordVersion } ?: 0L
+                    val requestedVersion = hintVersionsObj?.optLong("sleep", 0L) ?: 0L
+                    val nextVersion = HealthConnectSyncHelper.computeNextClientRecordVersion(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        requestedVersion = requestedVersion,
+                        existingMaxVersion = existingMaxVersion
+                    )
+
+                    val sleepRecordsToInsert = mutableListOf<SleepSessionRecord>()
+                    val newlyWrittenClientRecordIds = linkedSetOf<String>()
+                    var hasInvalidSessionEntry = false
+
+                    for (i in 0 until sessionsArray.length()) {
+                        val sessionItem = sessionsArray.optJSONObject(i)
+                        if (sessionItem == null) {
+                            hasInvalidSessionEntry = true
+                            continue
+                        }
+                        val source = sessionItem.optString("source", "tasket")
+                        if (source == "external" || source == "manual") {
+                            // 他アプリ由来またはローカル専用セッションは書き戻さない
+                            continue
+                        }
+                        val startStr = sessionItem.optString("startTime", "")
+                        val endStr = sessionItem.optString("endTime", "")
+                        if (startStr.isBlank() || endStr.isBlank()) {
+                            hasInvalidSessionEntry = true
+                            continue
+                        }
+                        val startInstant = try {
+                            Instant.parse(startStr)
                         } catch (_: Exception) {
+                            hasInvalidSessionEntry = true
+                            null
+                        }
+                        val endInstant = try {
+                            Instant.parse(endStr)
+                        } catch (_: Exception) {
+                            hasInvalidSessionEntry = true
+                            null
+                        }
+                        if (startInstant != null && endInstant != null && endInstant.isAfter(startInstant)) {
+                            val idx = sleepRecordsToInsert.size
+                            val cid = "tasket-sleep-$dateStr-$idx"
+                            val itemRequestedVersion = sessionItem.optLong("clientRecordVersion", 0L)
+                            val recordVersion = maxOf(nextVersion, itemRequestedVersion + 1L)
+                            sleepRecordsToInsert.add(
+                                SleepSessionRecord(
+                                    startTime = startInstant,
+                                    startZoneOffset = zoneId.rules.getOffset(startInstant),
+                                    endTime = endInstant,
+                                    endZoneOffset = zoneId.rules.getOffset(endInstant),
+                                    metadata = Metadata(
+                                        clientRecordId = cid,
+                                        clientRecordVersion = recordVersion
+                                    )
+                                )
+                            )
+                            newlyWrittenClientRecordIds.add(cid)
+                        } else {
+                            hasInvalidSessionEntry = true
                         }
                     }
 
-                    if (addedCount > 0) {
+                    if (sessionsArray.length() > 0 && sleepRecordsToInsert.isEmpty() && hasInvalidSessionEntry) {
+                        invalidFields.put("sleep")
+                    } else {
+                        // Step A: まず新しい睡眠セッションを insertRecords で書き込む（失敗時は既存セッションを削除しない）
+                        if (sleepRecordsToInsert.isNotEmpty()) {
+                            client.insertRecords(sleepRecordsToInsert)
+                        }
+
+                        // Step B: 新規書き込みが成功した後にのみ、不要となった過去の Tasket 睡眠セッションを削除
+                        val cleanupPlan = HealthConnectSyncHelper.selectStaleTasketSleepRecordsToDelete(
+                            myPackageName = myPackageName,
+                            dateStr = dateStr,
+                            existingRecords = existingSleepMetas,
+                            previousClientRecordIds = prevSleepClientRecordIds,
+                            newlyWrittenClientRecordIds = newlyWrittenClientRecordIds
+                        )
+
+                        val tasketIdsArray = JSArray()
+                        for (cid in newlyWrittenClientRecordIds) {
+                            tasketIdsArray.put(cid)
+                        }
+                        outTasketSleepIds = tasketIdsArray
+
+                        if (cleanupPlan.recordIdsToDelete.isNotEmpty() || cleanupPlan.clientRecordIdsToDelete.isNotEmpty()) {
+                            try {
+                                client.deleteRecords(
+                                    recordType = SleepSessionRecord::class,
+                                    recordIdsList = cleanupPlan.recordIdsToDelete,
+                                    clientRecordIdsList = cleanupPlan.clientRecordIdsToDelete
+                                )
+                                outPendingDeleteSleepIds = JSArray()
+                            } catch (delEx: Exception) {
+                                Log.e(TAG, "Failed to delete stale Tasket sleep sessions on $localDate", delEx)
+                                val pendingArray = JSArray()
+                                for (cid in cleanupPlan.clientRecordIdsToDelete) {
+                                    pendingArray.put(cid)
+                                }
+                                outPendingDeleteSleepIds = pendingArray
+                                failedFields.put("sleep")
+                                fieldErrors.put("sleep", "Failed to delete stale sleep sessions: ${delEx.message}")
+                            }
+                        } else {
+                            outPendingDeleteSleepIds = JSArray()
+                        }
+
+                        outVersions.put("sleep", nextVersion)
                         writtenFields.put("sleep")
                     }
-                } else {
-                    skippedPermissionFields.put("sleep")
+                } catch (e: Exception) {
+                    handleWriteError("sleep", e)
                 }
             }
         }
 
-        // 3. 心拍数
+        // 3. 心拍数（他アプリ由来サンプルがない日のみ Upsert）
         if (dataObj.has("heartRate") && !dataObj.isNull("heartRate")) {
             val bpm = dataObj.optDouble("heartRate", -1.0).roundToLong()
-            if (bpm in 1L..300L) {
-                if (granted.contains(PERM_WRITE_HEART_RATE)) {
-                    recordsToInsert.add(
-                        HeartRateRecord(
-                            startTime = pointTime,
-                            startZoneOffset = pointOffset,
-                            endTime = pointTime.plusSeconds(60),
-                            endZoneOffset = pointOffset,
-                            samples = listOf(
-                                HeartRateRecord.Sample(
-                                    time = pointTime,
-                                    beatsPerMinute = bpm
-                                )
-                            ),
-                            metadata = Metadata(clientRecordId = "tasket-heartRate-$dateStr")
+            if (bpm !in 1L..300L) {
+                invalidFields.put("heartRate")
+            } else if (!granted.contains(PERM_WRITE_HEART_RATE)) {
+                skippedPermissionFields.put("heartRate")
+            } else {
+                try {
+                    var hasExternalHr = false
+                    var existingMaxVersion = 0L
+
+                    if (granted.contains(PERM_READ_HEART_RATE)) {
+                        val records = readAllRecords(client, HeartRateRecord::class, dayFilter)
+                        existingMaxVersion = records
+                            .filter { it.metadata.dataOrigin.packageName == myPackageName }
+                            .maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                        hasExternalHr = records.any { rec ->
+                            rec.metadata.dataOrigin.packageName != myPackageName &&
+                                rec.samples.any { s -> !s.time.isBefore(startOfDay) && s.time.isBefore(endOfDay) }
+                        }
+                    }
+
+                    if (!hasExternalHr) {
+                        val requestedVersion = hintVersionsObj?.optLong("heartRate", 0L) ?: 0L
+                        val nextVersion = HealthConnectSyncHelper.computeNextClientRecordVersion(
+                            nowEpochMillis = System.currentTimeMillis(),
+                            requestedVersion = requestedVersion,
+                            existingMaxVersion = existingMaxVersion
                         )
-                    )
-                    writtenFields.put("heartRate")
-                } else {
-                    skippedPermissionFields.put("heartRate")
+                        val pointOffset = zoneId.rules.getOffset(defaultPointTime)
+                        client.insertRecords(
+                            listOf(
+                                HeartRateRecord(
+                                    startTime = defaultPointTime,
+                                    startZoneOffset = pointOffset,
+                                    endTime = defaultPointTime.plusSeconds(60).coerceAtMost(endOfDay.minusMillis(1)),
+                                    endZoneOffset = pointOffset,
+                                    samples = listOf(
+                                        HeartRateRecord.Sample(
+                                            time = defaultPointTime,
+                                            beatsPerMinute = bpm
+                                        )
+                                    ),
+                                    metadata = Metadata(
+                                        clientRecordId = "tasket-heartRate-$dateStr",
+                                        clientRecordVersion = nextVersion
+                                    )
+                                )
+                            )
+                        )
+                        outTasketValues.put("heartRate", bpm.toInt())
+                        outVersions.put("heartRate", nextVersion)
+                        writtenFields.put("heartRate")
+                    }
+                } catch (e: Exception) {
+                    handleWriteError("heartRate", e)
                 }
             }
         }
 
-        // 4. 体重
+        // 4. 体重（当日内の既存レコードより新しい時刻で Upsert）
         if (dataObj.has("weight") && !dataObj.isNull("weight")) {
             val weightKg = dataObj.optDouble("weight", -1.0)
-            if (weightKg > 0.0) {
-                if (granted.contains(PERM_WRITE_WEIGHT)) {
-                    recordsToInsert.add(
-                        WeightRecord(
-                            time = pointTime,
-                            zoneOffset = pointOffset,
-                            weight = Mass.kilograms(weightKg),
-                            metadata = Metadata(clientRecordId = "tasket-weight-$dateStr")
+            if (weightKg <= 0.0 || weightKg > 500.0) {
+                invalidFields.put("weight")
+            } else if (!granted.contains(PERM_WRITE_WEIGHT)) {
+                skippedPermissionFields.put("weight")
+            } else {
+                try {
+                    var existingMaxVersion = 0L
+                    var existingTimes = emptyList<Instant>()
+
+                    if (granted.contains(PERM_READ_WEIGHT)) {
+                        val records = readAllRecords(client, WeightRecord::class, dayFilter)
+                        existingMaxVersion = records
+                            .filter { it.metadata.dataOrigin.packageName == myPackageName }
+                            .maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                        existingTimes = records.map { it.time }
+                    }
+
+                    val requestedVersion = hintVersionsObj?.optLong("weight", 0L) ?: 0L
+                    val nextVersion = HealthConnectSyncHelper.computeNextClientRecordVersion(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        requestedVersion = requestedVersion,
+                        existingMaxVersion = existingMaxVersion
+                    )
+                    val writeTime = HealthConnectSyncHelper.computeLatestMeasurementTimestamp(
+                        startOfDay = startOfDay,
+                        endOfDay = endOfDay,
+                        defaultPointTime = defaultPointTime,
+                        existingTimes = existingTimes
+                    )
+                    val writeOffset = zoneId.rules.getOffset(writeTime)
+
+                    client.insertRecords(
+                        listOf(
+                            WeightRecord(
+                                time = writeTime,
+                                zoneOffset = writeOffset,
+                                weight = Mass.kilograms(weightKg),
+                                metadata = Metadata(
+                                    clientRecordId = "tasket-weight-$dateStr",
+                                    clientRecordVersion = nextVersion
+                                )
+                            )
                         )
                     )
+                    outTasketValues.put("weight", weightKg)
+                    outVersions.put("weight", nextVersion)
                     writtenFields.put("weight")
-                } else {
-                    skippedPermissionFields.put("weight")
+                } catch (e: Exception) {
+                    handleWriteError("weight", e)
                 }
             }
         }
 
-        // 5. 体脂肪率
+        // 5. 体脂肪率（当日内の既存レコードより新しい時刻で Upsert）
         if (dataObj.has("bodyFatPercentage") && !dataObj.isNull("bodyFatPercentage")) {
             val bodyFatPct = dataObj.optDouble("bodyFatPercentage", -1.0)
-            if (bodyFatPct > 0.0 && bodyFatPct < 100.0) {
-                if (granted.contains(PERM_WRITE_BODY_FAT)) {
-                    recordsToInsert.add(
-                        BodyFatRecord(
-                            time = pointTime,
-                            zoneOffset = pointOffset,
-                            percentage = Percentage(bodyFatPct),
-                            metadata = Metadata(clientRecordId = "tasket-bodyFatPercentage-$dateStr")
+            if (bodyFatPct <= 0.0 || bodyFatPct >= 100.0) {
+                invalidFields.put("bodyFatPercentage")
+            } else if (!granted.contains(PERM_WRITE_BODY_FAT)) {
+                skippedPermissionFields.put("bodyFatPercentage")
+            } else {
+                try {
+                    var existingMaxVersion = 0L
+                    var existingTimes = emptyList<Instant>()
+
+                    if (granted.contains(PERM_READ_BODY_FAT)) {
+                        val records = readAllRecords(client, BodyFatRecord::class, dayFilter)
+                        existingMaxVersion = records
+                            .filter { it.metadata.dataOrigin.packageName == myPackageName }
+                            .maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                        existingTimes = records.map { it.time }
+                    }
+
+                    val requestedVersion = hintVersionsObj?.optLong("bodyFatPercentage", 0L) ?: 0L
+                    val nextVersion = HealthConnectSyncHelper.computeNextClientRecordVersion(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        requestedVersion = requestedVersion,
+                        existingMaxVersion = existingMaxVersion
+                    )
+                    val writeTime = HealthConnectSyncHelper.computeLatestMeasurementTimestamp(
+                        startOfDay = startOfDay,
+                        endOfDay = endOfDay,
+                        defaultPointTime = defaultPointTime,
+                        existingTimes = existingTimes
+                    )
+                    val writeOffset = zoneId.rules.getOffset(writeTime)
+
+                    client.insertRecords(
+                        listOf(
+                            BodyFatRecord(
+                                time = writeTime,
+                                zoneOffset = writeOffset,
+                                percentage = Percentage(bodyFatPct),
+                                metadata = Metadata(
+                                    clientRecordId = "tasket-bodyFatPercentage-$dateStr",
+                                    clientRecordVersion = nextVersion
+                                )
+                            )
                         )
                     )
+                    outTasketValues.put("bodyFatPercentage", bodyFatPct)
+                    outVersions.put("bodyFatPercentage", nextVersion)
                     writtenFields.put("bodyFatPercentage")
-                } else {
-                    skippedPermissionFields.put("bodyFatPercentage")
+                } catch (e: Exception) {
+                    handleWriteError("bodyFatPercentage", e)
                 }
             }
         }
 
-        // 6. 水分摂取量
+        // 6. 水分摂取量（加算型：他アプリ由来合計との差分を Upsert、減少時は Tasket レコードを削除）
         if (dataObj.has("waterIntake") && !dataObj.isNull("waterIntake")) {
             val waterMl = dataObj.optDouble("waterIntake", -1.0)
-            if (waterMl > 0.0) {
-                if (granted.contains(PERM_WRITE_HYDRATION)) {
-                    val startTime = localDate.atTime(12, 0).atZone(zoneId).toInstant()
-                    val endTime = localDate.atTime(12, 15).atZone(zoneId).toInstant()
-                    recordsToInsert.add(
-                        HydrationRecord(
-                            startTime = startTime,
-                            startZoneOffset = zoneId.rules.getOffset(startTime),
-                            endTime = endTime,
-                            endZoneOffset = zoneId.rules.getOffset(endTime),
-                            volume = Volume.milliliters(waterMl),
-                            metadata = Metadata(clientRecordId = "tasket-waterIntake-$dateStr")
-                        )
+            if (waterMl < 0.0) {
+                invalidFields.put("waterIntake")
+            } else if (!granted.contains(PERM_WRITE_HYDRATION)) {
+                skippedPermissionFields.put("waterIntake")
+            } else {
+                try {
+                    var externalWaterMl = hintExternalObj?.optDouble("waterIntake", 0.0)?.coerceAtLeast(0.0) ?: 0.0
+                    var existingMaxVersion = 0L
+                    val existingTasketIds = mutableListOf<String>()
+
+                    if (granted.contains(PERM_READ_HYDRATION)) {
+                        val records = readAllRecords(client, HydrationRecord::class, dayFilter)
+                        val externalRecords = records.filter { it.metadata.dataOrigin.packageName != myPackageName }
+                        val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+                        externalWaterMl = externalRecords.sumOf { it.volume.inMilliliters }.coerceAtLeast(0.0)
+                        existingMaxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                        existingTasketIds.addAll(tasketRecords.mapNotNull { it.metadata.id.takeIf { id -> id.isNotBlank() } })
+                    }
+
+                    val requestedVersion = hintVersionsObj?.optLong("waterIntake", 0L) ?: 0L
+                    val nextVersion = HealthConnectSyncHelper.computeNextClientRecordVersion(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        requestedVersion = requestedVersion,
+                        existingMaxVersion = existingMaxVersion
                     )
-                    writtenFields.put("waterIntake")
-                } else {
-                    skippedPermissionFields.put("waterIntake")
+                    val clientRecordId = "tasket-waterIntake-$dateStr"
+
+                    when (val action = HealthConnectSyncHelper.computeAdditiveWriteAction(waterMl, externalWaterMl)) {
+                        is HealthConnectSyncHelper.AdditiveWriteAction.UpsertDelta -> {
+                            val deltaMl = action.deltaValue.roundToInt().coerceAtLeast(1)
+                            val startTime = localDate.atTime(12, 0).atZone(zoneId).toInstant()
+                            val endTime = localDate.atTime(12, 15).atZone(zoneId).toInstant()
+                            client.insertRecords(
+                                listOf(
+                                    HydrationRecord(
+                                        startTime = startTime,
+                                        startZoneOffset = zoneId.rules.getOffset(startTime),
+                                        endTime = endTime,
+                                        endZoneOffset = zoneId.rules.getOffset(endTime),
+                                        volume = Volume.milliliters(deltaMl.toDouble()),
+                                        metadata = Metadata(
+                                            clientRecordId = clientRecordId,
+                                            clientRecordVersion = nextVersion
+                                        )
+                                    )
+                                )
+                            )
+                            outExternalValues.put("waterIntake", externalWaterMl.roundToInt())
+                            outTasketValues.put("waterIntake", deltaMl)
+                            outVersions.put("waterIntake", nextVersion)
+                            writtenFields.put("waterIntake")
+                        }
+                        is HealthConnectSyncHelper.AdditiveWriteAction.DeleteTasketRecord -> {
+                            client.deleteRecords(
+                                recordType = HydrationRecord::class,
+                                recordIdsList = existingTasketIds,
+                                clientRecordIdsList = listOf(clientRecordId)
+                            )
+                            outExternalValues.put("waterIntake", externalWaterMl.roundToInt())
+                            outTasketValues.put("waterIntake", 0)
+                            writtenFields.put("waterIntake")
+                        }
+                    }
+                } catch (e: Exception) {
+                    handleWriteError("waterIntake", e)
                 }
             }
         }
 
-        // 7. 運動時間
+        // 7. 運動時間（加算型：他アプリ由来合計との差分を Upsert、減少時は Tasket レコードを削除）
         if (dataObj.has("exerciseMinutes") && !dataObj.isNull("exerciseMinutes")) {
             val exerciseMins = dataObj.optLong("exerciseMinutes", -1L)
-            if (exerciseMins > 0L) {
-                if (granted.contains(PERM_WRITE_EXERCISE)) {
-                    val startTime = localDate.atTime(18, 0).atZone(zoneId).toInstant()
-                    val endTime = startTime.plusSeconds(exerciseMins * 60L)
-                    recordsToInsert.add(
-                        ExerciseSessionRecord(
-                            startTime = startTime,
-                            startZoneOffset = zoneId.rules.getOffset(startTime),
-                            endTime = endTime,
-                            endZoneOffset = zoneId.rules.getOffset(endTime),
-                            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
-                            metadata = Metadata(clientRecordId = "tasket-exerciseMinutes-$dateStr")
-                        )
+            if (exerciseMins < 0L) {
+                invalidFields.put("exerciseMinutes")
+            } else if (!granted.contains(PERM_WRITE_EXERCISE)) {
+                skippedPermissionFields.put("exerciseMinutes")
+            } else {
+                try {
+                    var externalExerciseMins = hintExternalObj?.optLong("exerciseMinutes", 0L)?.coerceAtLeast(0L) ?: 0L
+                    var existingMaxVersion = 0L
+                    val existingTasketIds = mutableListOf<String>()
+
+                    if (granted.contains(PERM_READ_EXERCISE)) {
+                        val records = readAllRecords(client, ExerciseSessionRecord::class, dayFilter)
+                        val externalOrigins = records
+                            .map { it.metadata.dataOrigin }
+                            .filter { it.packageName != myPackageName }
+                            .toSet()
+                        val tasketRecords = records.filter { it.metadata.dataOrigin.packageName == myPackageName }
+                        existingMaxVersion = tasketRecords.maxOfOrNull { it.metadata.clientRecordVersion } ?: 0L
+                        existingTasketIds.addAll(tasketRecords.mapNotNull { it.metadata.id.takeIf { id -> id.isNotBlank() } })
+
+                        externalExerciseMins = if (externalOrigins.isNotEmpty()) {
+                            val agg = client.aggregate(
+                                AggregateRequest(
+                                    metrics = setOf(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL),
+                                    timeRangeFilter = dayFilter,
+                                    dataOriginFilter = externalOrigins
+                                )
+                            )
+                            (agg[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes() ?: 0L).coerceAtLeast(0L)
+                        } else {
+                            0L
+                        }
+                    }
+
+                    val requestedVersion = hintVersionsObj?.optLong("exerciseMinutes", 0L) ?: 0L
+                    val nextVersion = HealthConnectSyncHelper.computeNextClientRecordVersion(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        requestedVersion = requestedVersion,
+                        existingMaxVersion = existingMaxVersion
                     )
-                    writtenFields.put("exerciseMinutes")
-                } else {
-                    skippedPermissionFields.put("exerciseMinutes")
+                    val clientRecordId = "tasket-exerciseMinutes-$dateStr"
+
+                    when (val action = HealthConnectSyncHelper.computeAdditiveWriteAction(exerciseMins.toDouble(), externalExerciseMins.toDouble())) {
+                        is HealthConnectSyncHelper.AdditiveWriteAction.UpsertDelta -> {
+                            val deltaMins = action.deltaValue.roundToLong().coerceAtLeast(1L)
+                            val durationSeconds = (deltaMins * 60L).coerceAtMost(86399L)
+                            val preferredStart = localDate.atTime(18, 0).atZone(zoneId).toInstant()
+                            val maxStart = endOfDay.minusSeconds(durationSeconds + 1L).coerceAtLeast(startOfDay)
+                            val startTime = if (preferredStart.isAfter(maxStart)) maxStart else preferredStart
+                            val endTime = startTime.plusSeconds(durationSeconds).coerceAtMost(endOfDay.minusSeconds(1))
+
+                            client.insertRecords(
+                                listOf(
+                                    ExerciseSessionRecord(
+                                        startTime = startTime,
+                                        startZoneOffset = zoneId.rules.getOffset(startTime),
+                                        endTime = endTime,
+                                        endZoneOffset = zoneId.rules.getOffset(endTime),
+                                        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
+                                        metadata = Metadata(
+                                            clientRecordId = clientRecordId,
+                                            clientRecordVersion = nextVersion
+                                        )
+                                    )
+                                )
+                            )
+                            outExternalValues.put("exerciseMinutes", externalExerciseMins.toInt())
+                            outTasketValues.put("exerciseMinutes", deltaMins.toInt())
+                            outVersions.put("exerciseMinutes", nextVersion)
+                            writtenFields.put("exerciseMinutes")
+                        }
+                        is HealthConnectSyncHelper.AdditiveWriteAction.DeleteTasketRecord -> {
+                            client.deleteRecords(
+                                recordType = ExerciseSessionRecord::class,
+                                recordIdsList = existingTasketIds,
+                                clientRecordIdsList = listOf(clientRecordId)
+                            )
+                            outExternalValues.put("exerciseMinutes", externalExerciseMins.toInt())
+                            outTasketValues.put("exerciseMinutes", 0)
+                            writtenFields.put("exerciseMinutes")
+                        }
+                    }
+                } catch (e: Exception) {
+                    handleWriteError("exerciseMinutes", e)
                 }
             }
-        }
-
-        if (recordsToInsert.isNotEmpty()) {
-            client.insertRecords(recordsToInsert)
         }
 
         val result = JSObject()
         result.put("writtenFields", writtenFields)
         result.put("skippedPermissionFields", skippedPermissionFields)
+        result.put("invalidFields", invalidFields)
+        result.put("failedFields", failedFields)
+        result.put("fieldErrors", fieldErrors)
+        result.put("externalValues", outExternalValues)
+        result.put("tasketValues", outTasketValues)
+        result.put("clientRecordVersions", outVersions)
+        if (outTasketSleepIds != null) {
+            result.put("tasketSleepClientRecordIds", outTasketSleepIds)
+        }
+        if (outPendingDeleteSleepIds != null) {
+            result.put("pendingDeleteSleepClientRecordIds", outPendingDeleteSleepIds)
+        }
         return result
     }
 }

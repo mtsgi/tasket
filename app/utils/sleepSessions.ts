@@ -83,13 +83,13 @@ export function resolveSleepSessionToIso(
     }
   }
 
-  // 既にISO日時文字列の場合
+  // 既にISO日時文字列の場合（秒・ミリ秒精度をそのまま保持）
   const parsedStart = dayjs(trimmedStart)
   const parsedEnd = dayjs(trimmedEnd)
   if (!parsedStart.isValid() || !parsedEnd.isValid()) {
     return null
   }
-  if (parsedEnd.diff(parsedStart, 'minute') <= 0) {
+  if (parsedEnd.valueOf() <= parsedStart.valueOf()) {
     return null
   }
 
@@ -100,33 +100,134 @@ export function resolveSleepSessionToIso(
 }
 
 /**
- * 単一の睡眠セッションの時間（分）を計算
- * @param session - 睡眠セッション
- * @param date - HH:mm形式で格納されている場合の基準日（YYYY-MM-DD）
- * @returns 睡眠時間（分、無効な場合は0）
+ * 保存済みの睡眠セッション配列からフォーム入力用のドラフト配列を生成
+ * 表示用には HH:mm を設定し、未編集時の秒以下精度・由来メタデータ維持のため originalStartTime / originalEndTime 等を保持する
  */
-export function calculateSleepSessionMinutes(session: SleepSession, date?: string): number {
+export function createSleepSessionDrafts(
+  sessions: SleepSession[] | undefined | null,
+): SleepSession[] {
+  if (!sessions || sessions.length === 0) {
+    return []
+  }
+
+  return sessions.map((session) => {
+    const displayStart = extractTimeHHmm(session.startTime)
+    const displayEnd = extractTimeHHmm(session.endTime)
+    const isIsoStart = !HH_MM_PATTERN.test(session.startTime.trim()) && dayjs(session.startTime).isValid()
+    const isIsoEnd = !HH_MM_PATTERN.test(session.endTime.trim()) && dayjs(session.endTime).isValid()
+
+    return {
+      ...session,
+      startTime: displayStart,
+      endTime: displayEnd,
+      originalStartTime: session.originalStartTime ?? (isIsoStart ? dayjs(session.startTime).toISOString() : undefined),
+      originalEndTime: session.originalEndTime ?? (isIsoEnd ? dayjs(session.endTime).toISOString() : undefined),
+    }
+  })
+}
+
+/**
+ * 単一の睡眠セッションをミリ秒区間 [startMs, endMs] に解決
+ */
+export function resolveSleepSessionIntervalMs(
+  session: SleepSession,
+  date?: string,
+): { startMs: number, endMs: number } | null {
+  if (!session?.startTime || !session?.endTime) {
+    return null
+  }
+
+  const trimmedStart = session.startTime.trim()
+  const trimmedEnd = session.endTime.trim()
+
+  // 未編集の元ISO日時があり、かつ表示用HH:mmと一致している場合は元ISO日時の精度を使用
+  if (
+    session.originalStartTime
+    && session.originalEndTime
+    && extractTimeHHmm(session.originalStartTime) === extractTimeHHmm(trimmedStart)
+    && extractTimeHHmm(session.originalEndTime) === extractTimeHHmm(trimmedEnd)
+  ) {
+    const origStart = dayjs(session.originalStartTime)
+    const origEnd = dayjs(session.originalEndTime)
+    if (origStart.isValid() && origEnd.isValid() && origEnd.valueOf() > origStart.valueOf()) {
+      return {
+        startMs: origStart.valueOf(),
+        endMs: origEnd.valueOf(),
+      }
+    }
+  }
+
   const resolved = date
-    ? resolveSleepSessionToIso(date, session.startTime, session.endTime)
+    ? resolveSleepSessionToIso(date, trimmedStart, trimmedEnd)
     : (() => {
-        const start = dayjs(session.startTime)
-        const end = dayjs(session.endTime)
-        if (!start.isValid() || !end.isValid() || end.diff(start, 'minute') <= 0) {
+        const start = dayjs(trimmedStart)
+        const end = dayjs(trimmedEnd)
+        if (!start.isValid() || !end.isValid() || end.valueOf() <= start.valueOf()) {
           return null
         }
         return { startTime: start.toISOString(), endTime: end.toISOString() }
       })()
 
   if (!resolved) {
+    return null
+  }
+
+  const startMs = dayjs(resolved.startTime).valueOf()
+  const endMs = dayjs(resolved.endTime).valueOf()
+  return endMs > startMs ? { startMs, endMs } : null
+}
+
+/**
+ * 重複する睡眠時間帯（オーバーラップ区間）をマージして互いに素な区間リストを返す
+ */
+export function mergeOverlappingSleepIntervals(
+  intervals: Array<{ startMs: number, endMs: number }>,
+): Array<{ startMs: number, endMs: number }> {
+  const valid = intervals
+    .filter(interval => interval.endMs > interval.startMs)
+    .sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs)
+
+  if (valid.length === 0) {
+    return []
+  }
+
+  const merged: Array<{ startMs: number, endMs: number }> = [
+    { startMs: valid[0]!.startMs, endMs: valid[0]!.endMs },
+  ]
+
+  for (let i = 1; i < valid.length; i++) {
+    const next = valid[i]!
+    const current = merged[merged.length - 1]!
+    if (next.startMs < current.endMs) {
+      current.endMs = Math.max(current.endMs, next.endMs)
+    }
+    else {
+      merged.push({ startMs: next.startMs, endMs: next.endMs })
+    }
+  }
+
+  return merged
+}
+
+/**
+ * 単一の睡眠セッションの時間（分）を計算
+ * @param session - 睡眠セッション
+ * @param date - HH:mm形式で格納されている場合の基準日（YYYY-MM-DD）
+ * @returns 睡眠時間（分、無効な場合は0）
+ */
+export function calculateSleepSessionMinutes(session: SleepSession, date?: string): number {
+  const interval = resolveSleepSessionIntervalMs(session, date)
+  if (!interval) {
     return 0
   }
 
-  const minutes = dayjs(resolved.endTime).diff(dayjs(resolved.startTime), 'minute')
+  const minutes = Math.round((interval.endMs - interval.startMs) / 60000)
   return minutes > 0 ? minutes : 0
 }
 
 /**
  * 複数の睡眠セッションから合計睡眠時間（時間・小数第1位）を計算
+ * 重複する睡眠時間帯がある場合は区間マージして二重計上を防止し、秒以下の精度も考慮する
  * @param sessions - 睡眠セッションの配列
  * @param date - HH:mm形式で格納されている場合の基準日（YYYY-MM-DD）
  * @returns 合計睡眠時間（時間・小数第1位）、または有効なセッションがない場合はundefined
@@ -139,29 +240,35 @@ export function calculateTotalSleepHours(
     return undefined
   }
 
-  let totalMinutes = 0
-  let validCount = 0
-
+  const intervals: Array<{ startMs: number, endMs: number }> = []
   for (const session of sessions) {
-    const minutes = calculateSleepSessionMinutes(session, date)
-    if (minutes > 0) {
-      totalMinutes += minutes
-      validCount++
+    const interval = resolveSleepSessionIntervalMs(session, date)
+    if (interval) {
+      intervals.push(interval)
     }
   }
 
-  if (validCount === 0 || totalMinutes <= 0) {
+  const merged = mergeOverlappingSleepIntervals(intervals)
+  if (merged.length === 0) {
     return undefined
   }
 
-  return Math.round((totalMinutes / 60) * 10) / 10
+  const totalMs = merged.reduce((sum, item) => sum + (item.endMs - item.startMs), 0)
+  if (totalMs <= 0) {
+    return undefined
+  }
+
+  const rounded = Math.round((totalMs / 3600000) * 10) / 10
+  return rounded > 0 ? rounded : undefined
 }
 
 /**
- * フォーム入力配列を正規化されたSleepSession配列に変換
- * 未入力・無効な行は除外する
+ * フォーム入力配列またはHealth Connect取得配列を正規化されたSleepSession配列に変換
+ * - 未入力・無効な行は除外する
+ * - 未編集のセッション（表示用HH:mmがoriginalStartTime/originalEndTimeのHH:mmと一致）は秒以下の精度と由来メタデータを維持する
+ * - 他アプリ由来（source === 'external'）のセッションがフォームで時刻変更された場合は source: 'manual'（ローカル編集）へ遷移させ、Health Connectへの重複書き戻しを防ぐ
  * @param date - 記録日（YYYY-MM-DD形式）
- * @param draftSessions - フォーム入力中の睡眠セッション配列
+ * @param draftSessions - フォーム入力中または取得した睡眠セッション配列
  * @returns 正規化されたSleepSession配列
  */
 export function normalizeSleepSessionsForDate(
@@ -174,9 +281,91 @@ export function normalizeSleepSessionsForDate(
 
   const normalized: SleepSession[] = []
   for (const draft of draftSessions) {
-    const resolved = resolveSleepSessionToIso(date, draft.startTime, draft.endTime)
+    if (!draft?.startTime || !draft?.endTime) {
+      continue
+    }
+    const trimmedStart = draft.startTime.trim()
+    const trimmedEnd = draft.endTime.trim()
+
+    // 1. すでにISO日時が直接入っており、originalStartTime等がない場合
+    const isDirectIso = !HH_MM_PATTERN.test(trimmedStart) && !HH_MM_PATTERN.test(trimmedEnd)
+    if (isDirectIso) {
+      const parsedStart = dayjs(trimmedStart)
+      const parsedEnd = dayjs(trimmedEnd)
+      if (parsedStart.isValid() && parsedEnd.isValid() && parsedEnd.valueOf() > parsedStart.valueOf()) {
+        const entry: SleepSession = {
+          startTime: parsedStart.toISOString(),
+          endTime: parsedEnd.toISOString(),
+        }
+        if (draft.id !== undefined) entry.id = draft.id
+        if (draft.clientRecordId !== undefined) entry.clientRecordId = draft.clientRecordId
+        if (draft.clientRecordVersion !== undefined) entry.clientRecordVersion = draft.clientRecordVersion
+        if (draft.dataOrigin !== undefined) entry.dataOrigin = draft.dataOrigin
+        if (draft.source !== undefined) entry.source = draft.source
+        normalized.push(entry)
+      }
+      continue
+    }
+
+    // 2. フォームドラフトで originalStartTime / originalEndTime が保持されており、HH:mm が未変更の場合
+    if (
+      draft.originalStartTime
+      && draft.originalEndTime
+      && extractTimeHHmm(draft.originalStartTime) === extractTimeHHmm(trimmedStart)
+      && extractTimeHHmm(draft.originalEndTime) === extractTimeHHmm(trimmedEnd)
+    ) {
+      const origStart = dayjs(draft.originalStartTime)
+      const origEnd = dayjs(draft.originalEndTime)
+      if (origStart.isValid() && origEnd.isValid() && origEnd.valueOf() > origStart.valueOf()) {
+        const entry: SleepSession = {
+          startTime: origStart.toISOString(),
+          endTime: origEnd.toISOString(),
+        }
+        if (draft.id !== undefined) entry.id = draft.id
+        if (draft.clientRecordId !== undefined) entry.clientRecordId = draft.clientRecordId
+        if (draft.clientRecordVersion !== undefined) entry.clientRecordVersion = draft.clientRecordVersion
+        if (draft.dataOrigin !== undefined) entry.dataOrigin = draft.dataOrigin
+        if (draft.source !== undefined) entry.source = draft.source
+        normalized.push(entry)
+        continue
+      }
+    }
+
+    // 3. 新規追加または時刻（HH:mm）が編集された場合
+    const resolved = resolveSleepSessionToIso(date, trimmedStart, trimmedEnd)
     if (resolved) {
-      normalized.push(resolved)
+      const entry: SleepSession = {
+        startTime: resolved.startTime,
+        endTime: resolved.endTime,
+      }
+      if (draft.source === 'external') {
+        // 他アプリ由来のセッションを手動編集した場合はローカル優先セッション('manual')へ遷移
+        entry.source = 'manual'
+        if (draft.dataOrigin !== undefined) {
+          entry.dataOrigin = draft.dataOrigin
+        }
+      }
+      else if (draft.source === 'manual') {
+        entry.source = 'manual'
+        if (draft.dataOrigin !== undefined) {
+          entry.dataOrigin = draft.dataOrigin
+        }
+      }
+      else {
+        if (draft.source !== undefined) {
+          entry.source = draft.source
+        }
+        if (draft.clientRecordId !== undefined) {
+          entry.clientRecordId = draft.clientRecordId
+        }
+        if (draft.clientRecordVersion !== undefined) {
+          entry.clientRecordVersion = draft.clientRecordVersion
+        }
+        if (draft.dataOrigin !== undefined) {
+          entry.dataOrigin = draft.dataOrigin
+        }
+      }
+      normalized.push(entry)
     }
   }
   return normalized
@@ -213,7 +402,7 @@ export function formatSleepSessionsSummary(sessions: SleepSession[] | undefined 
 }
 
 /**
- * 2つの睡眠セッション配列が同じ内容かどうかを判定
+ * 2つの睡眠セッション配列が同じ内容かどうかを判定（ミリ秒精度および由来種別を含む）
  * @param a - 比較対象の睡眠セッション配列A
  * @param b - 比較対象の睡眠セッション配列B
  * @returns 同一内容であればtrue
@@ -239,7 +428,9 @@ export function areSleepSessionsEqual(
     const endA = dayjs(itemA.endTime).isValid() ? dayjs(itemA.endTime).toISOString() : itemA.endTime
     const startB = dayjs(itemB.startTime).isValid() ? dayjs(itemB.startTime).toISOString() : itemB.startTime
     const endB = dayjs(itemB.endTime).isValid() ? dayjs(itemB.endTime).toISOString() : itemB.endTime
-    if (startA !== startB || endA !== endB) {
+    const sourceA = itemA.source ?? 'tasket'
+    const sourceB = itemB.source ?? 'tasket'
+    if (startA !== startB || endA !== endB || sourceA !== sourceB) {
       return false
     }
   }
