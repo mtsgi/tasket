@@ -38,6 +38,9 @@ export default {
   '今日もTasketを開きました': 'You opened Tasket today',
   'この調子で毎日の記録を続けましょう': 'Keep up your daily records',
   '最長{count}日': 'Best: {count} days',
+  '利用履歴の形式が無効です': 'Invalid daily activity format',
+  'データベースの更新が待機中です': 'Database update is waiting',
+  '他のタブで開いているTasketを閉じてください。閉じると自動的に再開します。': 'Please close Tasket in other tabs. It will resume automatically once closed.',
 
   // Common
   '読み込み中': 'Loading...',

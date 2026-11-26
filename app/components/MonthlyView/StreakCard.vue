@@ -7,8 +7,12 @@ import { calculateStreak } from '~/utils/streak'
 
 const props = defineProps<{ yearMonth: string }>()
 const streakStore = useStreakStore()
+const healthDataStore = useHealthDataStore()
+const itemsStore = useItemsStore()
+const routinesStore = useRoutinesStore()
 const { t } = useI18n()
 const loadError = ref(false)
+const hasLoadError = computed(() => loadError.value || Boolean(healthDataStore.error || itemsStore.error || streakStore.error))
 const categories = [
   { id: 'usage', label: 'Tasket利用', icon: 'mdi:fire' },
   { id: 'overall', label: '総合記録', icon: 'mdi:notebook-edit-outline' },
@@ -36,25 +40,26 @@ const rows = computed(() => {
 })
 const recentDays = computed(() => streakStore.usage.recentDays)
 
-async function loadRecords() {
+async function loadRecords(force = false) {
   loadError.value = false
   try {
     await Promise.all([
       streakStore.refreshHistory(),
-      useHealthDataStore().fetchHealthData(),
-      useItemsStore().fetchItems(),
-      useRoutinesStore().fetchAllRoutineLogs(),
+      healthDataStore.fetchHealthData({ force }),
+      itemsStore.fetchItems({ force }),
+      routinesStore.fetchAllRoutineLogs(),
     ])
-    loadError.value = Boolean(useHealthDataStore().error || useItemsStore().error)
   }
   catch {
     loadError.value = true
   }
 }
-onMounted(loadRecords)
+onMounted(() => {
+  void loadRecords()
+})
 
 async function retryRecords() {
-  await loadRecords()
+  await loadRecords(true)
   await streakStore.checkIn()
 }
 </script>
@@ -200,7 +205,7 @@ async function retryRecords() {
       />
     </UiButton>
     <p
-      v-if="loadError || streakStore.error"
+      v-if="hasLoadError"
       role="alert"
     >
       {{ t('連続記録を読み込めませんでした') }}

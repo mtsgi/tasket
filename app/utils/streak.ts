@@ -82,16 +82,28 @@ export function collectRecordDates(health: HealthData[], logs: RoutineLog[], ite
   return { ...dates, overall: [...dates.health, ...dates.routine, ...dates.todo, ...dates.expense, ...dates.meal] }
 }
 
+export const DAILY_ACTIVITY_PARSE_ERROR_KEY = '利用履歴の形式が無効です'
+
+export class DailyActivityParseError extends Error {
+  readonly i18nKey: string
+
+  constructor(i18nKey = DAILY_ACTIVITY_PARSE_ERROR_KEY) {
+    super(i18nKey)
+    this.name = 'DailyActivityParseError'
+    this.i18nKey = i18nKey
+  }
+}
+
 /** バックアップからの履歴も同じ検証を通す。 */
 export function parseDailyActivities(value: unknown): DailyActivity[] {
   if (value === undefined) return []
-  if (!Array.isArray(value)) throw new Error('Invalid daily activities')
+  if (!Array.isArray(value)) throw new DailyActivityParseError()
   return value.map((entry) => {
     if (!entry || typeof entry !== 'object' || typeof entry.date !== 'string'
       || !isActivityDate(entry.date) || typeof entry.firstOpenedAt !== 'string'
       || !Number.isFinite(new Date(entry.firstOpenedAt).getTime())
       || !Number.isInteger(entry.dateChangeLine) || entry.dateChangeLine < 0 || entry.dateChangeLine > 23) {
-      throw new Error('Invalid daily activity')
+      throw new DailyActivityParseError()
     }
     return { date: entry.date, firstOpenedAt: new Date(entry.firstOpenedAt), dateChangeLine: entry.dateChangeLine }
   })

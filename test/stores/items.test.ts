@@ -253,5 +253,53 @@ describe('useItemsStore', () => {
         expect(store.items[0]!.id).toBe('item-2')
       })
     })
+
+    describe('fetchItems 重複排除と世代管理', () => {
+      it('同時呼び出し時は in-flight Promise を共有し DB 取得を 1 回に集約する', async () => {
+        const { getAllItems } = await import('~/utils/db')
+        let resolveFetch!: (items: ReturnType<typeof createItem>[]) => void
+        vi.mocked(getAllItems).mockImplementationOnce(() => new Promise((resolve) => {
+          resolveFetch = resolve
+        }))
+
+        const store = useItemsStore()
+        const p1 = store.fetchItems()
+        const p2 = store.fetchItems()
+        const fetched = [createItem({ id: 'shared-1' })]
+        resolveFetch(fetched)
+        await Promise.all([p1, p2])
+
+        expect(getAllItems).toHaveBeenCalledTimes(1)
+        expect(store.items).toEqual(fetched)
+
+        // 完了後の再呼び出しは新たに取得する
+        vi.mocked(getAllItems).mockResolvedValueOnce([createItem({ id: 'shared-2' })])
+        await store.fetchItems()
+        expect(getAllItems).toHaveBeenCalledTimes(2)
+        expect(store.items[0]!.id).toBe('shared-2')
+      })
+
+      it('復元・インポート前の in-flight 取得結果が force 再取得後のストアを上書きしない', async () => {
+        const { getAllItems } = await import('~/utils/db')
+        let resolveStale!: (items: ReturnType<typeof createItem>[]) => void
+        vi.mocked(getAllItems)
+          .mockImplementationOnce(() => new Promise((resolve) => {
+            resolveStale = resolve
+          }))
+          .mockResolvedValueOnce([createItem({ id: 'restored-item', title: '復元後' })])
+
+        const store = useItemsStore()
+        const staleFetch = store.fetchItems()
+        await store.fetchItems({ force: true })
+        expect(store.items[0]!.id).toBe('restored-item')
+
+        // 古い取得が後から解決しても上書きされない
+        resolveStale([createItem({ id: 'stale-item', title: '復元前' })])
+        await staleFetch
+        expect(store.items).toHaveLength(1)
+        expect(store.items[0]!.id).toBe('restored-item')
+        expect(store.isLoading).toBe(false)
+      })
+    })
   })
 })

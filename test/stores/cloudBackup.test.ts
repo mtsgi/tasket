@@ -33,6 +33,9 @@ vi.mock('~/stores/settings', () => ({
 vi.mock('~/stores/lock', () => ({
   useLockStore: vi.fn(() => ({
     loadSettings: vi.fn().mockResolvedValue(undefined),
+    checkTimeout: vi.fn(),
+    isLockConfigured: false,
+    isLocked: false,
   })),
 }))
 
@@ -104,10 +107,22 @@ function createBackupData(itemOverrides: Record<string, unknown> = {}) {
 }
 
 describe('useCloudBackupStore', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia())
     resetIdCounter()
     vi.clearAllMocks()
+    const { useSettingsStore } = await import('~/stores/settings')
+    const { useLockStore } = await import('~/stores/lock')
+    vi.mocked(useSettingsStore).mockReturnValue({
+      loadSettings: vi.fn().mockResolvedValue(undefined),
+      dateChangeLine: 0,
+    } as unknown as ReturnType<typeof useSettingsStore>)
+    vi.mocked(useLockStore).mockReturnValue({
+      loadSettings: vi.fn().mockResolvedValue(undefined),
+      checkTimeout: vi.fn(),
+      isLockConfigured: false,
+      isLocked: false,
+    } as unknown as ReturnType<typeof useLockStore>)
   })
 
   describe('restore', () => {
@@ -124,14 +139,16 @@ describe('useCloudBackupStore', () => {
       expect(getAllDailyActivities).toHaveBeenCalled()
     })
 
-    it('不正な利用履歴は既存データを消す前に拒否する', async () => {
+    it('不正な利用履歴は既存データを消す前に i18n 対応エラーで拒否する', async () => {
       const { getCloudBackupConfigById, clearUserData } = await import('~/utils/db')
+      const { DailyActivityParseError, DAILY_ACTIVITY_PARSE_ERROR_KEY } = await import('~/utils/streak')
       vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
       const store = useCloudBackupStore()
       vi.spyOn(store, 'getAdapter').mockReturnValue(createMockAdapter({
         ...createBackupData(), dailyActivities: [{ date: 'invalid' }],
       }))
-      await expect(store.restore('config-1', '/backup/test.json')).rejects.toThrow('Invalid daily activity')
+      await expect(store.restore('config-1', '/backup/test.json')).rejects.toThrow(DailyActivityParseError)
+      expect(store.error).toBe(DAILY_ACTIVITY_PARSE_ERROR_KEY)
       expect(clearUserData).not.toHaveBeenCalled()
     })
 
@@ -151,7 +168,73 @@ describe('useCloudBackupStore', () => {
       await store.restore('config-1', '/backup/test.json')
       expect(streak.dailyActivities).toEqual([])
       expect(streak.showDailyModal).toBe(false)
-      expect(health.fetchHealthData).toHaveBeenCalledTimes(1)
+      expect(health.fetchHealthData).toHaveBeenCalledWith({ force: true })
+    })
+
+    it('復元中は自動チェックインを抑止し、完了後に履歴を再取得してモーダルなしでチェックインを再判定する', async () => {
+      const { getCloudBackupConfigById, clearUserData, recordDailyActivity, getAllDailyActivities } = await import('~/utils/db')
+      const { useStreakStore } = await import('~/stores/streak')
+      const { useSettingsStore } = await import('~/stores/settings')
+      const { useLockStore } = await import('~/stores/lock')
+
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+      vi.mocked(recordDailyActivity).mockResolvedValue(true)
+      vi.mocked(getAllDailyActivities).mockResolvedValue([])
+
+      const streak = useStreakStore()
+      const settingsState = {
+        dateChangeLine: 0,
+        loadSettings: vi.fn(async () => {
+          settingsState.dateChangeLine = 4
+          // 設定読み込み時の watcher 発火を模倣（復元中なので抑止されるべき）
+          expect(await streak.checkIn()).toBe(false)
+        }),
+      }
+      vi.mocked(useSettingsStore).mockReturnValue(settingsState as unknown as ReturnType<typeof useSettingsStore>)
+      vi.mocked(useLockStore).mockReturnValue({
+        loadSettings: vi.fn().mockResolvedValue(undefined),
+        checkTimeout: vi.fn(),
+        isLockConfigured: false,
+        isLocked: false,
+      } as unknown as ReturnType<typeof useLockStore>)
+
+      let checkInDuringClear = true
+      vi.mocked(clearUserData).mockImplementationOnce(async () => {
+        checkInDuringClear = await streak.checkIn()
+      })
+
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(createMockAdapter({
+        ...createBackupData(),
+        appSettings: [{ id: 'app-settings', dateChangeLine: 4, updated_at: '2026-10-06T00:00:00.000Z' }],
+      }))
+
+      await store.restore('config-1', '/backup/test.json')
+
+      expect(checkInDuringClear).toBe(false)
+      expect(recordDailyActivity).toHaveBeenCalledTimes(1)
+      expect(recordDailyActivity).toHaveBeenCalledWith(expect.objectContaining({ dateChangeLine: 4 }))
+      expect(streak.showDailyModal).toBe(false)
+      expect(streak.isAutoCheckInSuspended).toBe(false)
+    })
+
+    it('復元後のロック設定が有効な場合は自動チェックインを再実行しない', async () => {
+      const { getCloudBackupConfigById, recordDailyActivity } = await import('~/utils/db')
+      const { useLockStore } = await import('~/stores/lock')
+
+      vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+      vi.mocked(useLockStore).mockReturnValue({
+        loadSettings: vi.fn().mockResolvedValue(undefined),
+        checkTimeout: vi.fn(),
+        isLockConfigured: true,
+        isLocked: true,
+      } as unknown as ReturnType<typeof useLockStore>)
+
+      const store = useCloudBackupStore()
+      vi.spyOn(store, 'getAdapter').mockReturnValue(createMockAdapter(createBackupData()))
+      await store.restore('config-1', '/backup/test.json')
+
+      expect(recordDailyActivity).not.toHaveBeenCalled()
     })
 
     it('完了済みTodoアイテムの完了状態を正しく復元する', async () => {

@@ -84,8 +84,84 @@ interface TasketDB extends DBSchema {
   }
 }
 
+// データベース名とバージョン
+export const DB_NAME = 'tasket-db'
+export const DB_VERSION = 9
+
 // データベース接続のシングルトンインスタンス
 let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
+let activeDB: IDBPDatabase<TasketDB> | null = null
+const closedPromises = new WeakSet<Promise<IDBPDatabase<TasketDB>>>()
+let dbUpgradeBlocked = false
+const blockedListeners = new Set<(blocked: boolean) => void>()
+
+function setDBUpgradeBlocked(blocked: boolean) {
+  if (dbUpgradeBlocked === blocked) return
+  dbUpgradeBlocked = blocked
+  for (const listener of blockedListeners) {
+    listener(blocked)
+  }
+}
+
+function resetConnectionCache(targetPromise?: Promise<IDBPDatabase<TasketDB>>) {
+  if (targetPromise && dbPromise !== targetPromise) return
+  dbPromise = null
+  activeDB = null
+}
+
+/**
+ * DBアップグレードまたは削除が他タブによりブロックされているかどうかを返す
+ */
+export function isDBUpgradeBlocked(): boolean {
+  return dbUpgradeBlocked
+}
+
+/**
+ * DBブロック状態の変化を購読する
+ */
+export function subscribeDBBlocked(listener: (blocked: boolean) => void): () => void {
+  blockedListeners.add(listener)
+  return () => {
+    blockedListeners.delete(listener)
+  }
+}
+
+/**
+ * 開いているIndexedDB接続を閉じてキャッシュをリセットする
+ */
+export function closeDB(): void {
+  if (dbPromise) {
+    closedPromises.add(dbPromise)
+  }
+  if (activeDB) {
+    activeDB.close()
+  }
+  resetConnectionCache()
+  setDBUpgradeBlocked(false)
+}
+
+/**
+ * IndexedDBデータベースを削除し、実際の削除完了を待機する
+ * 他タブによりブロックされた場合は成功扱いにせず、ブロック状態を通知して完了を待つ
+ */
+export function deleteDB(): Promise<void> {
+  closeDB()
+  return new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME)
+    request.onblocked = () => {
+      console.warn('データベースの削除が他タブによりブロックされています')
+      setDBUpgradeBlocked(true)
+    }
+    request.onsuccess = () => {
+      setDBUpgradeBlocked(false)
+      resolve()
+    }
+    request.onerror = () => {
+      setDBUpgradeBlocked(false)
+      reject(request.error ?? new Error('Failed to delete database'))
+    }
+  })
+}
 
 /**
  * データベース接続を取得
@@ -93,7 +169,7 @@ let dbPromise: Promise<IDBPDatabase<TasketDB>> | null = null
  */
 export function getDB(): Promise<IDBPDatabase<TasketDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TasketDB>('tasket-db', 9, {
+    const promise: Promise<IDBPDatabase<TasketDB>> = openDB<TasketDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion, newVersion, transaction) {
         // バージョン1からのアップグレード
         if (oldVersion < 1) {
@@ -190,7 +266,34 @@ export function getDB(): Promise<IDBPDatabase<TasketDB>> {
           db.createObjectStore('dailyActivities', { keyPath: 'date' })
         }
       },
+      blocked() {
+        console.warn('データベースのアップグレードが他タブによりブロックされています')
+        setDBUpgradeBlocked(true)
+      },
+      blocking(_currentVersion, _blockedVersion, event) {
+        const dbToClose = activeDB ?? (event.target as IDBDatabase | null)
+        resetConnectionCache(promise)
+        dbToClose?.close()
+      },
+      terminated() {
+        resetConnectionCache(promise)
+      },
+    }).then((db) => {
+      setDBUpgradeBlocked(false)
+      if (closedPromises.has(promise)) {
+        db.close()
+        return db
+      }
+      if (dbPromise === promise) {
+        activeDB = db
+      }
+      return db
+    }).catch((error) => {
+      setDBUpgradeBlocked(false)
+      resetConnectionCache(promise)
+      throw error
     })
+    dbPromise = promise
   }
   return dbPromise
 }

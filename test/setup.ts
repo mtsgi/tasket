@@ -72,5 +72,11 @@ vi.mock('~/utils/db', () => ({
   clearUserData: vi.fn().mockResolvedValue(undefined),
 
   // DB接続
+  DB_NAME: 'tasket-db',
+  DB_VERSION: 9,
   getDB: vi.fn(),
+  closeDB: vi.fn(),
+  deleteDB: vi.fn().mockResolvedValue(undefined),
+  isDBUpgradeBlocked: vi.fn(() => false),
+  subscribeDBBlocked: vi.fn(() => vi.fn()),
 }))

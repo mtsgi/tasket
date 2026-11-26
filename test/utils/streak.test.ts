@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { calculateStreak, collectRecordDates, hasHealthRecord, parseDailyActivities } from '~/utils/streak'
+import {
+  calculateStreak,
+  collectRecordDates,
+  DAILY_ACTIVITY_PARSE_ERROR_KEY,
+  DailyActivityParseError,
+  hasHealthRecord,
+  parseDailyActivities,
+} from '~/utils/streak'
+import jaLocale from '../../i18n/locales/ja.js'
+import enLocale from '../../i18n/locales/en.js'
 import { createHealthData, createItem, createRoutineLog } from '../helpers/factories'
 
 describe('calculateStreak', () => {
@@ -92,7 +101,26 @@ describe('parseDailyActivities', () => {
     [{ date: '2026-02-30', firstOpenedAt: '2026-10-06T12:00:00Z', dateChangeLine: 4 }],
     [{ date: '2026-10-06', firstOpenedAt: 'invalid', dateChangeLine: 4 }],
     [{ date: '2026-10-06', firstOpenedAt: '2026-10-06T12:00:00Z', dateChangeLine: 24 }],
-  ])('無効な履歴を拒否する: %j', (data) => {
-    expect(() => parseDailyActivities(data)).toThrow()
+  ])('無効な履歴は i18n 対応の DailyActivityParseError を投げる: %j', (data) => {
+    try {
+      parseDailyActivities(data)
+      expect.unreachable('DailyActivityParseError が投げられるべき')
+    }
+    catch (error) {
+      expect(error).toBeInstanceOf(DailyActivityParseError)
+      expect((error as DailyActivityParseError).i18nKey).toBe(DAILY_ACTIVITY_PARSE_ERROR_KEY)
+    }
+  })
+
+  it('パースエラーおよびDBブロック案内の i18n キーが日英ロケールに存在する', () => {
+    const keys = [
+      DAILY_ACTIVITY_PARSE_ERROR_KEY,
+      'データベースの更新が待機中です',
+      '他のタブで開いているTasketを閉じてください。閉じると自動的に再開します。',
+    ] as const
+    for (const key of keys) {
+      expect(jaLocale[key]).toBeTruthy()
+      expect(enLocale[key]).toBeTruthy()
+    }
   })
 })

@@ -398,103 +398,106 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
         const data = await adapter.download(remotePath)
         const dailyActivities = parseDailyActivities(data.dailyActivities)
 
-        // 既存のユーザーデータをクリア（競合を防ぐため復元前に削除）
-        const { clearUserData, addItem, addRoutine, saveRoutineLog, saveAppSettings, saveHealthData, saveDailyActivity } = await import('~/utils/db')
-        await clearUserData()
-        for (const activity of dailyActivities) await saveDailyActivity(activity)
+        // 復元中は自動チェックインを抑止し、完了後に履歴を再取得・再判定する
         const streakStore = useStreakStore()
-        streakStore.showDailyModal = false
-        await streakStore.refreshHistory()
+        await streakStore.runWithAutoCheckInSuspended(async () => {
+          streakStore.showDailyModal = false
 
-        // データをインポート
-        const itemsStore = useItemsStore()
-        const routinesStore = useRoutinesStore()
-        const dayTitlesStore = useDayTitlesStore()
-        const settingsStore = useSettingsStore()
-        const lockStore = useLockStore()
-        const tutorialStore = useTutorialStore()
+          // 既存のユーザーデータをクリア（競合を防ぐため復元前に削除）
+          const { clearUserData, addItem, addRoutine, saveRoutineLog, saveAppSettings, saveHealthData, saveDailyActivity } = await import('~/utils/db')
+          await clearUserData()
+          for (const activity of dailyActivities) await saveDailyActivity(activity)
 
-        // アイテムをインポート（完了状態・実行日時・IDなどを含む全フィールドを復元）
-        for (const itemData of data.items) {
-          await addItem({
-            id: itemData.id,
-            title: itemData.title,
-            amount: itemData.amount,
-            type: itemData.type,
-            is_completed: itemData.is_completed ?? false,
-            is_important: itemData.is_important ?? false,
-            scheduled_at: new Date(itemData.scheduled_at),
-            executed_at: itemData.executed_at ? new Date(itemData.executed_at) : null,
-            created_at: new Date(itemData.created_at),
-            notes: itemData.notes || '',
-            mealLog: itemData.mealLog,
-            photos: itemData.photos,
-          })
-        }
+          // データをインポート
+          const itemsStore = useItemsStore()
+          const routinesStore = useRoutinesStore()
+          const dayTitlesStore = useDayTitlesStore()
+          const settingsStore = useSettingsStore()
+          const lockStore = useLockStore()
+          const tutorialStore = useTutorialStore()
 
-        // 日課をインポート
-        if (data.routines) {
-          for (const routineData of data.routines) {
-            // バックアップに含まれるIDを保持して復元
-            await addRoutine({
-              id: routineData.id,
-              title: routineData.title,
-              yearMonth: routineData.yearMonth,
-              order: routineData.order,
-              created_at: new Date(routineData.created_at),
+          // アイテムをインポート（完了状態・実行日時・IDなどを含む全フィールドを復元）
+          for (const itemData of data.items) {
+            await addItem({
+              id: itemData.id,
+              title: itemData.title,
+              amount: itemData.amount,
+              type: itemData.type,
+              is_completed: itemData.is_completed ?? false,
+              is_important: itemData.is_important ?? false,
+              scheduled_at: new Date(itemData.scheduled_at),
+              executed_at: itemData.executed_at ? new Date(itemData.executed_at) : null,
+              created_at: new Date(itemData.created_at),
+              notes: itemData.notes || '',
+              mealLog: itemData.mealLog,
+              photos: itemData.photos,
             })
           }
-        }
 
-        // 日課ログをインポート
-        if (data.routineLogs) {
-          for (const logData of data.routineLogs) {
-            await saveRoutineLog({
-              id: logData.id,
-              routineId: logData.routineId,
-              date: logData.date,
-              status: logData.status || 'unconfirmed',
-              completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
-            })
+          // 日課をインポート
+          if (data.routines) {
+            for (const routineData of data.routines) {
+              // バックアップに含まれるIDを保持して復元
+              await addRoutine({
+                id: routineData.id,
+                title: routineData.title,
+                yearMonth: routineData.yearMonth,
+                order: routineData.order,
+                created_at: new Date(routineData.created_at),
+              })
+            }
           }
-        }
 
-        // 日タイトルをインポート
-        if (data.dayTitles) {
-          for (const dayTitleData of data.dayTitles) {
-            await dayTitlesStore.saveDayTitle(dayTitleData.date, dayTitleData.title)
+          // 日課ログをインポート
+          if (data.routineLogs) {
+            for (const logData of data.routineLogs) {
+              await saveRoutineLog({
+                id: logData.id,
+                routineId: logData.routineId,
+                date: logData.date,
+                status: logData.status || 'unconfirmed',
+                completed_at: logData.completed_at ? new Date(logData.completed_at) : null,
+              })
+            }
           }
-        }
 
-        // アプリ設定をインポート
-        if (data.appSettings && data.appSettings.length > 0) {
-          for (const settingsData of data.appSettings) {
-            await saveAppSettings({
-              ...settingsData,
-              updated_at: new Date(settingsData.updated_at),
-            })
+          // 日タイトルをインポート
+          if (data.dayTitles) {
+            for (const dayTitleData of data.dayTitles) {
+              await dayTitlesStore.saveDayTitle(dayTitleData.date, dayTitleData.title)
+            }
           }
-          await settingsStore.loadSettings()
-          await lockStore.loadSettings()
-          await tutorialStore.loadTutorialState()
-        }
 
-        // 健康データをインポート
-        if (data.healthData) {
-          for (const healthDataItem of data.healthData) {
-            await saveHealthData({
-              ...healthDataItem,
-              created_at: new Date(healthDataItem.created_at),
-              updated_at: new Date(healthDataItem.updated_at),
-            })
+          // アプリ設定をインポート
+          if (data.appSettings && data.appSettings.length > 0) {
+            for (const settingsData of data.appSettings) {
+              await saveAppSettings({
+                ...settingsData,
+                updated_at: new Date(settingsData.updated_at),
+              })
+            }
+            await settingsStore.loadSettings()
+            await lockStore.loadSettings()
+            await tutorialStore.loadTutorialState()
           }
-        }
 
-        // 各ストアを再読み込みしてUIに反映
-        await useHealthDataStore().fetchHealthData()
-        await itemsStore.fetchItems()
-        await routinesStore.fetchAllRoutines()
-        await routinesStore.fetchAllRoutineLogs()
+          // 健康データをインポート
+          if (data.healthData) {
+            for (const healthDataItem of data.healthData) {
+              await saveHealthData({
+                ...healthDataItem,
+                created_at: new Date(healthDataItem.created_at),
+                updated_at: new Date(healthDataItem.updated_at),
+              })
+            }
+          }
+
+          // 各ストアを再読み込みしてUIに反映（復元前のin-flight取得結果による上書きを防ぐためforce指定）
+          await useHealthDataStore().fetchHealthData({ force: true })
+          await itemsStore.fetchItems({ force: true })
+          await routinesStore.fetchAllRoutines()
+          await routinesStore.fetchAllRoutineLogs()
+        })
       }
       catch (e) {
         this.error = e instanceof Error ? e.message : 'データの復元に失敗しました'

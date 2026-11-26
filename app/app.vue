@@ -7,6 +7,7 @@
 import LockScreen from '~/components/shared/LockScreen.vue'
 import TutorialModal from '~/components/shared/TutorialModal.vue'
 import PWAInstallBanner from '~/components/shared/PWAInstallBanner.vue'
+import DBBlockedBanner from '~/components/shared/DBBlockedBanner.vue'
 import DailyStreakModal from '~/components/shared/DailyStreakModal.vue'
 import { useStreakStore } from '~/stores/streak'
 import { addDays, getEffectiveDateForTime, getStartOfEffectiveDay } from '~/utils/dateHelpers'
@@ -23,8 +24,19 @@ let checkInTimer: ReturnType<typeof setTimeout> | undefined
 async function checkDailyActivity() {
   if (!initialized.value) return
   clearTimeout(checkInTimer)
-  if (document.visibilityState !== 'hidden' && !(lockStore.isLockConfigured && lockStore.isLocked)) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!initialized.value || document.visibilityState === 'hidden' || (lockStore.isLockConfigured && lockStore.isLocked)) {
+      break
+    }
+    const beforeDate = getEffectiveDateForTime(new Date(), settingsStore.dateChangeLine)
     await streakStore.checkIn()
+    if (!initialized.value || streakStore.isAutoCheckInSuspended) {
+      break
+    }
+    const afterDate = getEffectiveDateForTime(new Date(), settingsStore.dateChangeLine)
+    if (afterDate === beforeDate) {
+      break
+    }
   }
   if (!initialized.value) return
   clearTimeout(checkInTimer)
@@ -128,6 +140,9 @@ const showLockScreen = computed(() => {
   >
     <!-- PWAインストールバナー -->
     <PWAInstallBanner />
+
+    <!-- DBアップグレード／削除ブロック警告バナー -->
+    <DBBlockedBanner />
 
     <!-- ロック画面 -->
     <LockScreen v-if="showLockScreen" />
