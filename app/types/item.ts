@@ -159,6 +159,78 @@ export interface MealLog {
 }
 
 /**
+ * 睡眠セッションのデータ由来種別
+ * - tasket: Tasketで作成またはHealth ConnectへTasketが書き込んだセッション
+ * - external: 他アプリがHealth Connectへ書き込んだ未編集セッション
+ * - manual: 他アプリ由来のセッションをTasket上でローカル編集したセッション
+ */
+export type SleepSessionSource = 'tasket' | 'external' | 'manual'
+
+/**
+ * 睡眠セッションのデータ構造
+ * 1日の中の各睡眠時間帯（夜間睡眠や昼寝などの分割睡眠）を記録
+ */
+export interface SleepSession {
+  startTime: string // 開始日時（ISO 8601形式）または時刻（HH:mm形式）
+  endTime: string // 終了日時（ISO 8601形式）または時刻（HH:mm形式）
+  id?: string // Health Connect上のレコードID（オプション）
+  clientRecordId?: string // Tasketが付与したclientRecordId（オプション）
+  clientRecordVersion?: number // Tasketが付与したclientRecordVersion（オプション）
+  dataOrigin?: string // 作成元パッケージ名（オプション）
+  source?: SleepSessionSource // セッションの由来（オプション）
+  originalStartTime?: string // フォーム表示前の元ISO開始日時（秒以下の精度保持用・オプション）
+  originalEndTime?: string // フォーム表示前の元ISO終了日時（秒以下の精度保持用・オプション）
+}
+
+/**
+ * Health Connectにおける項目別の数値マップ（由来別集計用）
+ */
+export interface HealthConnectMetricValueMap {
+  steps?: number
+  waterIntake?: number
+  exerciseMinutes?: number
+  heartRate?: number
+  weight?: number
+  bodyFatPercentage?: number
+}
+
+/**
+ * Health Connectとの同期状態メタデータ
+ * 手動入力値の上書き防止および未変更データの二重書き込み（循環同期）防止に使用
+ */
+export interface HealthConnectSyncMetadata {
+  steps?: number
+  sleepHours?: number
+  sleepSessions?: SleepSession[]
+  heartRate?: number
+  weight?: number
+  bodyFatPercentage?: number
+  waterIntake?: number
+  exerciseMinutes?: number
+  /** 他アプリ（DataOrigin != Tasket）由来の集計・測定値 */
+  externalValues?: HealthConnectMetricValueMap
+  /** Tasket自身（DataOrigin == Tasket）がHealth Connectへ書き込んだ値 */
+  tasketValues?: HealthConnectMetricValueMap
+  /** 他アプリ由来の心拍数サンプルが存在するか */
+  hasExternalHeartRate?: boolean
+  /** 項目ごとの最終書き込み clientRecordVersion */
+  clientRecordVersions?: Partial<Record<'steps' | 'sleep' | 'heartRate' | 'weight' | 'bodyFatPercentage' | 'waterIntake' | 'exerciseMinutes', number>>
+  /** TasketがHealth Connect上に作成済みの睡眠セッションclientRecordId一覧（削除漏れ・再試行管理用） */
+  tasketSleepClientRecordIds?: string[]
+  /** 削除失敗により次回再試行が必要な睡眠セッションclientRecordId一覧 */
+  pendingDeleteSleepClientRecordIds?: string[]
+  syncedAt?: string
+}
+
+/**
+ * Health Connect連携設定
+ */
+export interface HealthConnectSettings {
+  enabled: boolean // Health Connect連携の有効/無効
+  lastSyncedAt?: string | null // 最終同期日時（ISO 8601形式）
+}
+
+/**
  * 健康データのデータ構造
  * 日ごとの健康状態を記録
  */
@@ -187,6 +259,7 @@ export interface HealthData {
 
   // 活動量
   sleepHours?: number // 睡眠時間（時間）
+  sleepSessions?: SleepSession[] // 睡眠セッション一覧（開始・終了時刻）
   steps?: number // 歩数
   exerciseMinutes?: number // 運動時間（分）
   caloriesBurned?: number // 消費カロリー（kcal）
@@ -198,6 +271,9 @@ export interface HealthData {
   // その他
   medicationRecord?: string // 服薬記録
   healthMemo?: string // 体調に関する自由記録メモ
+
+  // Health Connect同期メタデータ（オプション、既存データ・バックアップ互換）
+  healthConnectSync?: HealthConnectSyncMetadata
 
   created_at: Date // 作成日時
   updated_at: Date // 更新日時
@@ -295,6 +371,7 @@ export interface AppSettings {
     pointRadius?: 'small' | 'medium' | 'large' // データポイントのサイズ
     fillArea?: boolean // グラフエリアの塗りつぶし
   }
+  healthConnectSettings?: HealthConnectSettings
 
   // 収支推移グラフ設定
   expenseChartSettings?: ExpenseChartSettings

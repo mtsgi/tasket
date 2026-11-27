@@ -86,6 +86,46 @@ describe('collectRecordDates', () => {
     const result = collectRecordDates([createHealthData({ date: '2026-10-08', weight: 60 })], [], [], 4)
     expect(calculateStreak(result.health, '2026-10-07').current).toBe(0)
   })
+  it('複数睡眠セッション（sleepSessions）から算出した睡眠時間やHealth Connect取得データがストリーク集計に反映される', () => {
+    const recordWithSleepSessionsOnly = createHealthData({
+      date: '2026-10-06',
+      weight: undefined,
+      bodyFatPercentage: undefined,
+      sleepHours: undefined,
+      sleepSessions: [
+        { startTime: '23:30', endTime: '06:30' },
+        { startTime: '13:00', endTime: '14:00' },
+      ],
+    })
+    const recordFromHealthConnect = createHealthData({
+      date: '2026-10-07',
+      weight: 65.2,
+      bodyFatPercentage: 18.5,
+      steps: 9500,
+      sleepHours: 7.5,
+      sleepSessions: [
+        { startTime: '2026-10-06T14:30:00.000Z', endTime: '2026-10-06T22:00:00.000Z' },
+      ],
+      healthConnectSync: {
+        weight: 65.2,
+        bodyFatPercentage: 18.5,
+        steps: 9500,
+        sleepHours: 7.5,
+      },
+    })
+
+    expect(hasHealthRecord(recordWithSleepSessionsOnly)).toBe(true)
+    const dates = collectRecordDates([recordWithSleepSessionsOnly, recordFromHealthConnect], [], [], 0)
+    expect(dates.health).toEqual(['2026-10-06', '2026-10-07'])
+    expect(dates.sleep).toEqual(['2026-10-06', '2026-10-07'])
+    expect(dates.weight).toEqual(['2026-10-07'])
+    expect(dates.steps).toEqual(['2026-10-07'])
+    expect(calculateStreak(dates.sleep, '2026-10-07')).toMatchObject({
+      current: 2,
+      longest: 2,
+      recordedToday: true,
+    })
+  })
 })
 
 describe('parseDailyActivities', () => {

@@ -3,6 +3,8 @@
  * 日次健康サマリーコンポーネント
  * 日ごとのビューで健康データと摂取カロリーを表示
  */
+import { formatSleepSessionsSummary } from '~/utils/sleepSessions'
+
 const props = defineProps<{
   date: string // YYYY-MM-DD形式
 }>()
@@ -13,6 +15,11 @@ const itemsStore = useItemsStore()
 // その日の健康データ
 const healthData = computed(() => {
   return healthDataStore.getHealthDataByDateString(props.date)
+})
+
+// 睡眠時間帯のサマリー文字列（例: "23:30〜07:00"）
+const sleepSessionsSummary = computed(() => {
+  return formatSleepSessionsSummary(healthData.value?.sleepSessions)
 })
 
 // その日の摂取カロリー
@@ -111,6 +118,12 @@ const hasData = computed(() => {
         <div class="value">
           {{ $t('{value}時間', { value: healthData.sleepHours.toFixed(1) }) }}
         </div>
+        <div
+          v-if="sleepSessionsSummary"
+          class="sub-text"
+        >
+          {{ sleepSessionsSummary }}
+        </div>
       </div>
 
       <!-- 運動時間 -->
@@ -157,9 +170,12 @@ const hasData = computed(() => {
     color: white;
 
     .label,
-    .value,
-    .sub-text {
+    .value {
       color: white;
+    }
+
+    .sub-text {
+      color: rgba(255, 255, 255, 0.8);
     }
   }
 
@@ -174,8 +190,12 @@ const hasData = computed(() => {
 
   .sub-text {
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.8);
+    color: #888888;
     margin-top: 2px;
+
+    .dark-mode & {
+      color: #b0b0b0;
+    }
   }
 }
 

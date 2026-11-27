@@ -88,6 +88,43 @@ describe('useStreakStore', () => {
     expect(store.usage.current).toBe(0)
   })
 
+  it('複数睡眠セッションから算出した睡眠時間およびHealth Connect取得データがストリークストアに反映される', async () => {
+    const { getHealthDataByDate } = await import('~/utils/db')
+    const { mergeHealthConnectDailyData } = await import('~/utils/healthConnect')
+    vi.mocked(getHealthDataByDate).mockResolvedValue(undefined)
+
+    const store = useStreakStore()
+    store.now = new Date(2026, 9, 7, 12)
+    const health = useHealthDataStore()
+
+    // 10/06: 複数睡眠セッション（夜間睡眠＋昼寝）を保存
+    await health.saveHealthDataItem({
+      date: '2026-10-06',
+      sleepSessions: [
+        { startTime: '23:30', endTime: '06:30' },
+        { startTime: '13:00', endTime: '14:00' },
+      ],
+    })
+
+    // 10/07: Health Connect取得データをマージして保存
+    const merged = mergeHealthConnectDailyData(
+      undefined,
+      {
+        date: '2026-10-07',
+        steps: 10200,
+        weight: 64.8,
+        sleepSessions: [{ startTime: '23:00', endTime: '06:30' }],
+      },
+      '2026-10-07',
+    )
+    await health.saveHealthDataItem(merged.mergedData)
+
+    expect(store.summaries.sleep).toMatchObject({ current: 2, longest: 2, recordedToday: true })
+    expect(store.summaries.health).toMatchObject({ current: 2, longest: 2, recordedToday: true })
+    expect(store.summaries.steps).toMatchObject({ current: 1, longest: 1, recordedToday: true })
+    expect(store.summaries.weight).toMatchObject({ current: 1, longest: 1, recordedToday: true })
+  })
+
   it('日付変更線付近で非同期チェックインが競合しても当日分を取りこぼさない', async () => {
     useSettingsStore().dateChangeLine = 4
     let resolveFirst!: (value: boolean) => void

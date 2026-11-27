@@ -674,4 +674,56 @@ export default {
   'コンテナ名': 'Container Name',
   'Dropboxの設定方法': 'Dropbox Setup Guide',
   'Azure Blob Storageの設定方法': 'Azure Blob Storage Setup Guide',
+
+  // Sleep Sessions & Health Connect Integration
+  '睡眠セッション（開始・終了時刻）': 'Sleep Sessions (Start & End Time)',
+  '睡眠時間帯を追加': 'Add Sleep Session',
+  '開始時刻が終了時刻より後の場合（例: 23:30〜07:00）は前日夜〜当日朝として合計時間を自動計算します':
+    'If start time is later than end time (e.g., 23:30 to 07:00), it is automatically calculated as overnight sleep from the previous day',
+  '就寝': 'Bedtime',
+  '起床': 'Wake up',
+  'Health Connectから取得': 'Fetch from Health Connect',
+  'Health Connectへ書き込み': 'Write to Health Connect',
+  '取得中': 'Fetching',
+  '書き込み中': 'Writing',
+  'Health Connectからデータを取得して保存しました': 'Fetched and saved data from Health Connect',
+  'Health Connectに反映可能な新しいデータがありませんでした': 'No new data available to sync from Health Connect',
+  'Health Connectからのデータ取得に失敗しました': 'Failed to fetch data from Health Connect',
+  'ローカル保存が完了しました（Health Connectへ書き込む新規・変更データはありません）':
+    'Saved locally (no new or modified data to write to Health Connect)',
+  '健康データを保存し、Health Connectへ書き込みました': 'Saved health data and wrote to Health Connect',
+  'ローカル保存は完了しましたが、Health Connectの書き込み権限が許可されていないため書き込みをスキップしました':
+    'Saved locally, but skipped writing to Health Connect because write permissions are not granted',
+  'Health Connectへの書き込みに失敗しました': 'Failed to write data to Health Connect',
+  'Health Connect連携': 'Health Connect Integration',
+  'AndroidのHealth Connectと健康データ（歩数・睡眠時間・心拍数・体重・体脂肪率・水分摂取量・運動時間）を双方向連携します':
+    'Bidirectionally sync health data (Steps, Sleep, Heart Rate, Weight, Body Fat, Water Intake, Exercise Time) with Android Health Connect',
+  'Androidアプリ版でのみ利用可能です（Web/PWA版では手動での健康データ記録を引き続きご利用いただけます）':
+    'Available only in the Android app (manual health data recording remains available in the Web/PWA version)',
+  'Health Connectアプリのインストールまたはアップデートが必要です':
+    'Health Connect app installation or update is required',
+  'この端末ではHealth Connectを利用できません': 'Health Connect is not available on this device',
+  '最終同期日時': 'Last Synced',
+  '未同期': 'Never synced',
+  '読取': 'Read',
+  '書込': 'Write',
+  '許可': 'Granted',
+  '未許可': 'Not granted',
+  'アクセス権限を許可・確認': 'Grant / Check Permissions',
+  'Health Connect設定を開く': 'Open Health Connect Settings',
+  '直近30日分をHealth Connectから一括取得': 'Fetch Last 30 Days from Health Connect',
+  '同期中': 'Syncing',
+  'Health Connectの権限要求に失敗しました': 'Failed to request Health Connect permissions',
+  '直近30日分のデータを同期しました（更新日数: {days}日）': 'Synced last 30 days of data (updated days: {days})',
+  '直近30日分のデータを一部同期しました（更新日数: {days}日）': 'Partially synced last 30 days of data (updated days: {days})',
+  '未保存の入力内容があります。編集中の項目を保持したまま、未編集の項目のみHealth Connectから取得して反映しますか？':
+    'You have unsaved changes. Keep your edited fields and fetch only unedited fields from Health Connect?',
+  'Health Connectの読み取り権限が許可されていません': 'Health Connect read permissions are not granted',
+  '一部の項目のみHealth Connectから取得しました（取得失敗: {count}項目）':
+    'Fetched some metrics from Health Connect (failed: {count} metrics)',
+  '一部の項目のみHealth Connectへ書き込みました': 'Partially wrote health data to Health Connect',
+  'ローカル保存は完了しましたが、Health Connectへ書き込めない無効な値が含まれているため書き込みをスキップしました':
+    'Saved locally, but skipped writing to Health Connect because invalid values were included',
+  '他アプリ由来のデータとの重複を防ぐため、ローカル保存のみ行いました（Health Connectへの書き込みはスキップしました）':
+    'Saved locally only to prevent duplicate counting with data from other apps (skipped writing to Health Connect)',
 }

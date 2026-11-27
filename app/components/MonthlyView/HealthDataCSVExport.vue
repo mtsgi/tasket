@@ -87,7 +87,7 @@ async function exportToCSV() {
     const filename = generateHealthDataFilename(startDate.value, endDate.value, locale)
 
     // CSVファイルをダウンロード
-    downloadCSV(csvContent, filename)
+    await downloadCSV(csvContent, filename)
 
     // 成功メッセージを表示
     // TODO: Replace alert with a toast notification system for better UX

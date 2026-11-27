@@ -365,4 +365,41 @@ describe('IndexedDB 接続管理と v8 → v9 マイグレーション', () => {
       otherTabConn.close()
     }
   })
+
+  it('v9 DBで睡眠セッション（sleepSessions）・Health Connect同期メタデータ・利用履歴を同時に永続化・取得できる', async () => {
+    const dbMod = await loadDBModule()
+    const sleepSessions = [
+      { startTime: '2026-10-06T14:30:00.000Z', endTime: '2026-10-06T22:00:00.000Z' },
+    ]
+    await dbMod.saveHealthData({
+      id: 'health-v9-hc',
+      date: '2026-10-07',
+      weight: 64.5,
+      steps: 9800,
+      sleepHours: 7.5,
+      sleepSessions,
+      healthConnectSync: {
+        weight: 64.5,
+        steps: 9800,
+        sleepHours: 7.5,
+        sleepSessions,
+        syncedAt: '2026-10-07T08:00:00.000Z',
+      },
+      created_at: new Date('2026-10-07T08:00:00.000Z'),
+      updated_at: new Date('2026-10-07T08:00:00.000Z'),
+    })
+    const createdActivity = await dbMod.recordDailyActivity({
+      date: '2026-10-07',
+      firstOpenedAt: new Date('2026-10-07T08:00:00.000Z'),
+      dateChangeLine: 0,
+    })
+
+    expect(createdActivity).toBe(true)
+    const savedHealth = await dbMod.getHealthDataByDate('2026-10-07')
+    expect(savedHealth?.sleepSessions).toEqual(sleepSessions)
+    expect(savedHealth?.healthConnectSync?.steps).toBe(9800)
+    const activities = await dbMod.getAllDailyActivities()
+    expect(activities).toHaveLength(1)
+    expect(activities[0]?.date).toBe('2026-10-07')
+  })
 })

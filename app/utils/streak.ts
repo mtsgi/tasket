@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import type { DailyActivity, HealthData, Item, RoutineLog } from '~/types/item'
 import { getEffectiveDateForTime } from '~/utils/dateHelpers'
+import { calculateTotalSleepHours } from '~/utils/sleepSessions'
 
 export interface StreakSummary {
   current: number
@@ -56,8 +57,15 @@ function hasValue(value: unknown): boolean {
   return typeof value === 'number' ? Number.isFinite(value) : typeof value === 'string' && value.trim().length > 0
 }
 
+function hasSleepValue(data: HealthData): boolean {
+  if (hasValue(data.sleepHours)) {
+    return true
+  }
+  return hasValue(calculateTotalSleepHours(data.sleepSessions, data.date))
+}
+
 export function hasHealthRecord(data: HealthData): boolean {
-  return healthFields.some(field => hasValue(data[field]))
+  return healthFields.some(field => hasValue(data[field])) || hasSleepValue(data)
 }
 
 /** 記録ストリークは対象日で集計し、利用履歴から独立させる。 */
@@ -65,7 +73,7 @@ export function collectRecordDates(health: HealthData[], logs: RoutineLog[], ite
   const dates = {
     health: health.filter(hasHealthRecord).map(data => data.date),
     weight: health.filter(data => hasValue(data.weight)).map(data => data.date),
-    sleep: health.filter(data => hasValue(data.sleepHours)).map(data => data.date),
+    sleep: health.filter(hasSleepValue).map(data => data.date),
     bloodPressure: health.filter(data => hasValue(data.systolicBloodPressure) || hasValue(data.diastolicBloodPressure)).map(data => data.date),
     steps: health.filter(data => hasValue(data.steps)).map(data => data.date),
     routine: logs.filter(log => log.status === 'achieved').map(log => log.date),

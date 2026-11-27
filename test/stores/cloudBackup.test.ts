@@ -420,4 +420,70 @@ describe('useCloudBackupStore', () => {
       dailyActivities: [{ date: '2026-10-06', firstOpenedAt: '2026-10-06T12:00:00.000Z', dateChangeLine: 4 }],
     }), expect.any(String))
   })
+
+  it('Health Connect同期メタデータ・睡眠セッション・利用履歴をクラウドバックアップで保存・復元できる', async () => {
+    const {
+      getCloudBackupConfigById,
+      getAllDailyActivities,
+      getAllHealthData,
+      saveHealthData,
+      saveDailyActivity,
+    } = await import('~/utils/db')
+
+    const sleepSessions = [
+      { startTime: '2026-10-05T14:30:00.000Z', endTime: '2026-10-05T22:00:00.000Z' },
+    ]
+    const healthConnectSync = {
+      steps: 9200,
+      sleepHours: 7.5,
+      sleepSessions,
+      weight: 66.1,
+      syncedAt: '2026-10-06T08:00:00.000Z',
+    }
+
+    vi.mocked(getCloudBackupConfigById).mockResolvedValue(createMockConfig())
+    vi.mocked(getAllDailyActivities).mockResolvedValue([{
+      date: '2026-10-06',
+      firstOpenedAt: new Date('2026-10-06T08:00:00.000Z'),
+      dateChangeLine: 0,
+    }])
+    vi.mocked(getAllHealthData).mockResolvedValue([{
+      id: 'hc-health-1',
+      date: '2026-10-06',
+      weight: 66.1,
+      steps: 9200,
+      sleepHours: 7.5,
+      sleepSessions,
+      healthConnectSync,
+      created_at: new Date('2026-10-06T08:00:00.000Z'),
+      updated_at: new Date('2026-10-06T08:00:00.000Z'),
+    }])
+
+    const store = useCloudBackupStore()
+    let uploadedPayload: unknown
+    const adapter = createMockAdapter(createBackupData())
+    vi.mocked(adapter.upload).mockImplementation(async (payload) => {
+      uploadedPayload = payload
+      return '/backup/hc-test.json'
+    })
+    vi.mocked(adapter.download).mockImplementation(async () => uploadedPayload as ReturnType<typeof createBackupData>)
+    vi.spyOn(store, 'getAdapter').mockReturnValue(adapter)
+
+    await store.backup('config-1')
+    await store.restore('config-1', '/backup/hc-test.json')
+
+    expect(saveDailyActivity).toHaveBeenCalledWith({
+      date: '2026-10-06',
+      firstOpenedAt: new Date('2026-10-06T08:00:00.000Z'),
+      dateChangeLine: 0,
+    })
+    expect(saveHealthData).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'hc-health-1',
+      date: '2026-10-06',
+      steps: 9200,
+      sleepHours: 7.5,
+      sleepSessions,
+      healthConnectSync,
+    }))
+  })
 })

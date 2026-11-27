@@ -11,12 +11,14 @@ import DBBlockedBanner from '~/components/shared/DBBlockedBanner.vue'
 import DailyStreakModal from '~/components/shared/DailyStreakModal.vue'
 import { useStreakStore } from '~/stores/streak'
 import { addDays, getEffectiveDateForTime, getStartOfEffectiveDay } from '~/utils/dateHelpers'
+import { isNativeApp } from '~/utils/healthConnect'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
 const tutorialStore = useTutorialStore()
 const streakStore = useStreakStore()
 const { setLocale } = useI18n()
+const isNative = isNativeApp()
 const initialized = ref(false)
 let checkInTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -57,8 +59,8 @@ watch(() => [lockStore.isLocked, lockStore.isLockConfigured, settingsStore.dateC
   void checkDailyActivity()
 })
 
-// Service Workerの登録（本番環境のみ）
-if (import.meta.client && import.meta.env.PROD && 'serviceWorker' in navigator) {
+// Service Workerの登録（Web/PWAの本番環境のみ、Capacitorネイティブ環境では登録しない）
+if (import.meta.client && import.meta.env.PROD && !isNative && 'serviceWorker' in navigator) {
   navigator.serviceWorker
     .register('/sw.js')
     .then((registration) => {
@@ -138,8 +140,8 @@ const showLockScreen = computed(() => {
     :class="{ 'dark-mode': settingsStore.darkMode }"
     :style="backgroundStyle"
   >
-    <!-- PWAインストールバナー -->
-    <PWAInstallBanner />
+    <!-- PWAインストールバナー（ネイティブアプリ版では非表示） -->
+    <PWAInstallBanner v-if="!isNative" />
 
     <!-- DBアップグレード／削除ブロック警告バナー -->
     <DBBlockedBanner />

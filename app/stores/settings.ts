@@ -4,7 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { getAppSettings, saveAppSettings } from '~/utils/db'
-import type { ExpenseChartSettings } from '~/types/item'
+import type { ExpenseChartSettings, HealthConnectSettings } from '~/types/item'
 
 export interface CalendarDisplaySettings {
   showExpense: boolean // 支出合計の表示/非表示
@@ -29,6 +29,7 @@ export interface Settings {
   dateChangeLine: number // 日付変更線の時刻（0-23時）。この時刻より前は前日として扱う
   calendarDisplay: CalendarDisplaySettings // カレンダー表示設定
   healthGraphSettings: HealthGraphSettings // 健康グラフ表示設定
+  healthConnectSettings: HealthConnectSettings // Health Connect連携設定
   expenseChartSettings: ExpenseChartSettings // 収支推移グラフ表示設定
   height?: number // 身長（cm）- BMI計算に使用
 }
@@ -57,6 +58,10 @@ export const useSettingsStore = defineStore('settings', {
       pointRadius: 'medium', // デフォルトは中サイズのポイント
       fillArea: false, // デフォルトは塗りつぶしなし
     } as HealthGraphSettings,
+    healthConnectSettings: {
+      enabled: false, // デフォルトは無効
+      lastSyncedAt: null,
+    } as HealthConnectSettings,
     expenseChartSettings: {
       dataMode: 'daily', // デフォルトは単日表示
       chartType: 'line', // デフォルトは折れ線グラフ
@@ -124,6 +129,11 @@ export const useSettingsStore = defineStore('settings', {
             ...defaultHealthGraphSettings,
             ...settings.healthGraphSettings,
           }
+          this.healthConnectSettings = {
+            enabled: false,
+            lastSyncedAt: null,
+            ...settings.healthConnectSettings,
+          }
           // デフォルト値と既存設定をマージ
           const defaultExpenseChartSettings = {
             dataMode: 'daily' as const,
@@ -187,6 +197,7 @@ export const useSettingsStore = defineStore('settings', {
           language: this.language,
           calendarDisplay: { ...this.calendarDisplay }, // reactive proxyをplain objectに変換
           healthGraphSettings: { ...this.healthGraphSettings }, // reactive proxyをplain objectに変換
+          healthConnectSettings: { ...this.healthConnectSettings }, // reactive proxyをplain objectに変換
           expenseChartSettings: {
             dataMode: this.expenseChartSettings.dataMode,
             chartType: this.expenseChartSettings.chartType,
@@ -274,6 +285,20 @@ export const useSettingsStore = defineStore('settings', {
       }
       catch (e) {
         console.error('健康グラフ表示設定の保存に失敗しました:', e)
+      }
+    },
+
+    /**
+     * Health Connect連携設定の更新
+     * @param settings - Health Connect連携設定
+     */
+    async updateHealthConnectSettings(settings: Partial<HealthConnectSettings>) {
+      try {
+        this.healthConnectSettings = { ...this.healthConnectSettings, ...settings }
+        await this.saveSettings()
+      }
+      catch (e) {
+        console.error('Health Connect設定の保存に失敗しました:', e)
       }
     },
 

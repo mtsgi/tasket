@@ -483,9 +483,18 @@ export const useCloudBackupStore = defineStore('cloudBackup', {
 
           // 健康データをインポート
           if (data.healthData) {
+            const { calculateTotalSleepHours, normalizeSleepSessionsForDate } = await import('~/utils/sleepSessions')
             for (const healthDataItem of data.healthData) {
+              const normalizedSessions = healthDataItem.sleepSessions !== undefined
+                ? normalizeSleepSessionsForDate(healthDataItem.date, healthDataItem.sleepSessions)
+                : undefined
+              const sleepHours = normalizedSessions && normalizedSessions.length > 0
+                ? calculateTotalSleepHours(normalizedSessions, healthDataItem.date)
+                : healthDataItem.sleepHours
               await saveHealthData({
                 ...healthDataItem,
+                ...(normalizedSessions !== undefined ? { sleepSessions: normalizedSessions } : {}),
+                ...(sleepHours !== undefined ? { sleepHours } : {}),
                 created_at: new Date(healthDataItem.created_at),
                 updated_at: new Date(healthDataItem.updated_at),
               })
