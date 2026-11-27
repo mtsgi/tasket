@@ -25,6 +25,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = '21'
+        freeCompilerArgs += ['-Xskip-metadata-version-check']
     }
 }
 
@@ -40,10 +41,12 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.health.connect:connect-client:$healthConnectVersion"
+    implementation "com.google.mlkit:genai-prompt:$mlkitGenaiPromptVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinxCoroutinesVersion"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.7"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "org.json:json:$orgJsonVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')

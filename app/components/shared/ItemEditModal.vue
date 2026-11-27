@@ -4,9 +4,11 @@
  * 既存アイテムの編集・削除機能を提供
  */
 import type { Item, ItemType } from '~/types/item'
+import MealAiEstimator from '~/components/shared/MealAiEstimator.vue'
 import { useItemsStore } from '~/stores/items'
 import { formatDate, formatYearMonth } from '~/utils/dateHelpers'
 import { clearMealLogRefs } from '~/utils/mealLog'
+import { applyMealAiEstimationToRefs, type MealAiNutritionEstimation } from '~/utils/mealAi'
 import { ALBUM_MAX_PHOTOS } from '~/utils/constants'
 
 const props = defineProps<{
@@ -46,6 +48,8 @@ const mealCarbs = ref<number | undefined>(props.item.mealLog?.carbs)
 const mealFat = ref<number | undefined>(props.item.mealLog?.fat)
 const mealPhoto = ref<string | undefined>(props.item.mealLog?.photo)
 const mealMemo = ref(props.item.mealLog?.memo || '')
+const isMealAiBusy = ref(false)
+const mealAiEstimatorRef = ref<InstanceType<typeof MealAiEstimator> | null>(null)
 
 // アルバム機能の状態（TODO・支出・収入用の写真）
 const albumPhotos = ref<string[]>(props.item.photos || [])
@@ -71,7 +75,7 @@ function selectType(newType: ItemType) {
  * フォーム送信処理
  */
 async function handleSubmit() {
-  if (!title.value.trim()) return
+  if (!title.value.trim() || isMealAiBusy.value) return
 
   isSubmitting.value = true
   try {
@@ -127,6 +131,7 @@ async function handleSubmit() {
  * アイテム削除処理
  */
 async function handleDelete() {
+  if (isMealAiBusy.value) return
   if (confirm(t('このアイテムを削除しますか？'))) {
     await itemsStore.deleteItemById(props.item.id)
     emit('close')
@@ -151,6 +156,8 @@ function toggleMealLog() {
  * 食事ログを削除
  */
 function deleteMealLog() {
+  mealAiEstimatorRef.value?.reset()
+  isMealAiBusy.value = false
   clearMealLogRefs({
     showMealLog,
     mealCalories,
@@ -166,6 +173,7 @@ function deleteMealLog() {
  * 画像ファイルを選択（食事ログ用）
  */
 function handlePhotoUpload(event: Event) {
+  if (isMealAiBusy.value) return
   const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
     const file = input.files[0]
@@ -174,6 +182,38 @@ function handlePhotoUpload(event: Event) {
       mealPhoto.value = e.target?.result as string
     }
     reader.readAsDataURL(file)
+  }
+}
+
+/**
+ * AIによる栄養素推定結果を入力欄へ一括反映
+ */
+function handleApplyMealAiEstimation(estimation: MealAiNutritionEstimation) {
+  applyMealAiEstimationToRefs(estimation, {
+    mealCalories,
+    mealProtein,
+    mealFat,
+    mealCarbs,
+  })
+}
+
+/**
+ * AIが認識した料理名をアイテムの「タイトル」へ反映
+ */
+function handleApplyMealAiTitle(dishName: string) {
+  title.value = dishName
+}
+
+/**
+ * AIが認識した料理・食品を「食事メモ」へ追記
+ */
+function handleAppendMealAiMemo(memoText: string) {
+  const current = mealMemo.value.trim()
+  if (!current) {
+    mealMemo.value = memoText
+  }
+  else if (!current.includes(memoText)) {
+    mealMemo.value = `${current}\n${memoText}`
   }
 }
 
@@ -337,6 +377,7 @@ function applyCalculatedAmount(value: number) {
           <button
             type="button"
             class="meal-log-toggle"
+            :disabled="isMealAiBusy"
             @click="toggleMealLog"
           >
             <Icon :name="showMealLog ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
@@ -346,6 +387,7 @@ function applyCalculatedAmount(value: number) {
             v-if="showMealLog"
             variant="danger"
             icon
+            :disabled="isMealAiBusy"
             :aria-label="$t('食事ログを削除')"
             @click="deleteMealLog"
           >
@@ -363,6 +405,7 @@ function applyCalculatedAmount(value: number) {
               <UiInput
                 v-model.number="mealCalories"
                 type="number"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}kcal', { value: '0' })"
               />
             </div>
@@ -375,6 +418,7 @@ function applyCalculatedAmount(value: number) {
                 v-model.number="mealProtein"
                 type="number"
                 step="0.1"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}g', { value: '0' })"
               />
             </div>
@@ -384,6 +428,7 @@ function applyCalculatedAmount(value: number) {
                 v-model.number="mealCarbs"
                 type="number"
                 step="0.1"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}g', { value: '0' })"
               />
             </div>
@@ -393,6 +438,7 @@ function applyCalculatedAmount(value: number) {
                 v-model.number="mealFat"
                 type="number"
                 step="0.1"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}g', { value: '0' })"
               />
             </div>
@@ -404,6 +450,7 @@ function applyCalculatedAmount(value: number) {
               <input
                 type="file"
                 accept="image/*"
+                :disabled="isMealAiBusy"
                 @change="handlePhotoUpload"
               >
               <div
@@ -418,12 +465,24 @@ function applyCalculatedAmount(value: number) {
                   variant="danger"
                   icon
                   class="delete-photo-btn"
+                  :disabled="isMealAiBusy"
                   :aria-label="$t('写真を削除')"
                   @click="mealPhoto = undefined"
                 >
                   <Icon name="mdi:delete" />
                 </UiButton>
               </div>
+              <MealAiEstimator
+                ref="mealAiEstimatorRef"
+                :photo="mealPhoto"
+                :title="title"
+                :meal-memo="mealMemo"
+                :disabled="isSubmitting"
+                @apply-estimation="handleApplyMealAiEstimation"
+                @apply-title="handleApplyMealAiTitle"
+                @append-memo="handleAppendMealAiMemo"
+                @busy-change="isMealAiBusy = $event"
+              />
             </div>
           </div>
 
@@ -431,6 +490,7 @@ function applyCalculatedAmount(value: number) {
             <label>{{ $t('食事メモ') }}</label>
             <textarea
               v-model="mealMemo"
+              :disabled="isMealAiBusy"
               :placeholder="$t('食事メモ')"
               rows="2"
             />
@@ -513,6 +573,7 @@ function applyCalculatedAmount(value: number) {
     <template #footer>
       <UiButton
         variant="danger"
+        :disabled="isSubmitting || isMealAiBusy"
         @click="handleDelete"
       >
         <Icon name="mdi:delete" />
@@ -526,7 +587,7 @@ function applyCalculatedAmount(value: number) {
       </UiButton>
       <UiButton
         variant="primary"
-        :disabled="isSubmitting || !title.trim()"
+        :disabled="isSubmitting || isMealAiBusy || !title.trim()"
         @click="handleSubmit"
       >
         <Icon name="mdi:content-save" />
