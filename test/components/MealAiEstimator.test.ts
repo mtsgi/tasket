@@ -253,10 +253,17 @@ describe('MealAiEstimator.vue', () => {
     })
   })
 
-  it('非食品画像（isFood: false）やバリデーションエラー時は apply-estimation を発火せずエラーメッセージを表示する', async () => {
+  it('非食品画像（isFood: false）やバリデーション・途中切断エラー時は apply-estimation を発火せず、エラーメッセージと診断情報（エラーコード・段階・文字数・処理時間等）を画面に表示する', async () => {
     vi.mocked(analyzeMealPhotoWithAi).mockResolvedValueOnce({
       ok: true,
       isFood: false,
+      diagnostics: {
+        stage: 'completed',
+        attemptCount: 1,
+        responseLength: 82,
+        finishReason: 'STOP',
+        elapsedMs: 610,
+      },
     })
 
     const wrapper = await mountSuspended(MealAiEstimator, {
@@ -272,12 +279,22 @@ describe('MealAiEstimator.vue', () => {
     expect(wrapper.emitted('apply-estimation')).toBeUndefined()
     expect(wrapper.find('.meal-ai-error-banner').exists()).toBe(true)
     expect(wrapper.find('.meal-ai-error-banner').text()).toContain('食事・食品を認識できませんでした')
+    expect(wrapper.find('.meal-ai-error-diagnostics').text()).toContain('CODE: NOT_FOOD')
+    expect(wrapper.find('.meal-ai-error-diagnostics').text()).toContain('len: 82')
 
-    // 次にAI出力範囲外エラーのケース
+    // 次にAI出力範囲外エラー・JSON途中切断エラーのケース
     vi.mocked(analyzeMealPhotoWithAi).mockResolvedValueOnce({
       ok: false,
-      errorCode: 'OUT_OF_RANGE',
-      message: 'calories out of range',
+      errorCode: 'OUTPUT_TRUNCATED',
+      message: 'Model output hit maxOutputTokens',
+      diagnostics: {
+        errorCode: 'OUTPUT_TRUNCATED',
+        stage: 'response_parse',
+        attemptCount: 2,
+        responseLength: 254,
+        finishReason: 'MAX_TOKENS',
+        elapsedMs: 1480,
+      },
     })
 
     await wrapper.find('.meal-ai-estimate-btn').trigger('click')
@@ -285,5 +302,12 @@ describe('MealAiEstimator.vue', () => {
 
     expect(wrapper.emitted('apply-estimation')).toBeUndefined()
     expect(wrapper.find('.meal-ai-error-banner').text()).toContain('不正な形式だったため反映を中止しました')
+    const diagText = wrapper.find('.meal-ai-error-diagnostics').text()
+    expect(diagText).toContain('CODE: OUTPUT_TRUNCATED')
+    expect(diagText).toContain('stage: response_parse')
+    expect(diagText).toContain('attempts: 2')
+    expect(diagText).toContain('len: 254')
+    expect(diagText).toContain('finish: MAX_TOKENS')
+    expect(diagText).toContain('time: 1480ms')
   })
 })

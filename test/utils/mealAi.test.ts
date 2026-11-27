@@ -15,7 +15,9 @@ import {
   buildMealAiHintText,
   checkMealAiAvailability,
   downloadMealAiModel,
+  extractMealAiDiagnostics,
   extractMealAiErrorCode,
+  formatMealAiDiagnosticsSummary,
   validateMealAiRawResponse,
 } from '~/utils/mealAi'
 import { isAndroidNativeApp } from '~/utils/healthConnect'
@@ -97,7 +99,7 @@ describe('mealAi utilities', () => {
         elapsedMs: 650,
       })
 
-      expect(outcome).toEqual({
+      expect(outcome).toMatchObject({
         ok: true,
         isFood: false,
         elapsedMs: 650,
@@ -351,10 +353,68 @@ describe('mealAi utilities', () => {
       }
     })
 
-    it('extractMealAiErrorCode がプラグイン例外からエラーコードを抽出する', () => {
+    it('extractMealAiErrorCode・extractMealAiDiagnostics・formatMealAiDiagnosticsSummary が診断情報を正しく抽出・整形する', async () => {
       expect(extractMealAiErrorCode({ code: 'model_download_required' })).toBe('MODEL_DOWNLOAD_REQUIRED')
+      expect(extractMealAiErrorCode({ message: 'Failed', data: { errorCode: 'output_truncated' } })).toBe('OUTPUT_TRUNCATED')
       expect(extractMealAiErrorCode(new Error('Failed: QUOTA_EXCEEDED'))).toBe('QUOTA_EXCEEDED')
       expect(extractMealAiErrorCode(new Error('Unknown error'), 'CUSTOM_FALLBACK')).toBe('CUSTOM_FALLBACK')
+
+      const diag = extractMealAiDiagnostics({
+        errorCode: 'output_truncated',
+        stage: 'response_parse',
+        elapsedMs: 1420.4,
+        attemptCount: 2,
+        responseLength: 248,
+        finishReason: 'MAX_TOKENS',
+        failedField: 'calories',
+        structuredOutputAvailable: true,
+      })
+      expect(diag).toEqual({
+        errorCode: 'OUTPUT_TRUNCATED',
+        stage: 'response_parse',
+        elapsedMs: 1420,
+        attemptCount: 2,
+        responseLength: 248,
+        finishReason: 'MAX_TOKENS',
+        failedField: 'calories',
+        structuredOutputAvailable: true,
+      })
+
+      const summary = formatMealAiDiagnosticsSummary('OUTPUT_TRUNCATED', diag)
+      expect(summary).toBe(
+        'CODE: OUTPUT_TRUNCATED | stage: response_parse | field: calories | attempts: 2 | len: 248 | finish: MAX_TOKENS | time: 1420ms',
+      )
+
+      // プラグインが diagnostics data 付きで reject した際に analyzeMealPhotoWithAi が診断情報を保持すること
+      vi.mocked(isAndroidNativeApp).mockReturnValue(true)
+      vi.spyOn(MealAiPlugin, 'analyzeMealPhoto').mockRejectedValueOnce({
+        code: 'OUTPUT_TRUNCATED',
+        message: 'Model output hit maxOutputTokens',
+        data: {
+          errorCode: 'OUTPUT_TRUNCATED',
+          stage: 'response_parse',
+          attemptCount: 2,
+          responseLength: 310,
+          finishReason: 'MAX_TOKENS',
+          elapsedMs: 1650,
+        },
+      })
+
+      const failedOutcome = await analyzeMealPhotoWithAi({
+        photoBase64: 'data:image/jpeg;base64,aGVsbG8=',
+      })
+      expect(failedOutcome.ok).toBe(false)
+      if (!failedOutcome.ok) {
+        expect(failedOutcome.errorCode).toBe('OUTPUT_TRUNCATED')
+        expect(failedOutcome.diagnostics).toEqual({
+          errorCode: 'OUTPUT_TRUNCATED',
+          stage: 'response_parse',
+          attemptCount: 2,
+          responseLength: 310,
+          finishReason: 'MAX_TOKENS',
+          elapsedMs: 1650,
+        })
+      }
     })
   })
 })

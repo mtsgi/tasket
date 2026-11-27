@@ -9,6 +9,8 @@ import {
   buildMealAiHintText,
   checkMealAiAvailability,
   downloadMealAiModel,
+  extractMealAiErrorCode,
+  formatMealAiDiagnosticsSummary,
   isMealAiSupportedPlatform,
   type MealAiAvailabilityResult,
   type MealAiDownloadProgressEvent,
@@ -46,6 +48,7 @@ const isAnalyzing = ref(false)
 const downloadProgress = ref<MealAiDownloadProgressEvent | null>(null)
 const estimationResult = ref<MealAiNutritionEstimation | null>(null)
 const errorMessage = ref('')
+const errorDiagnosticsSummary = ref('')
 
 // 古い推論結果の破棄用リクエスト世代カウンタとアンマウントフラグ
 const requestGeneration = ref(0)
@@ -94,6 +97,7 @@ function reset() {
   isAnalyzing.value = false
   estimationResult.value = null
   errorMessage.value = ''
+  errorDiagnosticsSummary.value = ''
 }
 
 defineExpose({
@@ -170,12 +174,14 @@ function resolveErrorMessage(errorCode: string): string {
       return t('食事写真の読み込みに失敗しました。別の写真を選択するか手動で入力してください')
     case 'TIMEOUT':
       return t('AIによる解析がタイムアウトしました。再度お試しいただくか手動で入力してください')
+    case 'OUTPUT_TRUNCATED':
     case 'OUT_OF_RANGE':
     case 'INVALID_NUTRITION_VALUE':
     case 'INVALID_DISH_NAME':
     case 'INVALID_FIELD_TYPE':
     case 'MISSING_FIELD':
     case 'INVALID_JSON':
+    case 'INVALID_RESPONSE':
     case 'EMPTY_RESPONSE':
       return t('AIの推定結果が不正な形式だったため反映を中止しました。再度お試しいただくか手動で入力してください')
     default:
@@ -197,6 +203,7 @@ async function handleEstimate() {
   const localeSnapshot = typeof locale.value === 'string' ? locale.value : 'ja'
 
   errorMessage.value = ''
+  errorDiagnosticsSummary.value = ''
   estimationResult.value = null
   isAnalyzing.value = true
 
@@ -228,11 +235,13 @@ async function handleEstimate() {
         }
       }
       errorMessage.value = resolveErrorMessage(outcome.errorCode)
+      errorDiagnosticsSummary.value = formatMealAiDiagnosticsSummary(outcome.errorCode, outcome.diagnostics)
       return
     }
 
     if (!outcome.isFood) {
       errorMessage.value = t('写真から食事・食品を認識できませんでした。手動で入力してください')
+      errorDiagnosticsSummary.value = formatMealAiDiagnosticsSummary('NOT_FOOD', outcome.diagnostics)
       return
     }
 
@@ -258,6 +267,7 @@ async function handleDownloadAndEstimate() {
   const currentGeneration = ++requestGeneration.value
   const photoSnapshot = props.photo
   errorMessage.value = ''
+  errorDiagnosticsSummary.value = ''
   downloadProgress.value = null
   isDownloading.value = true
 
@@ -278,9 +288,14 @@ async function handleDownloadAndEstimate() {
       platform: 'android',
     }
   }
-  catch {
+  catch (err) {
     if (!isUnmounted.value) {
+      const errCode = extractMealAiErrorCode(err, 'DOWNLOAD_FAILED')
       errorMessage.value = t('オンデバイスAIモデルのダウンロードに失敗しました。ネットワーク接続と空き容量を確認してください')
+      errorDiagnosticsSummary.value = formatMealAiDiagnosticsSummary(errCode, {
+        stage: 'model_download',
+        errorCode: errCode,
+      })
       await refreshAvailability()
     }
     return
@@ -435,14 +450,22 @@ function handleAppendMemo() {
       </UiButton>
     </div>
 
-    <!-- エラーメッセージ表示 -->
+    <!-- エラーメッセージおよび診断情報（個人情報なし）表示 -->
     <div
       v-if="errorMessage"
       class="meal-ai-error-banner"
       role="alert"
     >
       <Icon name="mdi:alert-circle-outline" />
-      <span>{{ errorMessage }}</span>
+      <div class="meal-ai-error-content">
+        <span>{{ errorMessage }}</span>
+        <code
+          v-if="errorDiagnosticsSummary"
+          class="meal-ai-error-diagnostics"
+        >
+          {{ errorDiagnosticsSummary }}
+        </code>
+      </div>
     </div>
 
     <!-- AI推定結果バナー（認識料理・注意書き・ワンタップ反映ボタン） -->
@@ -618,6 +641,21 @@ function handleAppendMemo() {
     background-color: rgba(244, 67, 54, 0.15);
     border-color: rgba(244, 67, 54, 0.4);
     color: #ef9a9a;
+  }
+
+  .meal-ai-error-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .meal-ai-error-diagnostics {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    opacity: 0.9;
+    word-break: break-all;
   }
 }
 

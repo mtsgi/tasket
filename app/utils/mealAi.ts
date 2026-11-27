@@ -53,6 +53,21 @@ export interface MealAiDownloadResult {
 }
 
 /**
+ * 個人情報を含まないオンデバイスAI推論診断メタデータ
+ * （写真・ヒント・プロンプト・AI生テキストは一切含めない）
+ */
+export interface MealAiDiagnostics {
+  errorCode?: string
+  stage: string
+  elapsedMs?: number
+  attemptCount?: number
+  responseLength?: number
+  finishReason?: string
+  failedField?: string
+  structuredOutputAvailable?: boolean
+}
+
+/**
  * ネイティブプラグインから返却される生レスポンス型
  */
 export interface MealAiRawResponse {
@@ -64,6 +79,7 @@ export interface MealAiRawResponse {
   fat?: unknown
   carbs?: unknown
   elapsedMs?: unknown
+  diagnostics?: unknown
 }
 
 /**
@@ -87,16 +103,19 @@ export type MealAiAnalysisOutcome
     ok: true
     isFood: true
     estimation: MealAiNutritionEstimation
+    diagnostics?: MealAiDiagnostics
   }
   | {
     ok: true
     isFood: false
     elapsedMs?: number
+    diagnostics?: MealAiDiagnostics
   }
   | {
     ok: false
     errorCode: string
     message: string
+    diagnostics: MealAiDiagnostics
   }
 
 /**
@@ -157,6 +176,82 @@ export function roundToOneDecimal(value: number): number {
 }
 
 /**
+ * プラグインレスポンスまたは例外データから個人情報を含まない診断メタデータを安全に抽出する
+ */
+export function extractMealAiDiagnostics(
+  raw: unknown,
+  fallback: Partial<MealAiDiagnostics> = {},
+): MealAiDiagnostics {
+  const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const stage = typeof obj.stage === 'string' && obj.stage.trim().length > 0
+    ? obj.stage.trim()
+    : (fallback.stage || 'unknown')
+  const errorCode = typeof obj.errorCode === 'string' && obj.errorCode.trim().length > 0
+    ? obj.errorCode.trim().toUpperCase()
+    : fallback.errorCode
+  const elapsedMs = typeof obj.elapsedMs === 'number' && Number.isFinite(obj.elapsedMs) && obj.elapsedMs >= 0
+    ? Math.round(obj.elapsedMs)
+    : fallback.elapsedMs
+  const attemptCount = typeof obj.attemptCount === 'number' && Number.isFinite(obj.attemptCount) && obj.attemptCount >= 0
+    ? Math.round(obj.attemptCount)
+    : fallback.attemptCount
+  const responseLength = typeof obj.responseLength === 'number' && Number.isFinite(obj.responseLength) && obj.responseLength >= 0
+    ? Math.round(obj.responseLength)
+    : fallback.responseLength
+  const finishReason = typeof obj.finishReason === 'string' && obj.finishReason.trim().length > 0
+    ? obj.finishReason.trim()
+    : fallback.finishReason
+  const failedField = typeof obj.failedField === 'string' && obj.failedField.trim().length > 0
+    ? obj.failedField.trim()
+    : fallback.failedField
+  const structuredOutputAvailable = typeof obj.structuredOutputAvailable === 'boolean'
+    ? obj.structuredOutputAvailable
+    : fallback.structuredOutputAvailable
+
+  const diagnostics: MealAiDiagnostics = { stage }
+  if (errorCode !== undefined) diagnostics.errorCode = errorCode
+  if (elapsedMs !== undefined) diagnostics.elapsedMs = elapsedMs
+  if (attemptCount !== undefined) diagnostics.attemptCount = attemptCount
+  if (responseLength !== undefined) diagnostics.responseLength = responseLength
+  if (finishReason !== undefined) diagnostics.finishReason = finishReason
+  if (failedField !== undefined) diagnostics.failedField = failedField
+  if (structuredOutputAvailable !== undefined) diagnostics.structuredOutputAvailable = structuredOutputAvailable
+  return diagnostics
+}
+
+/**
+ * 画面表示用の個人情報を含まない診断サマリ文字列を生成する
+ */
+export function formatMealAiDiagnosticsSummary(
+  errorCode: string,
+  diagnostics?: MealAiDiagnostics,
+): string {
+  const normalizedCode = (errorCode || diagnostics?.errorCode || 'UNKNOWN').trim().toUpperCase()
+  const parts: string[] = [`CODE: ${normalizedCode}`]
+  if (diagnostics) {
+    if (diagnostics.stage) {
+      parts.push(`stage: ${diagnostics.stage}`)
+    }
+    if (diagnostics.failedField) {
+      parts.push(`field: ${diagnostics.failedField}`)
+    }
+    if (typeof diagnostics.attemptCount === 'number') {
+      parts.push(`attempts: ${diagnostics.attemptCount}`)
+    }
+    if (typeof diagnostics.responseLength === 'number') {
+      parts.push(`len: ${diagnostics.responseLength}`)
+    }
+    if (diagnostics.finishReason) {
+      parts.push(`finish: ${diagnostics.finishReason}`)
+    }
+    if (typeof diagnostics.elapsedMs === 'number') {
+      parts.push(`time: ${diagnostics.elapsedMs}ms`)
+    }
+  }
+  return parts.join(' | ')
+}
+
+/**
  * AI解析レスポンスの全項目を厳格にバリデーションする。
  * 不正値・欠損値・型不一致・範囲外の値はクランプによって正常値へ変換せず、推論失敗（ok: false）として返す。
  */
@@ -166,27 +261,45 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       ok: false,
       errorCode: 'INVALID_RESPONSE',
       message: 'AI output is not a valid object',
+      diagnostics: {
+        errorCode: 'INVALID_RESPONSE',
+        stage: 'frontend_validation',
+      },
     }
   }
 
   const record = raw as MealAiRawResponse
+  const elapsedMs = typeof record.elapsedMs === 'number' && Number.isFinite(record.elapsedMs) && record.elapsedMs >= 0
+    ? Math.round(record.elapsedMs)
+    : undefined
+  const baseDiag = extractMealAiDiagnostics(record.diagnostics, {
+    stage: 'frontend_validation',
+    elapsedMs,
+  })
+
   if (typeof record.isFood !== 'boolean') {
     return {
       ok: false,
       errorCode: 'MISSING_FIELD',
       message: 'isFood field is missing or not a boolean',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'MISSING_FIELD',
+        stage: 'frontend_validation',
+        failedField: 'isFood',
+      },
     }
   }
-
-  const elapsedMs = typeof record.elapsedMs === 'number' && Number.isFinite(record.elapsedMs) && record.elapsedMs >= 0
-    ? Math.round(record.elapsedMs)
-    : undefined
 
   if (!record.isFood) {
     return {
       ok: true,
       isFood: false,
       elapsedMs,
+      diagnostics: {
+        ...baseDiag,
+        stage: baseDiag.stage === 'unknown' ? 'completed' : baseDiag.stage,
+      },
     }
   }
 
@@ -196,6 +309,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       ok: false,
       errorCode: 'INVALID_DISH_NAME',
       message: 'dishName is missing or not a string',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'INVALID_DISH_NAME',
+        stage: 'frontend_validation',
+        failedField: 'dishName',
+      },
     }
   }
   const dishName = record.dishName.trim()
@@ -204,6 +323,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       ok: false,
       errorCode: 'INVALID_DISH_NAME',
       message: 'dishName is empty or exceeds maximum length',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'INVALID_DISH_NAME',
+        stage: 'frontend_validation',
+        failedField: 'dishName',
+      },
     }
   }
 
@@ -215,6 +340,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
         ok: false,
         errorCode: 'INVALID_FIELD_TYPE',
         message: 'recognizedItems must be an array',
+        diagnostics: {
+          ...baseDiag,
+          errorCode: 'INVALID_FIELD_TYPE',
+          stage: 'frontend_validation',
+          failedField: 'recognizedItems',
+        },
       }
     }
     for (const item of record.recognizedItems) {
@@ -223,6 +354,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
           ok: false,
           errorCode: 'INVALID_FIELD_TYPE',
           message: 'recognizedItems elements must be strings',
+          diagnostics: {
+            ...baseDiag,
+            errorCode: 'INVALID_FIELD_TYPE',
+            stage: 'frontend_validation',
+            failedField: 'recognizedItems',
+          },
         }
       }
       const trimmedItem = item.trim()
@@ -241,6 +378,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       ok: false,
       errorCode: 'OUT_OF_RANGE',
       message: 'calories is missing or out of valid range',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'OUT_OF_RANGE',
+        stage: 'frontend_validation',
+        failedField: 'calories',
+      },
     }
   }
   if (!isStrictValidNumberInRange(record.protein, MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS)) {
@@ -248,6 +391,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       ok: false,
       errorCode: 'OUT_OF_RANGE',
       message: 'protein is missing or out of valid range',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'OUT_OF_RANGE',
+        stage: 'frontend_validation',
+        failedField: 'protein',
+      },
     }
   }
   if (!isStrictValidNumberInRange(record.fat, MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS)) {
@@ -255,6 +404,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       ok: false,
       errorCode: 'OUT_OF_RANGE',
       message: 'fat is missing or out of valid range',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'OUT_OF_RANGE',
+        stage: 'frontend_validation',
+        failedField: 'fat',
+      },
     }
   }
   if (!isStrictValidNumberInRange(record.carbs, MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS)) {
@@ -262,6 +417,12 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       ok: false,
       errorCode: 'OUT_OF_RANGE',
       message: 'carbs is missing or out of valid range',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'OUT_OF_RANGE',
+        stage: 'frontend_validation',
+        failedField: 'carbs',
+      },
     }
   }
 
@@ -276,6 +437,10 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       fat: roundToOneDecimal(record.fat),
       carbs: roundToOneDecimal(record.carbs),
       elapsedMs,
+    },
+    diagnostics: {
+      ...baseDiag,
+      stage: baseDiag.stage === 'frontend_validation' ? 'completed' : baseDiag.stage,
     },
   }
 }
@@ -314,9 +479,15 @@ export function applyMealAiEstimationToRefs(
  */
 export function extractMealAiErrorCode(error: unknown, fallbackCode = 'INFERENCE_FAILED'): string {
   if (error && typeof error === 'object') {
-    const errObj = error as { code?: unknown, message?: unknown }
+    const errObj = error as { code?: unknown, message?: unknown, data?: unknown }
     if (typeof errObj.code === 'string' && errObj.code.trim().length > 0) {
       return errObj.code.trim().toUpperCase()
+    }
+    if (errObj.data && typeof errObj.data === 'object') {
+      const dataCode = (errObj.data as { errorCode?: unknown }).errorCode
+      if (typeof dataCode === 'string' && dataCode.trim().length > 0) {
+        return dataCode.trim().toUpperCase()
+      }
     }
     if (typeof errObj.message === 'string') {
       const msg = errObj.message.toUpperCase()
@@ -326,6 +497,10 @@ export function extractMealAiErrorCode(error: unknown, fallbackCode = 'INFERENCE
       if (msg.includes('INVALID_IMAGE')) return 'INVALID_IMAGE'
       if (msg.includes('NOT_ENOUGH_STORAGE')) return 'NOT_ENOUGH_STORAGE'
       if (msg.includes('QUOTA_EXCEEDED')) return 'QUOTA_EXCEEDED'
+      if (msg.includes('OUTPUT_TRUNCATED')) return 'OUTPUT_TRUNCATED'
+      if (msg.includes('INVALID_JSON')) return 'INVALID_JSON'
+      if (msg.includes('EMPTY_RESPONSE')) return 'EMPTY_RESPONSE'
+      if (msg.includes('OUT_OF_RANGE')) return 'OUT_OF_RANGE'
       if (msg.includes('TIMEOUT')) return 'TIMEOUT'
       if (msg.includes('BUSY')) return 'BUSY'
       if (msg.includes('CANCELLED')) return 'CANCELLED'
@@ -416,6 +591,10 @@ export async function analyzeMealPhotoWithAi(options: {
       ok: false,
       errorCode: 'MODEL_UNAVAILABLE',
       message: 'On-device AI meal analysis is only available on Android',
+      diagnostics: {
+        errorCode: 'MODEL_UNAVAILABLE',
+        stage: 'platform_check',
+      },
     }
   }
 
@@ -425,6 +604,10 @@ export async function analyzeMealPhotoWithAi(options: {
       ok: false,
       errorCode: 'INVALID_IMAGE',
       message: 'Meal photo is empty or exceeds maximum size limit',
+      diagnostics: {
+        errorCode: 'INVALID_IMAGE',
+        stage: 'input_validation',
+      },
     }
   }
 
@@ -438,10 +621,16 @@ export async function analyzeMealPhotoWithAi(options: {
   }
   catch (error) {
     const errorCode = extractMealAiErrorCode(error, 'INFERENCE_FAILED')
+    const rawErrorData = error && typeof error === 'object' ? (error as { data?: unknown }).data : undefined
+    const diagnostics = extractMealAiDiagnostics(rawErrorData, {
+      errorCode,
+      stage: 'inference',
+    })
     return {
       ok: false,
       errorCode,
       message: `Meal analysis failed (${errorCode})`,
+      diagnostics,
     }
   }
 }
