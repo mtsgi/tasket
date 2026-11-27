@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'com.google.devtools.ksp'
 
 android {
     namespace = "com.mtsgi.tasket"
@@ -42,6 +43,7 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.health.connect:connect-client:$healthConnectVersion"
     implementation "com.google.mlkit:genai-prompt:$mlkitGenaiPromptVersion"
+    ksp "com.google.mlkit:genai-schema-compiler:$mlkitGenaiSchemaCompilerVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinxCoroutinesVersion"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.7"
     implementation project(':capacitor-android')

@@ -282,18 +282,24 @@ describe('MealAiEstimator.vue', () => {
     expect(wrapper.find('.meal-ai-error-diagnostics').text()).toContain('CODE: NOT_FOOD')
     expect(wrapper.find('.meal-ai-error-diagnostics').text()).toContain('len: 82')
 
-    // 次にAI出力範囲外エラー・JSON途中切断エラーのケース
+    // 次にAI出力バリデーションエラー・フォールバック後の診断情報表示のケース
     vi.mocked(analyzeMealPhotoWithAi).mockResolvedValueOnce({
       ok: false,
-      errorCode: 'OUTPUT_TRUNCATED',
-      message: 'Model output hit maxOutputTokens',
+      errorCode: 'INVALID_NUTRITION_VALUE',
+      message: 'Invalid nutrition value for calories',
       diagnostics: {
-        errorCode: 'OUTPUT_TRUNCATED',
-        stage: 'response_parse',
+        errorCode: 'INVALID_NUTRITION_VALUE',
+        stage: 'schema_validation',
+        failedField: 'calories',
+        validationReason: 'string_type',
+        fieldPresence: 'isFood:bool,dishName:str,recognizedItems:arr,calories:str,protein:num,fat:num,carbs:num',
+        hasSchemaKeys: false,
+        inferenceMode: 'typed_then_freeform',
+        structuredOutputAvailable: true,
         attemptCount: 2,
-        responseLength: 254,
-        finishReason: 'MAX_TOKENS',
-        elapsedMs: 1480,
+        responseLength: 84,
+        finishReason: 'STOP',
+        elapsedMs: 8547,
       },
     })
 
@@ -303,11 +309,16 @@ describe('MealAiEstimator.vue', () => {
     expect(wrapper.emitted('apply-estimation')).toBeUndefined()
     expect(wrapper.find('.meal-ai-error-banner').text()).toContain('不正な形式だったため反映を中止しました')
     const diagText = wrapper.find('.meal-ai-error-diagnostics').text()
-    expect(diagText).toContain('CODE: OUTPUT_TRUNCATED')
-    expect(diagText).toContain('stage: response_parse')
+    expect(diagText).toContain('CODE: INVALID_NUTRITION_VALUE')
+    expect(diagText).toContain('mode: typed_then_freeform')
+    expect(diagText).toContain('structured: true')
+    expect(diagText).toContain('stage: schema_validation')
+    expect(diagText).toContain('field: calories')
+    expect(diagText).toContain('reason: string_type')
     expect(diagText).toContain('attempts: 2')
-    expect(diagText).toContain('len: 254')
-    expect(diagText).toContain('finish: MAX_TOKENS')
-    expect(diagText).toContain('time: 1480ms')
+    expect(diagText).toContain('len: 84')
+    expect(diagText).toContain('finish: STOP')
+    expect(diagText).toContain('time: 8547ms')
+    expect(diagText).toContain('fields: isFood:bool,dishName:str,recognizedItems:arr,calories:str,protein:num,fat:num,carbs:num')
   })
 })

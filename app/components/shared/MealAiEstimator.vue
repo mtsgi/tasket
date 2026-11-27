@@ -174,6 +174,8 @@ function resolveErrorMessage(errorCode: string): string {
       return t('食事写真の読み込みに失敗しました。別の写真を選択するか手動で入力してください')
     case 'TIMEOUT':
       return t('AIによる解析がタイムアウトしました。再度お試しいただくか手動で入力してください')
+    case 'SCHEMA_ECHO':
+    case 'STRUCTURED_OUTPUT_INVALID_CLASS':
     case 'OUTPUT_TRUNCATED':
     case 'OUT_OF_RANGE':
     case 'INVALID_NUTRITION_VALUE':

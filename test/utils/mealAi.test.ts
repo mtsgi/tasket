@@ -215,6 +215,110 @@ describe('mealAi utilities', () => {
       if (!badItems.ok) {
         expect(badItems.errorCode).toBe('INVALID_FIELD_TYPE')
       }
+
+      // 8. JSON Schema そのものが出力された場合（SCHEMA_ECHO）
+      const schemaEcho = validateMealAiRawResponse({
+        type: 'object',
+        properties: {
+          isFood: { type: 'boolean' },
+          dishName: { type: 'string' },
+          calories: { type: 'number' },
+        },
+        required: ['isFood', 'dishName', 'calories'],
+      })
+      expect(schemaEcho.ok).toBe(false)
+      if (!schemaEcho.ok) {
+        expect(schemaEcho.errorCode).toBe('SCHEMA_ECHO')
+        expect(schemaEcho.diagnostics?.validationReason).toBe('schema_echo')
+        expect(schemaEcho.diagnostics?.hasSchemaKeys).toBe(true)
+      }
+
+      // 9. isFood の欠落・null・文字列型での validationReason と fieldPresence
+      const missingIsFood = validateMealAiRawResponse({
+        dishName: 'ラーメン',
+        recognizedItems: ['ラーメン'],
+        calories: 650,
+        protein: 25,
+        fat: 20,
+        carbs: 75,
+      })
+      expect(missingIsFood.ok).toBe(false)
+      if (!missingIsFood.ok) {
+        expect(missingIsFood.errorCode).toBe('MISSING_FIELD')
+        expect(missingIsFood.diagnostics?.failedField).toBe('isFood')
+        expect(missingIsFood.diagnostics?.validationReason).toBe('missing_key')
+        expect(missingIsFood.diagnostics?.fieldPresence).toBe(
+          'isFood:missing,dishName:str,recognizedItems:arr,calories:num,protein:num,fat:num,carbs:num',
+        )
+      }
+
+      const nullIsFood = validateMealAiRawResponse({
+        isFood: null,
+        dishName: 'ラーメン',
+      })
+      expect(nullIsFood.ok).toBe(false)
+      if (!nullIsFood.ok) {
+        expect(nullIsFood.errorCode).toBe('MISSING_FIELD')
+        expect(nullIsFood.diagnostics?.validationReason).toBe('null_value')
+      }
+
+      const strIsFood = validateMealAiRawResponse({
+        isFood: 'true',
+        dishName: 'ラーメン',
+      })
+      expect(strIsFood.ok).toBe(false)
+      if (!strIsFood.ok) {
+        expect(strIsFood.errorCode).toBe('INVALID_FIELD_TYPE')
+        expect(strIsFood.diagnostics?.validationReason).toBe('string_type')
+      }
+
+      // 10. calories/protein/fat/carbs の欠落・null・文字列型・非数値での validationReason
+      const missingCalories = validateMealAiRawResponse({
+        isFood: true,
+        dishName: 'ラーメン',
+        recognizedItems: ['ラーメン'],
+        protein: 25,
+        fat: 20,
+        carbs: 75,
+      })
+      expect(missingCalories.ok).toBe(false)
+      if (!missingCalories.ok) {
+        expect(missingCalories.errorCode).toBe('INVALID_NUTRITION_VALUE')
+        expect(missingCalories.diagnostics?.failedField).toBe('calories')
+        expect(missingCalories.diagnostics?.validationReason).toBe('missing_key')
+      }
+
+      const nullCalories = validateMealAiRawResponse({
+        isFood: true,
+        dishName: 'ラーメン',
+        recognizedItems: ['ラーメン'],
+        calories: null,
+        protein: 25,
+        fat: 20,
+        carbs: 75,
+      })
+      expect(nullCalories.ok).toBe(false)
+      if (!nullCalories.ok) {
+        expect(nullCalories.errorCode).toBe('INVALID_NUTRITION_VALUE')
+        expect(nullCalories.diagnostics?.failedField).toBe('calories')
+        expect(nullCalories.diagnostics?.validationReason).toBe('null_value')
+      }
+
+      const stringCalories = validateMealAiRawResponse({
+        isFood: true,
+        dishName: 'ラーメン',
+        recognizedItems: ['ラーメン'],
+        calories: '650kcal',
+        protein: 25,
+        fat: 20,
+        carbs: 75,
+      })
+      expect(stringCalories.ok).toBe(false)
+      if (!stringCalories.ok) {
+        expect(stringCalories.errorCode).toBe('INVALID_NUTRITION_VALUE')
+        expect(stringCalories.diagnostics?.failedField).toBe('calories')
+        expect(stringCalories.diagnostics?.validationReason).toBe('string_type')
+      }
     })
   })
 
@@ -353,50 +457,69 @@ describe('mealAi utilities', () => {
       }
     })
 
-    it('extractMealAiErrorCode・extractMealAiDiagnostics・formatMealAiDiagnosticsSummary が診断情報を正しく抽出・整形する', async () => {
+    it('extractMealAiErrorCode・extractMealAiDiagnostics・formatMealAiDiagnosticsSummary が診断情報を正しく抽出・整形し、PIIを含まない', async () => {
       expect(extractMealAiErrorCode({ code: 'model_download_required' })).toBe('MODEL_DOWNLOAD_REQUIRED')
       expect(extractMealAiErrorCode({ message: 'Failed', data: { errorCode: 'output_truncated' } })).toBe('OUTPUT_TRUNCATED')
       expect(extractMealAiErrorCode(new Error('Failed: QUOTA_EXCEEDED'))).toBe('QUOTA_EXCEEDED')
       expect(extractMealAiErrorCode(new Error('Unknown error'), 'CUSTOM_FALLBACK')).toBe('CUSTOM_FALLBACK')
 
       const diag = extractMealAiDiagnostics({
-        errorCode: 'output_truncated',
-        stage: 'response_parse',
+        errorCode: 'invalid_nutrition_value',
+        stage: 'schema_validation',
         elapsedMs: 1420.4,
         attemptCount: 2,
-        responseLength: 248,
-        finishReason: 'MAX_TOKENS',
+        responseLength: 84,
+        finishReason: 'STOP',
         failedField: 'calories',
+        validationReason: 'string_type',
+        fieldPresence: 'isFood:bool,dishName:str,recognizedItems:arr,calories:str,protein:num,fat:num,carbs:num',
+        hasSchemaKeys: false,
+        inferenceMode: 'typed_then_freeform',
         structuredOutputAvailable: true,
+        // 以下のような個人情報フィールドが万一オブジェクトに含まれていても抽出されないこと
+        dishName: '秘密の特製ラーメン',
+        hintText: '自宅キッチン',
       })
       expect(diag).toEqual({
-        errorCode: 'OUTPUT_TRUNCATED',
-        stage: 'response_parse',
+        errorCode: 'INVALID_NUTRITION_VALUE',
+        stage: 'schema_validation',
         elapsedMs: 1420,
         attemptCount: 2,
-        responseLength: 248,
-        finishReason: 'MAX_TOKENS',
+        responseLength: 84,
+        finishReason: 'STOP',
         failedField: 'calories',
+        validationReason: 'string_type',
+        fieldPresence: 'isFood:bool,dishName:str,recognizedItems:arr,calories:str,protein:num,fat:num,carbs:num',
+        hasSchemaKeys: false,
+        inferenceMode: 'typed_then_freeform',
         structuredOutputAvailable: true,
       })
 
-      const summary = formatMealAiDiagnosticsSummary('OUTPUT_TRUNCATED', diag)
+      const summary = formatMealAiDiagnosticsSummary('INVALID_NUTRITION_VALUE', diag)
       expect(summary).toBe(
-        'CODE: OUTPUT_TRUNCATED | stage: response_parse | field: calories | attempts: 2 | len: 248 | finish: MAX_TOKENS | time: 1420ms',
+        'CODE: INVALID_NUTRITION_VALUE | mode: typed_then_freeform | structured: true | stage: schema_validation | field: calories | reason: string_type | schemaKeys: false | fields: isFood:bool,dishName:str,recognizedItems:arr,calories:str,protein:num,fat:num,carbs:num | attempts: 2 | len: 84 | finish: STOP | time: 1420ms',
       )
+      expect(summary).not.toContain('秘密の特製ラーメン')
+      expect(summary).not.toContain('自宅キッチン')
 
       // プラグインが diagnostics data 付きで reject した際に analyzeMealPhotoWithAi が診断情報を保持すること
       vi.mocked(isAndroidNativeApp).mockReturnValue(true)
       vi.spyOn(MealAiPlugin, 'analyzeMealPhoto').mockRejectedValueOnce({
-        code: 'OUTPUT_TRUNCATED',
-        message: 'Model output hit maxOutputTokens',
+        code: 'SCHEMA_ECHO',
+        message: 'Model echoed JSON Schema definition instead of meal analysis data',
         data: {
-          errorCode: 'OUTPUT_TRUNCATED',
-          stage: 'response_parse',
+          errorCode: 'SCHEMA_ECHO',
+          stage: 'schema_validation',
+          failedField: 'isFood',
+          validationReason: 'schema_echo',
+          fieldPresence: 'isFood:missing,dishName:missing,recognizedItems:missing,calories:missing,protein:missing,fat:missing,carbs:missing',
+          hasSchemaKeys: true,
+          inferenceMode: 'freeform',
+          structuredOutputAvailable: false,
           attemptCount: 2,
-          responseLength: 310,
-          finishReason: 'MAX_TOKENS',
-          elapsedMs: 1650,
+          responseLength: 1415,
+          finishReason: 'STOP',
+          elapsedMs: 14341,
         },
       })
 
@@ -405,14 +528,20 @@ describe('mealAi utilities', () => {
       })
       expect(failedOutcome.ok).toBe(false)
       if (!failedOutcome.ok) {
-        expect(failedOutcome.errorCode).toBe('OUTPUT_TRUNCATED')
+        expect(failedOutcome.errorCode).toBe('SCHEMA_ECHO')
         expect(failedOutcome.diagnostics).toEqual({
-          errorCode: 'OUTPUT_TRUNCATED',
-          stage: 'response_parse',
+          errorCode: 'SCHEMA_ECHO',
+          stage: 'schema_validation',
+          failedField: 'isFood',
+          validationReason: 'schema_echo',
+          fieldPresence: 'isFood:missing,dishName:missing,recognizedItems:missing,calories:missing,protein:missing,fat:missing,carbs:missing',
+          hasSchemaKeys: true,
+          inferenceMode: 'freeform',
+          structuredOutputAvailable: false,
           attemptCount: 2,
-          responseLength: 310,
-          finishReason: 'MAX_TOKENS',
-          elapsedMs: 1650,
+          responseLength: 1415,
+          finishReason: 'STOP',
+          elapsedMs: 14341,
         })
       }
     })

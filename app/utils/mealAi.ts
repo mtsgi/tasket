@@ -31,6 +31,7 @@ export interface MealAiAvailabilityResult {
   status: MealAiFeatureStatus
   featureStatus?: number
   platform: string
+  structuredOutputAvailable?: boolean
   errorCode?: string
   retryable?: boolean
 }
@@ -53,8 +54,36 @@ export interface MealAiDownloadResult {
 }
 
 /**
+ * 実際に使用した推論方式
+ */
+export type MealAiInferenceMode = 'typed' | 'freeform' | 'typed_then_freeform' | 'none'
+
+/**
+ * 必須出力フィールド一覧（診断用、順序固定）
+ */
+export const MEAL_AI_REQUIRED_FIELDS = [
+  'isFood',
+  'dishName',
+  'recognizedItems',
+  'calories',
+  'protein',
+  'fat',
+  'carbs',
+] as const
+
+/**
+ * ルートJSONオブジェクトに混入し得るJSON Schema定義用キー一覧
+ */
+export const MEAL_AI_SCHEMA_DEFINITION_KEYS = [
+  'properties',
+  'required',
+  'type',
+  '$schema',
+] as const
+
+/**
  * 個人情報を含まないオンデバイスAI推論診断メタデータ
- * （写真・ヒント・プロンプト・AI生テキストは一切含めない）
+ * （写真・料理名・食事メモ・プロンプト・AI生テキストは一切含めない）
  */
 export interface MealAiDiagnostics {
   errorCode?: string
@@ -65,6 +94,10 @@ export interface MealAiDiagnostics {
   finishReason?: string
   failedField?: string
   structuredOutputAvailable?: boolean
+  inferenceMode?: MealAiInferenceMode | string
+  validationReason?: string
+  fieldPresence?: string
+  hasSchemaKeys?: boolean
 }
 
 /**
@@ -162,17 +195,48 @@ export function buildMealAiHintText(title?: string, mealMemo?: string): string |
 }
 
 /**
- * 有限数値かつ指定範囲内であるかを厳密に検証する（クランプは行わない）
- */
-function isStrictValidNumberInRange(value: unknown, min: number, max: number): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
-}
-
-/**
  * 小数第1位に四捨五入する
  */
 export function roundToOneDecimal(value: number): number {
   return Math.round(value * 10) / 10
+}
+
+/**
+ * オブジェクト内の必須7フィールドの存在状況および値の型を個人情報を含まない診断文字列として返す
+ */
+export function inspectMealAiRawFieldPresence(record: Record<string, unknown>): string {
+  return MEAL_AI_REQUIRED_FIELDS.map((key) => {
+    if (!(key in record) || record[key] === undefined) {
+      return `${key}:missing`
+    }
+    const val = record[key]
+    if (val === null) {
+      return `${key}:null`
+    }
+    if (typeof val === 'boolean') {
+      return `${key}:bool`
+    }
+    if (typeof val === 'number') {
+      return `${key}:num`
+    }
+    if (typeof val === 'string') {
+      return `${key}:str`
+    }
+    if (Array.isArray(val)) {
+      return `${key}:arr`
+    }
+    if (typeof val === 'object') {
+      return `${key}:obj`
+    }
+    return `${key}:other`
+  }).join(',')
+}
+
+/**
+ * ルートオブジェクトに properties, required, type, $schema などのスキーマ定義用キーが存在するか判定する
+ */
+export function detectMealAiRawSchemaKeys(record: Record<string, unknown>): boolean {
+  return MEAL_AI_SCHEMA_DEFINITION_KEYS.some(key => key in record && record[key] !== undefined && record[key] !== null)
 }
 
 /**
@@ -207,6 +271,18 @@ export function extractMealAiDiagnostics(
   const structuredOutputAvailable = typeof obj.structuredOutputAvailable === 'boolean'
     ? obj.structuredOutputAvailable
     : fallback.structuredOutputAvailable
+  const inferenceMode = typeof obj.inferenceMode === 'string' && obj.inferenceMode.trim().length > 0
+    ? obj.inferenceMode.trim()
+    : fallback.inferenceMode
+  const validationReason = typeof obj.validationReason === 'string' && obj.validationReason.trim().length > 0
+    ? obj.validationReason.trim()
+    : fallback.validationReason
+  const fieldPresence = typeof obj.fieldPresence === 'string' && obj.fieldPresence.trim().length > 0
+    ? obj.fieldPresence.trim()
+    : fallback.fieldPresence
+  const hasSchemaKeys = typeof obj.hasSchemaKeys === 'boolean'
+    ? obj.hasSchemaKeys
+    : fallback.hasSchemaKeys
 
   const diagnostics: MealAiDiagnostics = { stage }
   if (errorCode !== undefined) diagnostics.errorCode = errorCode
@@ -216,6 +292,10 @@ export function extractMealAiDiagnostics(
   if (finishReason !== undefined) diagnostics.finishReason = finishReason
   if (failedField !== undefined) diagnostics.failedField = failedField
   if (structuredOutputAvailable !== undefined) diagnostics.structuredOutputAvailable = structuredOutputAvailable
+  if (inferenceMode !== undefined) diagnostics.inferenceMode = inferenceMode
+  if (validationReason !== undefined) diagnostics.validationReason = validationReason
+  if (fieldPresence !== undefined) diagnostics.fieldPresence = fieldPresence
+  if (hasSchemaKeys !== undefined) diagnostics.hasSchemaKeys = hasSchemaKeys
   return diagnostics
 }
 
@@ -229,11 +309,26 @@ export function formatMealAiDiagnosticsSummary(
   const normalizedCode = (errorCode || diagnostics?.errorCode || 'UNKNOWN').trim().toUpperCase()
   const parts: string[] = [`CODE: ${normalizedCode}`]
   if (diagnostics) {
+    if (diagnostics.inferenceMode) {
+      parts.push(`mode: ${diagnostics.inferenceMode}`)
+    }
+    if (typeof diagnostics.structuredOutputAvailable === 'boolean') {
+      parts.push(`structured: ${diagnostics.structuredOutputAvailable}`)
+    }
     if (diagnostics.stage) {
       parts.push(`stage: ${diagnostics.stage}`)
     }
     if (diagnostics.failedField) {
       parts.push(`field: ${diagnostics.failedField}`)
+    }
+    if (diagnostics.validationReason) {
+      parts.push(`reason: ${diagnostics.validationReason}`)
+    }
+    if (typeof diagnostics.hasSchemaKeys === 'boolean') {
+      parts.push(`schemaKeys: ${diagnostics.hasSchemaKeys}`)
+    }
+    if (diagnostics.fieldPresence) {
+      parts.push(`fields: ${diagnostics.fieldPresence}`)
     }
     if (typeof diagnostics.attemptCount === 'number') {
       parts.push(`attempts: ${diagnostics.attemptCount}`)
@@ -252,6 +347,122 @@ export function formatMealAiDiagnosticsSummary(
 }
 
 /**
+ * 栄養素フィールド1項目を厳格に検証し、失敗時は具体的な理由（missing_key / null_value / string_type / type_mismatch / non_finite_number / out_of_range）を返す
+ */
+function validateStrictNutritionField(
+  record: Record<string, unknown>,
+  key: 'calories' | 'protein' | 'fat' | 'carbs',
+  min: number,
+  max: number,
+  baseDiag: MealAiDiagnostics,
+): { ok: true, value: number } | { ok: false, outcome: MealAiAnalysisOutcome } {
+  if (!(key in record) || record[key] === undefined) {
+    return {
+      ok: false,
+      outcome: {
+        ok: false,
+        errorCode: 'INVALID_NUTRITION_VALUE',
+        message: `${key} is missing`,
+        diagnostics: {
+          ...baseDiag,
+          errorCode: 'INVALID_NUTRITION_VALUE',
+          stage: 'frontend_validation',
+          failedField: key,
+          validationReason: 'missing_key',
+        },
+      },
+    }
+  }
+  const rawVal = record[key]
+  if (rawVal === null) {
+    return {
+      ok: false,
+      outcome: {
+        ok: false,
+        errorCode: 'INVALID_NUTRITION_VALUE',
+        message: `${key} is null`,
+        diagnostics: {
+          ...baseDiag,
+          errorCode: 'INVALID_NUTRITION_VALUE',
+          stage: 'frontend_validation',
+          failedField: key,
+          validationReason: 'null_value',
+        },
+      },
+    }
+  }
+  if (typeof rawVal === 'string') {
+    return {
+      ok: false,
+      outcome: {
+        ok: false,
+        errorCode: 'INVALID_NUTRITION_VALUE',
+        message: `${key} must be a number, not a string`,
+        diagnostics: {
+          ...baseDiag,
+          errorCode: 'INVALID_NUTRITION_VALUE',
+          stage: 'frontend_validation',
+          failedField: key,
+          validationReason: 'string_type',
+        },
+      },
+    }
+  }
+  if (typeof rawVal !== 'number') {
+    return {
+      ok: false,
+      outcome: {
+        ok: false,
+        errorCode: 'INVALID_NUTRITION_VALUE',
+        message: `${key} must be a number`,
+        diagnostics: {
+          ...baseDiag,
+          errorCode: 'INVALID_NUTRITION_VALUE',
+          stage: 'frontend_validation',
+          failedField: key,
+          validationReason: 'type_mismatch',
+        },
+      },
+    }
+  }
+  if (!Number.isFinite(rawVal)) {
+    return {
+      ok: false,
+      outcome: {
+        ok: false,
+        errorCode: 'INVALID_NUTRITION_VALUE',
+        message: `${key} must be a finite number`,
+        diagnostics: {
+          ...baseDiag,
+          errorCode: 'INVALID_NUTRITION_VALUE',
+          stage: 'frontend_validation',
+          failedField: key,
+          validationReason: 'non_finite_number',
+        },
+      },
+    }
+  }
+  if (rawVal < min || rawVal > max) {
+    return {
+      ok: false,
+      outcome: {
+        ok: false,
+        errorCode: 'OUT_OF_RANGE',
+        message: `${key} is out of valid range`,
+        diagnostics: {
+          ...baseDiag,
+          errorCode: 'OUT_OF_RANGE',
+          stage: 'frontend_validation',
+          failedField: key,
+          validationReason: 'out_of_range',
+        },
+      },
+    }
+  }
+  return { ok: true, value: rawVal }
+}
+
+/**
  * AI解析レスポンスの全項目を厳格にバリデーションする。
  * 不正値・欠損値・型不一致・範囲外の値はクランプによって正常値へ変換せず、推論失敗（ok: false）として返す。
  */
@@ -264,29 +475,82 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       diagnostics: {
         errorCode: 'INVALID_RESPONSE',
         stage: 'frontend_validation',
+        validationReason: 'type_mismatch',
       },
     }
   }
 
-  const record = raw as MealAiRawResponse
+  const record = raw as MealAiRawResponse & Record<string, unknown>
   const elapsedMs = typeof record.elapsedMs === 'number' && Number.isFinite(record.elapsedMs) && record.elapsedMs >= 0
     ? Math.round(record.elapsedMs)
     : undefined
+  const inspectedPresence = inspectMealAiRawFieldPresence(record)
+  const detectedSchemaKeys = detectMealAiRawSchemaKeys(record)
   const baseDiag = extractMealAiDiagnostics(record.diagnostics, {
     stage: 'frontend_validation',
     elapsedMs,
+    fieldPresence: inspectedPresence,
+    hasSchemaKeys: detectedSchemaKeys,
   })
 
-  if (typeof record.isFood !== 'boolean') {
+  // JSON Schema定義そのものが返却された場合
+  const hasSchemaContainer = (record.properties && typeof record.properties === 'object') || Array.isArray(record.required)
+  if (detectedSchemaKeys && hasSchemaContainer && typeof record.isFood !== 'boolean') {
+    return {
+      ok: false,
+      errorCode: 'SCHEMA_ECHO',
+      message: 'AI returned a JSON Schema definition instead of meal analysis data',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'SCHEMA_ECHO',
+        stage: 'frontend_validation',
+        failedField: 'isFood',
+        validationReason: 'schema_echo',
+        fieldPresence: inspectedPresence,
+        hasSchemaKeys: true,
+      },
+    }
+  }
+
+  if (!('isFood' in record) || record.isFood === undefined) {
     return {
       ok: false,
       errorCode: 'MISSING_FIELD',
-      message: 'isFood field is missing or not a boolean',
+      message: 'isFood field is missing',
       diagnostics: {
         ...baseDiag,
         errorCode: 'MISSING_FIELD',
         stage: 'frontend_validation',
         failedField: 'isFood',
+        validationReason: 'missing_key',
+      },
+    }
+  }
+  if (record.isFood === null) {
+    return {
+      ok: false,
+      errorCode: 'MISSING_FIELD',
+      message: 'isFood field is null',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'MISSING_FIELD',
+        stage: 'frontend_validation',
+        failedField: 'isFood',
+        validationReason: 'null_value',
+      },
+    }
+  }
+  if (typeof record.isFood !== 'boolean') {
+    return {
+      ok: false,
+      errorCode: 'INVALID_FIELD_TYPE',
+      message: 'isFood field is not a boolean',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'INVALID_FIELD_TYPE',
+        stage: 'frontend_validation',
+        failedField: 'isFood',
+        validationReason: typeof record.isFood === 'string' ? 'string_type' : 'type_mismatch',
       },
     }
   }
@@ -298,36 +562,80 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
       elapsedMs,
       diagnostics: {
         ...baseDiag,
-        stage: baseDiag.stage === 'unknown' ? 'completed' : baseDiag.stage,
+        stage: baseDiag.stage === 'unknown' || baseDiag.stage === 'frontend_validation' ? 'completed' : baseDiag.stage,
       },
     }
   }
 
   // dishName の検証
+  if (!('dishName' in record) || record.dishName === undefined) {
+    return {
+      ok: false,
+      errorCode: 'INVALID_DISH_NAME',
+      message: 'dishName is missing',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'INVALID_DISH_NAME',
+        stage: 'frontend_validation',
+        failedField: 'dishName',
+        validationReason: 'missing_key',
+      },
+    }
+  }
+  if (record.dishName === null) {
+    return {
+      ok: false,
+      errorCode: 'INVALID_DISH_NAME',
+      message: 'dishName is null',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'INVALID_DISH_NAME',
+        stage: 'frontend_validation',
+        failedField: 'dishName',
+        validationReason: 'null_value',
+      },
+    }
+  }
   if (typeof record.dishName !== 'string') {
     return {
       ok: false,
       errorCode: 'INVALID_DISH_NAME',
-      message: 'dishName is missing or not a string',
+      message: 'dishName is not a string',
       diagnostics: {
         ...baseDiag,
         errorCode: 'INVALID_DISH_NAME',
         stage: 'frontend_validation',
         failedField: 'dishName',
+        validationReason: 'type_mismatch',
       },
     }
   }
   const dishName = record.dishName.trim()
-  if (dishName.length === 0 || dishName.length > MEAL_AI_MAX_DISH_NAME_LENGTH) {
+  if (dishName.length === 0) {
     return {
       ok: false,
       errorCode: 'INVALID_DISH_NAME',
-      message: 'dishName is empty or exceeds maximum length',
+      message: 'dishName is empty',
       diagnostics: {
         ...baseDiag,
         errorCode: 'INVALID_DISH_NAME',
         stage: 'frontend_validation',
         failedField: 'dishName',
+        validationReason: 'empty_string',
+      },
+    }
+  }
+  if (dishName.length > MEAL_AI_MAX_DISH_NAME_LENGTH) {
+    return {
+      ok: false,
+      errorCode: 'INVALID_DISH_NAME',
+      message: 'dishName exceeds maximum length',
+      diagnostics: {
+        ...baseDiag,
+        errorCode: 'INVALID_DISH_NAME',
+        stage: 'frontend_validation',
+        failedField: 'dishName',
+        validationReason: 'string_too_long',
       },
     }
   }
@@ -345,10 +653,25 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
           errorCode: 'INVALID_FIELD_TYPE',
           stage: 'frontend_validation',
           failedField: 'recognizedItems',
+          validationReason: typeof record.recognizedItems === 'string' ? 'string_type' : 'type_mismatch',
         },
       }
     }
     for (const item of record.recognizedItems) {
+      if (item === null) {
+        return {
+          ok: false,
+          errorCode: 'INVALID_FIELD_TYPE',
+          message: 'recognizedItems elements must not be null',
+          diagnostics: {
+            ...baseDiag,
+            errorCode: 'INVALID_FIELD_TYPE',
+            stage: 'frontend_validation',
+            failedField: 'recognizedItems',
+            validationReason: 'null_value',
+          },
+        }
+      }
       if (typeof item !== 'string') {
         return {
           ok: false,
@@ -359,6 +682,7 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
             errorCode: 'INVALID_FIELD_TYPE',
             stage: 'frontend_validation',
             failedField: 'recognizedItems',
+            validationReason: 'type_mismatch',
           },
         }
       }
@@ -372,59 +696,18 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
     recognizedItems.push(dishName)
   }
 
-  // カロリー・三大栄養素の厳格検証（クランプ禁止）
-  if (!isStrictValidNumberInRange(record.calories, MEAL_AI_MIN_CALORIES, MEAL_AI_MAX_CALORIES)) {
-    return {
-      ok: false,
-      errorCode: 'OUT_OF_RANGE',
-      message: 'calories is missing or out of valid range',
-      diagnostics: {
-        ...baseDiag,
-        errorCode: 'OUT_OF_RANGE',
-        stage: 'frontend_validation',
-        failedField: 'calories',
-      },
-    }
-  }
-  if (!isStrictValidNumberInRange(record.protein, MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS)) {
-    return {
-      ok: false,
-      errorCode: 'OUT_OF_RANGE',
-      message: 'protein is missing or out of valid range',
-      diagnostics: {
-        ...baseDiag,
-        errorCode: 'OUT_OF_RANGE',
-        stage: 'frontend_validation',
-        failedField: 'protein',
-      },
-    }
-  }
-  if (!isStrictValidNumberInRange(record.fat, MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS)) {
-    return {
-      ok: false,
-      errorCode: 'OUT_OF_RANGE',
-      message: 'fat is missing or out of valid range',
-      diagnostics: {
-        ...baseDiag,
-        errorCode: 'OUT_OF_RANGE',
-        stage: 'frontend_validation',
-        failedField: 'fat',
-      },
-    }
-  }
-  if (!isStrictValidNumberInRange(record.carbs, MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS)) {
-    return {
-      ok: false,
-      errorCode: 'OUT_OF_RANGE',
-      message: 'carbs is missing or out of valid range',
-      diagnostics: {
-        ...baseDiag,
-        errorCode: 'OUT_OF_RANGE',
-        stage: 'frontend_validation',
-        failedField: 'carbs',
-      },
-    }
-  }
+  // カロリー・三大栄養素の厳格検証（クランプ禁止・0補完禁止）
+  const calCheck = validateStrictNutritionField(record, 'calories', MEAL_AI_MIN_CALORIES, MEAL_AI_MAX_CALORIES, baseDiag)
+  if (!calCheck.ok) return calCheck.outcome
+
+  const protCheck = validateStrictNutritionField(record, 'protein', MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS, baseDiag)
+  if (!protCheck.ok) return protCheck.outcome
+
+  const fatCheck = validateStrictNutritionField(record, 'fat', MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS, baseDiag)
+  if (!fatCheck.ok) return fatCheck.outcome
+
+  const carbsCheck = validateStrictNutritionField(record, 'carbs', MEAL_AI_MIN_MACRO_GRAMS, MEAL_AI_MAX_MACRO_GRAMS, baseDiag)
+  if (!carbsCheck.ok) return carbsCheck.outcome
 
   return {
     ok: true,
@@ -432,10 +715,10 @@ export function validateMealAiRawResponse(raw: unknown): MealAiAnalysisOutcome {
     estimation: {
       dishName,
       recognizedItems,
-      calories: Math.round(record.calories),
-      protein: roundToOneDecimal(record.protein),
-      fat: roundToOneDecimal(record.fat),
-      carbs: roundToOneDecimal(record.carbs),
+      calories: Math.round(calCheck.value),
+      protein: roundToOneDecimal(protCheck.value),
+      fat: roundToOneDecimal(fatCheck.value),
+      carbs: roundToOneDecimal(carbsCheck.value),
       elapsedMs,
     },
     diagnostics: {
@@ -497,6 +780,7 @@ export function extractMealAiErrorCode(error: unknown, fallbackCode = 'INFERENCE
       if (msg.includes('INVALID_IMAGE')) return 'INVALID_IMAGE'
       if (msg.includes('NOT_ENOUGH_STORAGE')) return 'NOT_ENOUGH_STORAGE'
       if (msg.includes('QUOTA_EXCEEDED')) return 'QUOTA_EXCEEDED'
+      if (msg.includes('SCHEMA_ECHO')) return 'SCHEMA_ECHO'
       if (msg.includes('OUTPUT_TRUNCATED')) return 'OUTPUT_TRUNCATED'
       if (msg.includes('INVALID_JSON')) return 'INVALID_JSON'
       if (msg.includes('EMPTY_RESPONSE')) return 'EMPTY_RESPONSE'
@@ -532,6 +816,7 @@ export async function checkMealAiAvailability(): Promise<MealAiAvailabilityResul
       status: normalizedStatus,
       featureStatus: result.featureStatus,
       platform: result.platform || 'android',
+      structuredOutputAvailable: typeof result.structuredOutputAvailable === 'boolean' ? result.structuredOutputAvailable : undefined,
       errorCode: result.errorCode,
       retryable: result.retryable,
     }

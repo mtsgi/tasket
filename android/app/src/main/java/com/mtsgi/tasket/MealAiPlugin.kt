@@ -22,6 +22,7 @@ import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.GenerativeModel
 import com.google.mlkit.genai.prompt.ImagePart
 import com.google.mlkit.genai.prompt.TextPart
+import com.google.mlkit.genai.prompt.generateTypedContentRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -92,14 +93,24 @@ class MealAiPlugin : Plugin() {
     }
 
     /**
-     * Gemini Nano（ML Kit GenAI Prompt API）の利用可否・モデル準備状態を確認する
+     * Gemini Nano（ML Kit GenAI Prompt API）の利用可否・モデル準備状態・Structured Output対応可否を確認する
      */
     @PluginMethod
     fun checkStatus(call: PluginCall) {
         pluginScope.launch {
             try {
+                var structuredOutputAvailable = false
                 val statusInt = withContext(Dispatchers.IO) {
-                    getOrCreateModel().checkStatus()
+                    val model = getOrCreateModel()
+                    val status = model.checkStatus()
+                    if (status == FeatureStatus.AVAILABLE) {
+                        structuredOutputAvailable = try {
+                            model.getAvailableFeatures().contains(Feature.STRUCTURED_OUTPUT)
+                        } catch (_: Exception) {
+                            false
+                        }
+                    }
+                    status
                 }
                 val statusStr = MealAiHelper.mapFeatureStatusToString(statusInt)
                 val result = JSObject()
@@ -107,6 +118,7 @@ class MealAiPlugin : Plugin() {
                     .put("status", statusStr)
                     .put("featureStatus", statusInt)
                     .put("platform", "android")
+                    .put("structuredOutputAvailable", structuredOutputAvailable)
                     .put("retryable", statusInt == FeatureStatus.DOWNLOADABLE || statusInt == FeatureStatus.DOWNLOADING)
                 call.resolve(result)
             } catch (e: CancellationException) {
@@ -120,6 +132,7 @@ class MealAiPlugin : Plugin() {
                     .put("status", classified.status)
                     .put("featureStatus", FeatureStatus.UNAVAILABLE)
                     .put("platform", "android")
+                    .put("structuredOutputAvailable", false)
                     .put("errorCode", classified.errorCode)
                     .put("retryable", classified.retryable)
                 call.resolve(result)
@@ -130,6 +143,7 @@ class MealAiPlugin : Plugin() {
                     .put("status", "unavailable")
                     .put("featureStatus", FeatureStatus.UNAVAILABLE)
                     .put("platform", "android")
+                    .put("structuredOutputAvailable", false)
                     .put("errorCode", "status_check_failed")
                     .put("retryable", true)
                 call.resolve(result)
@@ -242,7 +256,8 @@ class MealAiPlugin : Plugin() {
     }
 
     /**
-     * 個人情報を含まない診断情報（エラーコード・失敗段階・処理時間・試行回数・出力文字数・完了理由など）のJSObjectを構築する
+     * 個人情報を含まない診断情報（エラーコード・推論方式・Structured Output対応可否・必須フィールド存在状況・
+     * 失敗理由・スキーマキー有無・失敗段階・処理時間・試行回数・出力文字数・完了理由）のJSObjectを構築する
      */
     private fun buildDiagnosticsJsObject(
         stage: String,
@@ -253,6 +268,10 @@ class MealAiPlugin : Plugin() {
         finishReason: String? = null,
         failedField: String? = null,
         structuredOutputAvailable: Boolean? = null,
+        inferenceMode: String? = null,
+        validationReason: String? = null,
+        fieldPresence: String? = null,
+        hasSchemaKeys: Boolean? = null,
     ): JSObject {
         val obj = JSObject().put("stage", stage)
         if (!errorCode.isNullOrBlank()) {
@@ -276,6 +295,18 @@ class MealAiPlugin : Plugin() {
         if (structuredOutputAvailable != null) {
             obj.put("structuredOutputAvailable", structuredOutputAvailable)
         }
+        if (!inferenceMode.isNullOrBlank()) {
+            obj.put("inferenceMode", inferenceMode)
+        }
+        if (!validationReason.isNullOrBlank()) {
+            obj.put("validationReason", validationReason)
+        }
+        if (!fieldPresence.isNullOrBlank()) {
+            obj.put("fieldPresence", fieldPresence)
+        }
+        if (hasSchemaKeys != null) {
+            obj.put("hasSchemaKeys", hasSchemaKeys)
+        }
         return obj
     }
 
@@ -298,6 +329,7 @@ class MealAiPlugin : Plugin() {
                     stage = "input_validation",
                     errorCode = "INVALID_IMAGE",
                     attemptCount = 0,
+                    inferenceMode = MealAiHelper.INFERENCE_MODE_NONE,
                 ),
             )
             return
@@ -311,6 +343,7 @@ class MealAiPlugin : Plugin() {
                     stage = "input_validation",
                     errorCode = "BUSY",
                     attemptCount = 0,
+                    inferenceMode = MealAiHelper.INFERENCE_MODE_NONE,
                 ),
             )
             return
@@ -320,16 +353,19 @@ class MealAiPlugin : Plugin() {
             var bitmap: Bitmap? = null
             var currentStage = "status_check"
             var currentAttemptCount = 0
-            var structuredOutputAvailable: Boolean? = null
+            var structuredOutputAvailable = false
+            var currentInferenceMode = MealAiHelper.INFERENCE_MODE_NONE
             val totalStartTimeMs = SystemClock.elapsedRealtime()
             try {
                 val model = getOrCreateModel()
                 val featureStatus = withContext(Dispatchers.IO) {
                     val status = model.checkStatus()
-                    structuredOutputAvailable = try {
-                        model.getAvailableFeatures().contains(Feature.STRUCTURED_OUTPUT)
-                    } catch (_: Exception) {
-                        null
+                    if (status == FeatureStatus.AVAILABLE) {
+                        structuredOutputAvailable = try {
+                            model.getAvailableFeatures().contains(Feature.STRUCTURED_OUTPUT)
+                        } catch (_: Exception) {
+                            false
+                        }
                     }
                     status
                 }
@@ -347,6 +383,7 @@ class MealAiPlugin : Plugin() {
                                 errorCode = "MODEL_DOWNLOAD_REQUIRED",
                                 attemptCount = 0,
                                 structuredOutputAvailable = structuredOutputAvailable,
+                                inferenceMode = currentInferenceMode,
                             ),
                         )
                         return@launch
@@ -360,6 +397,7 @@ class MealAiPlugin : Plugin() {
                                 errorCode = "MODEL_DOWNLOADING",
                                 attemptCount = 0,
                                 structuredOutputAvailable = structuredOutputAvailable,
+                                inferenceMode = currentInferenceMode,
                             ),
                         )
                         return@launch
@@ -373,6 +411,7 @@ class MealAiPlugin : Plugin() {
                                 errorCode = "MODEL_UNAVAILABLE",
                                 attemptCount = 0,
                                 structuredOutputAvailable = structuredOutputAvailable,
+                                inferenceMode = currentInferenceMode,
                             ),
                         )
                         return@launch
@@ -390,42 +429,83 @@ class MealAiPlugin : Plugin() {
 
                 val execResult = withContext(Dispatchers.IO) {
                     withTimeout(INFERENCE_TIMEOUT_MS) {
-                        MealAiHelper.runInferenceWithFormatRetry(
+                        MealAiHelper.runHybridInference(
+                            structuredOutputAvailable = structuredOutputAvailable,
                             maxAttempts = MealAiHelper.MAX_INFERENCE_ATTEMPTS,
-                        ) { attemptIndex, isRetry ->
-                            currentAttemptCount = attemptIndex
-                            try {
-                                model.clearImplicitCaches()
-                            } catch (_: Exception) {
-                                // 暗黙キャッシュのクリア失敗は推論継続に影響させない
-                            }
-
-                            val prompt = MealAiHelper.buildMealAnalysisPrompt(
-                                hintText = hintText,
-                                locale = locale,
-                                isRetry = isRetry,
-                            )
-                            val request = GenerateContentRequest.Builder(
-                                ImagePart(decodedBitmap),
-                                TextPart(prompt),
-                            ).apply {
-                                temperature = if (isRetry) {
-                                    MealAiHelper.RETRY_TEMPERATURE
-                                } else {
-                                    MealAiHelper.INITIAL_TEMPERATURE
+                            performTypedAttempt = { attemptIndex ->
+                                currentAttemptCount = attemptIndex
+                                currentInferenceMode = MealAiHelper.INFERENCE_MODE_TYPED
+                                try {
+                                    model.clearImplicitCaches()
+                                } catch (_: Exception) {
+                                    // 暗黙キャッシュのクリア失敗は推論継続に影響させない
                                 }
-                                candidateCount = 1
-                                maxOutputTokens = MealAiHelper.MAX_OUTPUT_TOKENS
-                                enableThinking = false
-                            }.build()
 
-                            val response = model.generateContent(request)
-                            val candidate = response.candidates.firstOrNull()
-                            MealAiHelper.RawInferenceAttempt(
-                                text = candidate?.text,
-                                finishReason = candidate?.finishReason,
-                            )
-                        }
+                                val typedPrompt = MealAiHelper.buildTypedMealAnalysisPrompt(
+                                    hintText = hintText,
+                                    locale = locale,
+                                )
+                                val baseRequest = GenerateContentRequest.Builder(
+                                    ImagePart(decodedBitmap),
+                                    TextPart(typedPrompt),
+                                ).apply {
+                                    temperature = MealAiHelper.INITIAL_TEMPERATURE
+                                    candidateCount = 1
+                                    maxOutputTokens = MealAiHelper.MAX_OUTPUT_TOKENS
+                                    enableThinking = false
+                                }.build()
+
+                                val typedRequest = generateTypedContentRequest(
+                                    baseRequest,
+                                    TypedMealAnalysisResult::class,
+                                )
+                                val typedResponse = model.generateContent(typedRequest)
+                                val candidate = typedResponse.candidates.firstOrNull()
+                                MealAiHelper.TypedInferenceAttempt(
+                                    response = candidate?.response,
+                                    finishReason = candidate?.finishReason,
+                                )
+                            },
+                            performFreeformAttempt = { attemptIndex, isRetry ->
+                                currentAttemptCount = attemptIndex
+                                currentInferenceMode = if (structuredOutputAvailable && attemptIndex > 1) {
+                                    MealAiHelper.INFERENCE_MODE_TYPED_THEN_FREEFORM
+                                } else {
+                                    MealAiHelper.INFERENCE_MODE_FREEFORM
+                                }
+                                try {
+                                    model.clearImplicitCaches()
+                                } catch (_: Exception) {
+                                    // 暗黙キャッシュのクリア失敗は推論継続に影響させない
+                                }
+
+                                val freeformPrompt = MealAiHelper.buildFreeformMealAnalysisPrompt(
+                                    hintText = hintText,
+                                    locale = locale,
+                                    isRetry = isRetry,
+                                )
+                                val request = GenerateContentRequest.Builder(
+                                    ImagePart(decodedBitmap),
+                                    TextPart(freeformPrompt),
+                                ).apply {
+                                    temperature = if (isRetry) {
+                                        MealAiHelper.RETRY_TEMPERATURE
+                                    } else {
+                                        MealAiHelper.INITIAL_TEMPERATURE
+                                    }
+                                    candidateCount = 1
+                                    maxOutputTokens = MealAiHelper.MAX_OUTPUT_TOKENS
+                                    enableThinking = false
+                                }.build()
+
+                                val response = model.generateContent(request)
+                                val candidate = response.candidates.firstOrNull()
+                                MealAiHelper.RawInferenceAttempt(
+                                    text = candidate?.text,
+                                    finishReason = candidate?.finishReason,
+                                )
+                            },
+                        )
                     }
                 }
 
@@ -443,7 +523,10 @@ class MealAiPlugin : Plugin() {
                             attemptCount = execResult.attemptCount,
                             responseLength = execResult.lastResponseLength,
                             finishReason = execResult.lastFinishReason,
-                            structuredOutputAvailable = structuredOutputAvailable,
+                            structuredOutputAvailable = execResult.structuredOutputAvailable,
+                            inferenceMode = execResult.inferenceMode,
+                            fieldPresence = execResult.fieldPresence,
+                            hasSchemaKeys = execResult.hasSchemaKeys,
                         )
                         val result = JSObject()
                             .put("isFood", true)
@@ -464,7 +547,10 @@ class MealAiPlugin : Plugin() {
                             attemptCount = execResult.attemptCount,
                             responseLength = execResult.lastResponseLength,
                             finishReason = execResult.lastFinishReason,
-                            structuredOutputAvailable = structuredOutputAvailable,
+                            structuredOutputAvailable = execResult.structuredOutputAvailable,
+                            inferenceMode = execResult.inferenceMode,
+                            fieldPresence = execResult.fieldPresence,
+                            hasSchemaKeys = execResult.hasSchemaKeys,
                         )
                         val result = JSObject()
                             .put("isFood", false)
@@ -477,7 +563,7 @@ class MealAiPlugin : Plugin() {
                     is MealAiHelper.ParseOutcome.Failure -> {
                         Log.w(
                             TAG,
-                            "Validation of AI output failed: code=${outcome.errorCode}, stage=${outcome.stage}, field=${outcome.failedField ?: "none"}, attempts=${execResult.attemptCount}, len=${execResult.lastResponseLength}, finish=${execResult.lastFinishReason}, elapsedMs=$elapsedMs",
+                            "Validation of AI output failed: code=${outcome.errorCode}, mode=${execResult.inferenceMode}, structured=${execResult.structuredOutputAvailable}, stage=${outcome.stage}, field=${outcome.failedField ?: "none"}, reason=${outcome.validationReason ?: "none"}, schemaKeys=${outcome.hasSchemaKeys}, attempts=${execResult.attemptCount}, len=${execResult.lastResponseLength}, finish=${execResult.lastFinishReason}, elapsedMs=$elapsedMs",
                         )
                         val diagnostics = buildDiagnosticsJsObject(
                             stage = outcome.stage,
@@ -487,14 +573,18 @@ class MealAiPlugin : Plugin() {
                             responseLength = execResult.lastResponseLength,
                             finishReason = execResult.lastFinishReason,
                             failedField = outcome.failedField,
-                            structuredOutputAvailable = structuredOutputAvailable,
+                            structuredOutputAvailable = execResult.structuredOutputAvailable,
+                            inferenceMode = execResult.inferenceMode,
+                            validationReason = outcome.validationReason,
+                            fieldPresence = outcome.fieldPresence,
+                            hasSchemaKeys = outcome.hasSchemaKeys,
                         )
                         call.reject(outcome.reason, outcome.errorCode, diagnostics)
                     }
                 }
             } catch (e: TimeoutCancellationException) {
                 val elapsedMs = max(0L, SystemClock.elapsedRealtime() - totalStartTimeMs)
-                Log.w(TAG, "Meal photo analysis timed out: stage=$currentStage, attempts=$currentAttemptCount, elapsedMs=$elapsedMs")
+                Log.w(TAG, "Meal photo analysis timed out: mode=$currentInferenceMode, stage=$currentStage, attempts=$currentAttemptCount, elapsedMs=$elapsedMs")
                 call.reject(
                     "Meal analysis timed out",
                     "TIMEOUT",
@@ -504,6 +594,7 @@ class MealAiPlugin : Plugin() {
                         elapsedMs = elapsedMs,
                         attemptCount = currentAttemptCount,
                         structuredOutputAvailable = structuredOutputAvailable,
+                        inferenceMode = currentInferenceMode,
                     ),
                 )
             } catch (e: CancellationException) {
@@ -517,6 +608,7 @@ class MealAiPlugin : Plugin() {
                         elapsedMs = elapsedMs,
                         attemptCount = currentAttemptCount,
                         structuredOutputAvailable = structuredOutputAvailable,
+                        inferenceMode = currentInferenceMode,
                     ),
                 )
                 throw e
@@ -532,6 +624,7 @@ class MealAiPlugin : Plugin() {
                         elapsedMs = elapsedMs,
                         attemptCount = currentAttemptCount,
                         structuredOutputAvailable = structuredOutputAvailable,
+                        inferenceMode = currentInferenceMode,
                     ),
                 )
             } catch (e: GenAiException) {
@@ -540,7 +633,7 @@ class MealAiPlugin : Plugin() {
                 val errorCode = reason.uppercase()
                 Log.w(
                     TAG,
-                    "GenAiException during analyzeMealPhoto: errorCode=${e.errorCode}, mapped=$errorCode, stage=$currentStage, attempts=$currentAttemptCount, elapsedMs=$elapsedMs",
+                    "GenAiException during analyzeMealPhoto: errorCode=${e.errorCode}, mapped=$errorCode, mode=$currentInferenceMode, stage=$currentStage, attempts=$currentAttemptCount, elapsedMs=$elapsedMs",
                 )
                 call.reject(
                     "On-device AI inference failed ($reason)",
@@ -551,13 +644,14 @@ class MealAiPlugin : Plugin() {
                         elapsedMs = elapsedMs,
                         attemptCount = currentAttemptCount,
                         structuredOutputAvailable = structuredOutputAvailable,
+                        inferenceMode = currentInferenceMode,
                     ),
                 )
             } catch (e: Exception) {
                 val elapsedMs = max(0L, SystemClock.elapsedRealtime() - totalStartTimeMs)
                 Log.w(
                     TAG,
-                    "Unexpected exception during analyzeMealPhoto: type=${e.javaClass.simpleName}, stage=$currentStage, attempts=$currentAttemptCount, elapsedMs=$elapsedMs",
+                    "Unexpected exception during analyzeMealPhoto: type=${e.javaClass.simpleName}, mode=$currentInferenceMode, stage=$currentStage, attempts=$currentAttemptCount, elapsedMs=$elapsedMs",
                 )
                 call.reject(
                     "On-device AI inference failed",
@@ -568,6 +662,7 @@ class MealAiPlugin : Plugin() {
                         elapsedMs = elapsedMs,
                         attemptCount = currentAttemptCount,
                         structuredOutputAvailable = structuredOutputAvailable,
+                        inferenceMode = currentInferenceMode,
                     ),
                 )
             } finally {

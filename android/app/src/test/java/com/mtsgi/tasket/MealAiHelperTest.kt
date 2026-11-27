@@ -46,40 +46,132 @@ class MealAiHelperTest {
     }
 
     @Test
-    fun `buildMealAnalysisPrompt sanitizes hintText, selects output language, and eliminates concrete example nutrient number bias`() {
-        val promptJa = MealAiHelper.buildMealAnalysisPrompt("  鮭定食\nご飯大盛り\t ", "ja")
-        assertTrue(promptJa.contains("Use Japanese for dishName and recognizedItems."))
-        assertTrue(promptJa.contains("鮭定食 ご飯大盛り"))
-        assertFalse(promptJa.contains("\nご飯大盛り"))
-        assertFalse(promptJa.contains("IMPORTANT: Output ONLY a single compact valid JSON object"))
+    fun `buildTypedMealAnalysisPrompt and buildFreeformMealAnalysisPrompt eliminate example number bias and schema echo risk`() {
+        val typedJa = MealAiHelper.buildTypedMealAnalysisPrompt("  醤油ラーメン\n大盛り\t ", "ja")
+        assertTrue(typedJa.contains("Japanese"))
+        assertTrue(typedJa.contains("醤油ラーメン 大盛り"))
+        assertFalse(typedJa.contains("\n大盛り"))
+        // 型付き推論用プロンプトにはJSON Schema定義を含めない
+        assertFalse(typedJa.contains("\"properties\""))
+
+        val freeformJa = MealAiHelper.buildFreeformMealAnalysisPrompt("  鮭定食\nご飯大盛り\t ", "ja")
+        assertTrue(freeformJa.contains("Japanese"))
+        assertTrue(freeformJa.contains("鮭定食 ご飯大盛り"))
+        assertFalse(freeformJa.contains("\nご飯大盛り"))
+        assertFalse(freeformJa.contains("IMPORTANT RETRY INSTRUCTION"))
 
         // 旧プロンプトで問題となった具体的な栄養素例示値（550, 24.5, 18.0, 68.0）が含まれていないことを検証
-        assertFalse(promptJa.contains("550"))
-        assertFalse(promptJa.contains("24.5"))
-        assertFalse(promptJa.contains("18.0"))
-        assertFalse(promptJa.contains("68.0"))
+        assertFalse(typedJa.contains("550"))
+        assertFalse(typedJa.contains("24.5"))
+        assertFalse(freeformJa.contains("550"))
+        assertFalse(freeformJa.contains("24.5"))
+        assertFalse(freeformJa.contains("18.0"))
+        assertFalse(freeformJa.contains("68.0"))
 
-        // ML Kit Structured Output互換のJSON Schema定義が含まれていることを検証
-        val schemaJson = org.json.JSONObject(MealAiHelper.buildMealAnalysisJsonSchema("Japanese"))
-        assertEquals("object", schemaJson.getString("type"))
-        val props = schemaJson.getJSONObject("properties")
-        assertTrue(props.has("isFood"))
-        assertTrue(props.has("dishName"))
-        assertTrue(props.has("recognizedItems"))
-        assertTrue(props.has("calories"))
-        assertTrue(props.has("protein"))
-        assertTrue(props.has("fat"))
-        assertTrue(props.has("carbs"))
+        // 自由形式プロンプトがJSON Schema自体の出力を禁止し、7必須キーとJSON数値型を明示していることを検証
+        assertTrue(freeformJa.contains("do NOT include keys such as \"type\", \"properties\", or \"required\""))
+        for (field in MealAiHelper.REQUIRED_FIELDS) {
+            assertTrue(freeformJa.contains("\"$field\""))
+        }
 
-        val promptEnRetry = MealAiHelper.buildMealAnalysisPrompt(null, "en-US", isRetry = true)
-        assertTrue(promptEnRetry.contains("Use English for dishName and recognizedItems."))
+        val promptEnRetry = MealAiHelper.buildFreeformMealAnalysisPrompt(null, "en-US", isRetry = true)
+        assertTrue(promptEnRetry.contains("English"))
         assertFalse(promptEnRetry.contains("User note / context hint"))
-        assertTrue(promptEnRetry.contains("IMPORTANT: Output ONLY a single compact valid JSON object"))
+        assertTrue(promptEnRetry.contains("IMPORTANT RETRY INSTRUCTION"))
 
         // 200文字を超えるヒントは切り詰められる
         val longHint = "あ".repeat(250)
         val sanitized = MealAiHelper.sanitizeHintText(longHint)
         assertEquals(MealAiHelper.MAX_HINT_LENGTH, sanitized.length)
+    }
+
+    @Test
+    fun `validateTypedMealAnalysisResult validates @Generable TypedMealAnalysisResult and rounds nutrition values`() {
+        val validTyped = TypedMealAnalysisResult(
+            isFood = true,
+            dishName = "  味噌ラーメン  ",
+            recognizedItems = listOf("味噌ラーメン", "チャーシュー", "味玉"),
+            calories = 742.6,
+            protein = 28.44,
+            fat = 24.16,
+            carbs = 96.85,
+        )
+        val outcome = MealAiHelper.validateTypedMealAnalysisResult(validTyped, finishReason = 0)
+        assertTrue(outcome is MealAiHelper.ParseOutcome.Success)
+        val success = outcome as MealAiHelper.ParseOutcome.Success
+        assertEquals("味噌ラーメン", success.data.dishName)
+        assertEquals(listOf("味噌ラーメン", "チャーシュー", "味玉"), success.data.recognizedItems)
+        assertEquals(743, success.data.calories)
+        assertEquals(28.4, success.data.protein, 0.001)
+        assertEquals(24.2, success.data.fat, 0.001)
+        assertEquals(96.9, success.data.carbs, 0.001)
+        assertEquals(
+            "isFood:bool,dishName:str,recognizedItems:arr,calories:num,protein:num,fat:num,carbs:num",
+            success.fieldPresence,
+        )
+        assertFalse(success.hasSchemaKeys)
+
+        // isFood: false の型付き出力
+        val notFoodTyped = TypedMealAnalysisResult(isFood = false)
+        assertTrue(MealAiHelper.validateTypedMealAnalysisResult(notFoodTyped, finishReason = 0) is MealAiHelper.ParseOutcome.NotFood)
+
+        // 範囲外の型付き出力（クランプせず OUT_OF_RANGE / out_of_range として拒否）
+        val outOfRangeTyped = TypedMealAnalysisResult(
+            isFood = true,
+            dishName = "ラーメン",
+            recognizedItems = listOf("ラーメン"),
+            calories = 12000.0,
+            protein = 25.0,
+            fat = 20.0,
+            carbs = 80.0,
+        )
+        val rangeFailure = MealAiHelper.validateTypedMealAnalysisResult(outOfRangeTyped, finishReason = 0)
+        assertTrue(rangeFailure is MealAiHelper.ParseOutcome.Failure)
+        assertEquals("OUT_OF_RANGE", (rangeFailure as MealAiHelper.ParseOutcome.Failure).errorCode)
+        assertEquals("calories", rangeFailure.failedField)
+        assertEquals("out_of_range", rangeFailure.validationReason)
+
+        // null レスポンス（MAX_TOKENS時は OUTPUT_TRUNCATED、それ以外は EMPTY_RESPONSE）
+        val maxTokenNull = MealAiHelper.validateTypedMealAnalysisResult(null, finishReason = 1)
+        assertEquals("OUTPUT_TRUNCATED", (maxTokenNull as MealAiHelper.ParseOutcome.Failure).errorCode)
+        assertEquals("truncated_json", maxTokenNull.validationReason)
+
+        val stopNull = MealAiHelper.validateTypedMealAnalysisResult(null, finishReason = 0)
+        assertEquals("EMPTY_RESPONSE", (stopNull as MealAiHelper.ParseOutcome.Failure).errorCode)
+        assertEquals("null_typed_response", stopNull.validationReason)
+    }
+
+    @Test
+    fun `parseMealAnalysisResponse detects JSON Schema echo when model outputs schema definition itself`() {
+        val echoedSchema = """
+            {
+              "type": "object",
+              "description": "Meal photo nutrition estimation result",
+              "properties": {
+                "isFood": {"type": "boolean"},
+                "dishName": {"type": "string"},
+                "recognizedItems": {"type": "array"},
+                "calories": {"type": "integer"},
+                "protein": {"type": "number"},
+                "fat": {"type": "number"},
+                "carbs": {"type": "number"}
+              },
+              "required": ["isFood", "dishName", "recognizedItems", "calories", "protein", "fat", "carbs"]
+            }
+        """.trimIndent()
+
+        val outcome = MealAiHelper.parseMealAnalysisResponse(echoedSchema, finishReason = 0)
+        assertTrue(outcome is MealAiHelper.ParseOutcome.Failure)
+        val failure = outcome as MealAiHelper.ParseOutcome.Failure
+        assertEquals("SCHEMA_ECHO", failure.errorCode)
+        assertEquals("schema_validation", failure.stage)
+        assertEquals("isFood", failure.failedField)
+        assertEquals("schema_echo", failure.validationReason)
+        assertTrue(failure.hasSchemaKeys)
+        assertEquals(
+            "isFood:missing,dishName:missing,recognizedItems:missing,calories:missing,protein:missing,fat:missing,carbs:missing",
+            failure.fieldPresence,
+        )
     }
 
     @Test
@@ -132,66 +224,121 @@ class MealAiHelperTest {
         val failure1 = outcomeMaxTokens as MealAiHelper.ParseOutcome.Failure
         assertEquals("OUTPUT_TRUNCATED", failure1.errorCode)
         assertEquals("response_parse", failure1.stage)
+        assertEquals("truncated_json", failure1.validationReason)
 
         // finishReason が STOP(0) または null でも '{' が閉じられていない場合は OUTPUT_TRUNCATED として検出する
         val outcomeUnclosed = MealAiHelper.parseMealAnalysisResponse(truncatedRaw, finishReason = 0)
         assertTrue(outcomeUnclosed is MealAiHelper.ParseOutcome.Failure)
         assertEquals("OUTPUT_TRUNCATED", (outcomeUnclosed as MealAiHelper.ParseOutcome.Failure).errorCode)
+        assertEquals("truncated_json", outcomeUnclosed.validationReason)
     }
 
     @Test
-    fun `runInferenceWithFormatRetry retries at most once on format failure and does not retry on NotFood or Success`() = kotlinx.coroutines.runBlocking {
-        // 1. 1回目がJSON途中切断、2回目（自動リトライ）で成功するケース
-        var callCount1 = 0
-        val retryFlags1 = mutableListOf<Boolean>()
-        val result1 = MealAiHelper.runInferenceWithFormatRetry { attemptIndex, isRetry ->
-            callCount1 = attemptIndex
-            retryFlags1.add(isRetry)
-            if (attemptIndex == 1) {
-                MealAiHelper.RawInferenceAttempt(
-                    text = """{"isFood":true,"dishName":"ハンバーグ""",
-                    finishReason = 1,
-                )
-            } else {
-                MealAiHelper.RawInferenceAttempt(
-                    text = """{"isFood":true,"dishName":"ハンバーグ定食","recognizedItems":["ハンバーグ","ライス"],"calories":780,"protein":34.2,"fat":32.5,"carbs":82.0}""",
+    fun `runHybridInference selects typed mode when available, falls back to freeform on typed failure, and uses freeform when unavailable`() = kotlinx.coroutines.runBlocking {
+        // 1. Structured Output 対応時: 1回目の typed 推論で成功すれば attemptCount = 1, inferenceMode = "typed"
+        var typedCalls1 = 0
+        var freeformCalls1 = 0
+        val res1 = MealAiHelper.runHybridInference(
+            structuredOutputAvailable = true,
+            performTypedAttempt = { attempt ->
+                typedCalls1 = attempt
+                MealAiHelper.TypedInferenceAttempt(
+                    response = TypedMealAnalysisResult(
+                        isFood = true,
+                        dishName = "豚骨ラーメン",
+                        recognizedItems = listOf("豚骨ラーメン", "チャーシュー"),
+                        calories = 820.0,
+                        protein = 31.5,
+                        fat = 34.0,
+                        carbs = 88.0,
+                    ),
                     finishReason = 0,
                 )
-            }
-        }
-        assertEquals(2, callCount1)
-        assertEquals(listOf(false, true), retryFlags1)
-        assertEquals(2, result1.attemptCount)
-        assertEquals("STOP", result1.lastFinishReason)
-        assertTrue(result1.outcome is MealAiHelper.ParseOutcome.Success)
+            },
+            performFreeformAttempt = { attempt, _ ->
+                freeformCalls1 = attempt
+                MealAiHelper.RawInferenceAttempt(null, 0)
+            },
+        )
+        assertEquals(1, typedCalls1)
+        assertEquals(0, freeformCalls1)
+        assertEquals(1, res1.attemptCount)
+        assertEquals(MealAiHelper.INFERENCE_MODE_TYPED, res1.inferenceMode)
+        assertTrue(res1.structuredOutputAvailable)
+        assertTrue(res1.outcome is MealAiHelper.ParseOutcome.Success)
 
-        // 2. 1回目・2回目ともに不正JSONの場合は2回で終了し Failure を返すケース
-        var callCount2 = 0
-        val result2 = MealAiHelper.runInferenceWithFormatRetry { attemptIndex, _ ->
-            callCount2 = attemptIndex
-            MealAiHelper.RawInferenceAttempt(
-                text = "Invalid output without JSON",
-                finishReason = 0,
-            )
-        }
-        assertEquals(2, callCount2)
-        assertEquals(2, result2.attemptCount)
-        assertEquals("Invalid output without JSON".length, result2.lastResponseLength)
-        assertTrue(result2.outcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("INVALID_JSON", (result2.outcome as MealAiHelper.ParseOutcome.Failure).errorCode)
+        // 2. Structured Output 対応時: 1回目の typed 推論が検証失敗（または構造化出力例外）したとき、
+        //    2回目に自動で freeform フォールバックを実行し inferenceMode = "typed_then_freeform" となること
+        var typedCalls2 = 0
+        var freeformCalls2 = 0
+        val res2 = MealAiHelper.runHybridInference(
+            structuredOutputAvailable = true,
+            performTypedAttempt = { attempt ->
+                typedCalls2 = attempt
+                throw GenAiException(
+                    "JSON structure does not match expected type. FinishReason: 0. Response: {\"isFood\":true,\"dishName\":\"ラーメン\",\"calories\":\"800kcal\"}",
+                    null,
+                    -105,
+                )
+            },
+            performFreeformAttempt = { attempt, isRetry ->
+                freeformCalls2 = attempt
+                assertTrue(isRetry)
+                MealAiHelper.RawInferenceAttempt(
+                    text = """{"isFood":true,"dishName":"醤油ラーメン","recognizedItems":["醤油ラーメン"],"calories":680,"protein":26.0,"fat":18.5,"carbs":92.0}""",
+                    finishReason = 0,
+                )
+            },
+        )
+        assertEquals(1, typedCalls2)
+        assertEquals(2, freeformCalls2)
+        assertEquals(2, res2.attemptCount)
+        assertEquals(MealAiHelper.INFERENCE_MODE_TYPED_THEN_FREEFORM, res2.inferenceMode)
+        assertTrue(res2.outcome is MealAiHelper.ParseOutcome.Success)
 
-        // 3. 1回目が isFood: false（NotFood）の場合はリトライせず1回で終了するケース
-        var callCount3 = 0
-        val result3 = MealAiHelper.runInferenceWithFormatRetry { attemptIndex, _ ->
-            callCount3 = attemptIndex
+        // 3. Structured Output 非対応時: freeform で実行され、1回目失敗→2回目再試行で成功すること
+        var typedCalls3 = 0
+        var freeformCalls3 = 0
+        val res3 = MealAiHelper.runHybridInference(
+            structuredOutputAvailable = false,
+            performTypedAttempt = { attempt ->
+                typedCalls3 = attempt
+                MealAiHelper.TypedInferenceAttempt(null, 0)
+            },
+            performFreeformAttempt = { attempt, _ ->
+                freeformCalls3 = attempt
+                if (attempt == 1) {
+                    MealAiHelper.RawInferenceAttempt(
+                        text = """{"isFood":true,"dishName":"ハンバーグ""",
+                        finishReason = 1,
+                    )
+                } else {
+                    MealAiHelper.RawInferenceAttempt(
+                        text = """{"isFood":true,"dishName":"ハンバーグ定食","recognizedItems":["ハンバーグ","ライス"],"calories":780,"protein":34.2,"fat":32.5,"carbs":82.0}""",
+                        finishReason = 0,
+                    )
+                }
+            },
+        )
+        assertEquals(0, typedCalls3)
+        assertEquals(2, freeformCalls3)
+        assertEquals(2, res3.attemptCount)
+        assertEquals(MealAiHelper.INFERENCE_MODE_FREEFORM, res3.inferenceMode)
+        assertFalse(res3.structuredOutputAvailable)
+        assertTrue(res3.outcome is MealAiHelper.ParseOutcome.Success)
+
+        // 4. 1回目が isFood: false（NotFood）の場合はリトライ・フォールバックせず1回で終了するケース
+        var freeformCalls4 = 0
+        val res4 = MealAiHelper.runInferenceWithFormatRetry { attemptIndex, _ ->
+            freeformCalls4 = attemptIndex
             MealAiHelper.RawInferenceAttempt(
                 text = """{"isFood":false,"dishName":"","recognizedItems":[],"calories":0,"protein":0,"fat":0,"carbs":0}""",
                 finishReason = 0,
             )
         }
-        assertEquals(1, callCount3)
-        assertEquals(1, result3.attemptCount)
-        assertTrue(result3.outcome is MealAiHelper.ParseOutcome.NotFood)
+        assertEquals(1, freeformCalls4)
+        assertEquals(1, res4.attemptCount)
+        assertTrue(res4.outcome is MealAiHelper.ParseOutcome.NotFood)
     }
 
     @Test
@@ -202,62 +349,104 @@ class MealAiHelperTest {
     }
 
     @Test
-    fun `parseMealAnalysisResponse rejects missing, null, non-numeric, or out-of-range values without clamping`() {
-        // 1. カロリー欠損
+    fun `parseMealAnalysisResponse rejects missing, null, string, non-numeric, or out-of-range values with detailed privacy-safe diagnostics`() {
+        // 0. isFood 欠損 / null / 文字列
+        val missingIsFood = """{"dishName":"ラーメン","recognizedItems":["ラーメン"],"calories":700,"protein":25,"fat":20,"carbs":85}"""
+        val missingIsFoodOutcome = MealAiHelper.parseMealAnalysisResponse(missingIsFood) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("MISSING_FIELD", missingIsFoodOutcome.errorCode)
+        assertEquals("isFood", missingIsFoodOutcome.failedField)
+        assertEquals("missing_key", missingIsFoodOutcome.validationReason)
+        assertEquals(
+            "isFood:missing,dishName:str,recognizedItems:arr,calories:num,protein:num,fat:num,carbs:num",
+            missingIsFoodOutcome.fieldPresence,
+        )
+        assertFalse(missingIsFoodOutcome.hasSchemaKeys)
+        // 診断情報に料理名「ラーメン」が含まれないこと
+        assertFalse(missingIsFoodOutcome.fieldPresence!!.contains("ラーメン"))
+
+        // 1. カロリー欠損（missing_key）
         val missingCalories = """{"isFood":true,"dishName":"カレー","recognizedItems":["カレー"],"protein":20,"fat":15,"carbs":80}"""
-        val missingCalOutcome = MealAiHelper.parseMealAnalysisResponse(missingCalories)
-        assertTrue(missingCalOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("calories", (missingCalOutcome as MealAiHelper.ParseOutcome.Failure).failedField)
+        val missingCalOutcome = MealAiHelper.parseMealAnalysisResponse(missingCalories) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("INVALID_NUTRITION_VALUE", missingCalOutcome.errorCode)
+        assertEquals("calories", missingCalOutcome.failedField)
+        assertEquals("missing_key", missingCalOutcome.validationReason)
+        assertEquals(
+            "isFood:bool,dishName:str,recognizedItems:arr,calories:missing,protein:num,fat:num,carbs:num",
+            missingCalOutcome.fieldPresence,
+        )
 
-        // 2. タンパク質がnull
+        // 2. タンパク質がnull（null_value）
         val nullProtein = """{"isFood":true,"dishName":"カレー","recognizedItems":["カレー"],"calories":700,"protein":null,"fat":15,"carbs":80}"""
-        val nullProtOutcome = MealAiHelper.parseMealAnalysisResponse(nullProtein)
-        assertTrue(nullProtOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("protein", (nullProtOutcome as MealAiHelper.ParseOutcome.Failure).failedField)
+        val nullProtOutcome = MealAiHelper.parseMealAnalysisResponse(nullProtein) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("INVALID_NUTRITION_VALUE", nullProtOutcome.errorCode)
+        assertEquals("protein", nullProtOutcome.failedField)
+        assertEquals("null_value", nullProtOutcome.validationReason)
+        assertEquals(
+            "isFood:bool,dishName:str,recognizedItems:arr,calories:num,protein:null,fat:num,carbs:num",
+            nullProtOutcome.fieldPresence,
+        )
 
-        // 3. 脂質が文字列
+        // 3. 脂質が文字列（string_type）
         val stringFat = """{"isFood":true,"dishName":"カレー","recognizedItems":["カレー"],"calories":700,"protein":20,"fat":"15g","carbs":80}"""
-        val strFatOutcome = MealAiHelper.parseMealAnalysisResponse(stringFat)
-        assertTrue(strFatOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("fat", (strFatOutcome as MealAiHelper.ParseOutcome.Failure).failedField)
+        val strFatOutcome = MealAiHelper.parseMealAnalysisResponse(stringFat) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("INVALID_NUTRITION_VALUE", strFatOutcome.errorCode)
+        assertEquals("fat", strFatOutcome.failedField)
+        assertEquals("string_type", strFatOutcome.validationReason)
+        assertEquals(
+            "isFood:bool,dishName:str,recognizedItems:arr,calories:num,protein:num,fat:str,carbs:num",
+            strFatOutcome.fieldPresence,
+        )
+        assertFalse(strFatOutcome.fieldPresence!!.contains("15g"))
 
-        // 4. 負のカロリー（クランプせずエラーにすること）
+        // 3b. カロリーがその他の型不一致（type_mismatch）
+        val arrayCalories = """{"isFood":true,"dishName":"カレー","recognizedItems":["カレー"],"calories":[700],"protein":20,"fat":15,"carbs":80}"""
+        val arrCalOutcome = MealAiHelper.parseMealAnalysisResponse(arrayCalories) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("INVALID_NUTRITION_VALUE", arrCalOutcome.errorCode)
+        assertEquals("calories", arrCalOutcome.failedField)
+        assertEquals("type_mismatch", arrCalOutcome.validationReason)
+
+        // 4. 負のカロリー（クランプせず OUT_OF_RANGE / out_of_range にすること）
         val negativeCalories = """{"isFood":true,"dishName":"カレー","recognizedItems":["カレー"],"calories":-10,"protein":20,"fat":15,"carbs":80}"""
-        val negOutcome = MealAiHelper.parseMealAnalysisResponse(negativeCalories)
-        assertTrue(negOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("OUT_OF_RANGE", (negOutcome as MealAiHelper.ParseOutcome.Failure).errorCode)
+        val negOutcome = MealAiHelper.parseMealAnalysisResponse(negativeCalories) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("OUT_OF_RANGE", negOutcome.errorCode)
         assertEquals("calories", negOutcome.failedField)
+        assertEquals("out_of_range", negOutcome.validationReason)
 
         // 5. 上限超過のカロリー（10000超をクランプせずエラーにすること）
         val excessiveCalories = """{"isFood":true,"dishName":"カレー","recognizedItems":["カレー"],"calories":15000,"protein":20,"fat":15,"carbs":80}"""
-        val excOutcome = MealAiHelper.parseMealAnalysisResponse(excessiveCalories)
-        assertTrue(excOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("OUT_OF_RANGE", (excOutcome as MealAiHelper.ParseOutcome.Failure).errorCode)
+        val excOutcome = MealAiHelper.parseMealAnalysisResponse(excessiveCalories) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("OUT_OF_RANGE", excOutcome.errorCode)
+        assertEquals("out_of_range", excOutcome.validationReason)
 
         // 6. 上限超過の炭水化物（1000g超をクランプせずエラーにすること）
         val excessiveCarbs = """{"isFood":true,"dishName":"カレー","recognizedItems":["カレー"],"calories":700,"protein":20,"fat":15,"carbs":1200}"""
-        val carbsOutcome = MealAiHelper.parseMealAnalysisResponse(excessiveCarbs)
-        assertTrue(carbsOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("OUT_OF_RANGE", (carbsOutcome as MealAiHelper.ParseOutcome.Failure).errorCode)
+        val carbsOutcome = MealAiHelper.parseMealAnalysisResponse(excessiveCarbs) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("OUT_OF_RANGE", carbsOutcome.errorCode)
         assertEquals("carbs", carbsOutcome.failedField)
+        assertEquals("out_of_range", carbsOutcome.validationReason)
 
-        // 7. dishName が空文字
+        // 7. dishName が空文字（empty_string）
         val emptyDishName = """{"isFood":true,"dishName":"   ","recognizedItems":["カレー"],"calories":700,"protein":20,"fat":15,"carbs":80}"""
-        val dishOutcome = MealAiHelper.parseMealAnalysisResponse(emptyDishName)
-        assertTrue(dishOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("INVALID_DISH_NAME", (dishOutcome as MealAiHelper.ParseOutcome.Failure).errorCode)
+        val dishOutcome = MealAiHelper.parseMealAnalysisResponse(emptyDishName) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("INVALID_DISH_NAME", dishOutcome.errorCode)
         assertEquals("dishName", dishOutcome.failedField)
+        assertEquals("empty_string", dishOutcome.validationReason)
 
-        // 8. recognizedItems が配列でない
+        // 8. recognizedItems が文字列（string_type）
         val invalidItems = """{"isFood":true,"dishName":"カレー","recognizedItems":"カレーライス","calories":700,"protein":20,"fat":15,"carbs":80}"""
-        val itemsOutcome = MealAiHelper.parseMealAnalysisResponse(invalidItems)
-        assertTrue(itemsOutcome is MealAiHelper.ParseOutcome.Failure)
-        assertEquals("INVALID_FIELD_TYPE", (itemsOutcome as MealAiHelper.ParseOutcome.Failure).errorCode)
+        val itemsOutcome = MealAiHelper.parseMealAnalysisResponse(invalidItems) as MealAiHelper.ParseOutcome.Failure
+        assertEquals("INVALID_FIELD_TYPE", itemsOutcome.errorCode)
         assertEquals("recognizedItems", itemsOutcome.failedField)
+        assertEquals("string_type", itemsOutcome.validationReason)
 
         // 9. JSONとして不正
-        assertTrue(MealAiHelper.parseMealAnalysisResponse("Not a JSON response") is MealAiHelper.ParseOutcome.Failure)
-        assertTrue(MealAiHelper.parseMealAnalysisResponse("") is MealAiHelper.ParseOutcome.Failure)
+        val notJsonOutcome = MealAiHelper.parseMealAnalysisResponse("Not a JSON response") as MealAiHelper.ParseOutcome.Failure
+        assertEquals("INVALID_JSON", notJsonOutcome.errorCode)
+        assertEquals("json_not_found", notJsonOutcome.validationReason)
+
+        val emptyOutcome = MealAiHelper.parseMealAnalysisResponse("") as MealAiHelper.ParseOutcome.Failure
+        assertEquals("EMPTY_RESPONSE", emptyOutcome.errorCode)
+        assertEquals("empty_response", emptyOutcome.validationReason)
     }
 
     @Test
@@ -317,4 +506,55 @@ class MealAiHelperTest {
         assertEquals(90, transpose.rotationDegrees)
         assertTrue(transpose.flipHorizontal)
     }
+
+    @Test
+    fun `KSP generates GenerableProvider for TypedMealAnalysisResult and ServiceLoader discovers it`() {
+        val provider = TypedMealAnalysisResult_GeneratedProvider()
+        assertEquals(TypedMealAnalysisResult::class, provider.targetClass)
+        val detail = provider.getGenerableDetail()
+        val guideNames = detail.guideDetails.map { it.name }
+        assertEquals(MealAiHelper.REQUIRED_FIELDS, guideNames)
+
+        val caloriesGuide = detail.guideDetails.first { it.name == "calories" }
+        assertEquals(0.0, caloriesGuide.minimum!!, 0.001)
+        assertEquals(10000.0, caloriesGuide.maximum!!, 0.001)
+        assertFalse(caloriesGuide.nullable)
+
+        val itemsGuide = detail.guideDetails.first { it.name == "recognizedItems" }
+        assertTrue(itemsGuide.isList)
+        assertEquals(8, itemsGuide.maxItems)
+
+        val loadedProviders = java.util.ServiceLoader.load(
+            com.google.mlkit.genai.schema.guided.GenerableProvider::class.java,
+            TypedMealAnalysisResult::class.java.classLoader,
+        ).toList()
+        assertTrue(loadedProviders.any { it.targetClass == TypedMealAnalysisResult::class })
+    }
+
+    @Test
+    fun `runHybridInference rethrows non-recoverable system GenAiException without falling back to freeform`() = kotlinx.coroutines.runBlocking {
+        var freeformCalled = false
+        var caughtCode: Int? = null
+        try {
+            MealAiHelper.runHybridInference(
+                structuredOutputAvailable = true,
+                performTypedAttempt = {
+                    throw GenAiException(
+                        "Quota exceeded",
+                        null,
+                        GenAiException.ErrorCode.PER_APP_BATTERY_USE_QUOTA_EXCEEDED,
+                    )
+                },
+                performFreeformAttempt = { _, _ ->
+                    freeformCalled = true
+                    MealAiHelper.RawInferenceAttempt(null, 0)
+                },
+            )
+        } catch (e: GenAiException) {
+            caughtCode = e.errorCode
+        }
+        assertEquals(GenAiException.ErrorCode.PER_APP_BATTERY_USE_QUOTA_EXCEEDED, caughtCode)
+        assertFalse(freeformCalled)
+    }
 }
+
