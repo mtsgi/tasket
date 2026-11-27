@@ -285,11 +285,12 @@ describe('healthConnect utilities', () => {
 
       const syncAfterWrite = applyWrittenFieldsToSyncMetadata(
         initial,
-        ['waterIntake'],
+        [],
         payload,
         {
-          writtenFields: ['waterIntake'],
+          writtenFields: [],
           skippedPermissionFields: [],
+          localOnlyFields: ['waterIntake'],
           externalValues: { waterIntake: 1000 },
           tasketValues: { waterIntake: 0 },
         },
@@ -313,6 +314,42 @@ describe('healthConnect utilities', () => {
       )
       expect(readAgain.mergedData.waterIntake).toBe(800)
       expect(readAgain.skippedManualFields).toContain('waterIntake')
+    })
+
+    it('加算型データの書き込み時に読み取り権限がなく localOnlyFields となった場合は同期済み扱いとせず、次回権限付与後に書き込み対象となる', () => {
+      const initial = createHealthData({
+        date: '2025-12-15',
+        weight: undefined,
+        bodyFatPercentage: undefined,
+        waterIntake: 1200,
+        healthConnectSync: {
+          waterIntake: 1000,
+          externalValues: { waterIntake: 1000 },
+        },
+      })
+
+      const { payload, targetFields } = buildHealthConnectWritePayload(initial)
+      expect(targetFields).toEqual(['waterIntake'])
+
+      // 読み取り権限がなく安全に差分計算できないため plugin が localOnlyFields: ['waterIntake']（externalValues なし）を返したケース
+      const syncAfterSkipped = applyWrittenFieldsToSyncMetadata(
+        initial,
+        [],
+        payload,
+        {
+          writtenFields: [],
+          skippedPermissionFields: [],
+          localOnlyFields: ['waterIntake'],
+        },
+      )
+      expect(syncAfterSkipped.waterIntake).toBe(1000)
+
+      // 権限付与後に再度 buildHealthConnectWritePayload を呼ぶと再び書き込み対象になる
+      const retryBuild = buildHealthConnectWritePayload({
+        ...initial,
+        healthConnectSync: syncAfterSkipped,
+      })
+      expect(retryBuild.targetFields).toEqual(['waterIntake'])
     })
 
     it('他アプリ由来の心拍数サンプルが存在する日は心拍数のHC書き込みをスキップし、ローカル優先値として保護する', () => {

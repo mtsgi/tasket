@@ -722,4 +722,8 @@ export default {
   '一部の項目のみHealth Connectから取得しました（取得失敗: {count}項目）':
     'Fetched some metrics from Health Connect (failed: {count} metrics)',
   '一部の項目のみHealth Connectへ書き込みました': 'Partially wrote health data to Health Connect',
+  'ローカル保存は完了しましたが、Health Connectへ書き込めない無効な値が含まれているため書き込みをスキップしました':
+    'Saved locally, but skipped writing to Health Connect because invalid values were included',
+  '他アプリ由来のデータとの重複を防ぐため、ローカル保存のみ行いました（Health Connectへの書き込みはスキップしました）':
+    'Saved locally only to prevent duplicate counting with data from other apps (skipped writing to Health Connect)',
 }

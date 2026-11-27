@@ -1,6 +1,7 @@
 package com.mtsgi.tasket
 
 import java.time.Instant
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -11,6 +12,19 @@ object HealthConnectSyncHelper {
 
     const val DEFAULT_PAGE_SIZE = 500
     const val DEFAULT_MAX_PAGES = 20
+
+    enum class PaginationStopReason {
+        COMPLETED,
+        MAX_PAGES_REACHED,
+        DUPLICATE_PAGE_TOKEN
+    }
+
+    data class PaginatedReadResult<T>(
+        val records: List<T>,
+        val isComplete: Boolean,
+        val stopReason: PaginationStopReason,
+        val pagesRead: Int
+    )
 
     data class HeartRateSampleMeta(
         val time: Instant,
@@ -63,15 +77,23 @@ object HealthConnectSyncHelper {
     }
 
     /**
-     * pageToken を用いた全ページ取得ループ (P2-7)
-     * - nextPageToken が null または空文字 "" の場合に終了
-     * - 同一トークンの再出現または maxPages 到達時に安全に打ち切り、無限ループ・メモリ枯渇を防止
+     * pageToken を用いた全ページ取得ループ（完了ステータス付き） (P2-7, Review #3)
+     * - nextPageToken が null または空文字 "" の場合に COMPLETED として正常終了
+     * - 同一トークンの再出現時は DUPLICATE_PAGE_TOKEN（isComplete = false）
+     * - maxPages 到達時にまだ nextToken が残っている場合は MAX_PAGES_REACHED（isComplete = false）
      */
-    suspend fun <T> readPaginatedRecords(
+    suspend fun <T> readPaginatedRecordsWithStatus(
         maxPages: Int = DEFAULT_MAX_PAGES,
         fetchPage: suspend (pageToken: String?) -> Pair<List<T>, String?>
-    ): List<T> {
-        if (maxPages <= 0) return emptyList()
+    ): PaginatedReadResult<T> {
+        if (maxPages <= 0) {
+            return PaginatedReadResult(
+                records = emptyList(),
+                isComplete = false,
+                stopReason = PaginationStopReason.MAX_PAGES_REACHED,
+                pagesRead = 0
+            )
+        }
         val allRecords = mutableListOf<T>()
         val seenTokens = mutableSetOf<String>()
         var currentToken: String? = null
@@ -83,16 +105,48 @@ object HealthConnectSyncHelper {
             pageCount++
 
             if (nextToken.isNullOrEmpty()) {
-                break
+                return PaginatedReadResult(
+                    records = allRecords,
+                    isComplete = true,
+                    stopReason = PaginationStopReason.COMPLETED,
+                    pagesRead = pageCount
+                )
             }
             if (!seenTokens.add(nextToken)) {
-                // 同一 pageToken が繰り返された場合は無限ループ防止のため終了
-                break
+                return PaginatedReadResult(
+                    records = allRecords,
+                    isComplete = false,
+                    stopReason = PaginationStopReason.DUPLICATE_PAGE_TOKEN,
+                    pagesRead = pageCount
+                )
             }
             currentToken = nextToken
         }
 
-        return allRecords
+        return PaginatedReadResult(
+            records = allRecords,
+            isComplete = false,
+            stopReason = PaginationStopReason.MAX_PAGES_REACHED,
+            pagesRead = pageCount
+        )
+    }
+
+    /**
+     * pageToken を用いた全ページ取得ループ
+     * 最大ページ数到達やトークン重複により全件取得できなかった場合は例外を送出し、
+     * 不完全な取得結果が正常値や差分書き込みの基準値として扱われることを防止する (Review #3)
+     */
+    suspend fun <T> readPaginatedRecords(
+        maxPages: Int = DEFAULT_MAX_PAGES,
+        fetchPage: suspend (pageToken: String?) -> Pair<List<T>, String?>
+    ): List<T> {
+        val result = readPaginatedRecordsWithStatus(maxPages, fetchPage)
+        if (!result.isComplete) {
+            throw IllegalStateException(
+                "Incomplete paginated read: ${result.stopReason} after ${result.pagesRead} pages"
+            )
+        }
+        return result.records
     }
 
     /**
@@ -185,6 +239,108 @@ object HealthConnectSyncHelper {
         } else {
             AdditiveWriteAction.DeleteTasketRecord
         }
+    }
+
+    /**
+     * 当日 [startOfDay, endOfDay) 内で他アプリ記録の時間帯（externalIntervals）と重複しない区間 [start, end] を探索する (Review #2)
+     * Health Connect の Activity 系集計（StepsRecord.COUNT_TOTAL, ExerciseSessionRecord.EXERCISE_DURATION_TOTAL）は
+     * 時間帯が重複するレコード間でアプリ優先順位に基づく重複排除を行うため、差分レコードは非重複区間に配置する。
+     * 必要な長さの非重複区間が存在しない場合は null を返す。
+     */
+    fun findNonOverlappingInterval(
+        startOfDay: Instant,
+        endOfDay: Instant,
+        durationSeconds: Long,
+        preferredStart: Instant,
+        externalIntervals: List<Pair<Instant, Instant>>
+    ): Pair<Instant, Instant>? {
+        val dayBoundEnd = endOfDay.minusSeconds(1)
+        val requiredSeconds = durationSeconds.coerceAtLeast(1L)
+        val dayTotalSeconds = dayBoundEnd.epochSecond - startOfDay.epochSecond
+        if (requiredSeconds > dayTotalSeconds) {
+            return null
+        }
+
+        // 当日内にクリップして重複する他アプリ区間をマージ
+        val clipped = externalIntervals
+            .mapNotNull { (rawStart, rawEnd) ->
+                val s = if (rawStart.isBefore(startOfDay)) startOfDay else rawStart
+                val e = if (rawEnd.isAfter(dayBoundEnd)) dayBoundEnd else rawEnd
+                if (e.isAfter(s)) s to e else null
+            }
+            .sortedWith(compareBy<Pair<Instant, Instant>> { it.first }.thenBy { it.second })
+
+        val mergedExternal = mutableListOf<Pair<Instant, Instant>>()
+        for ((s, e) in clipped) {
+            if (mergedExternal.isEmpty()) {
+                mergedExternal.add(s to e)
+            } else {
+                val last = mergedExternal.last()
+                if (!s.isAfter(last.second)) {
+                    val newEnd = if (e.isAfter(last.second)) e else last.second
+                    mergedExternal[mergedExternal.lastIndex] = last.first to newEnd
+                } else {
+                    mergedExternal.add(s to e)
+                }
+            }
+        }
+
+        val clampedPreferredStart = when {
+            preferredStart.isBefore(startOfDay) -> startOfDay
+            preferredStart.plusSeconds(requiredSeconds).isAfter(dayBoundEnd) -> dayBoundEnd.minusSeconds(requiredSeconds)
+            else -> preferredStart
+        }
+        val clampedPreferredEnd = clampedPreferredStart.plusSeconds(requiredSeconds)
+
+        if (mergedExternal.isEmpty()) {
+            return clampedPreferredStart to clampedPreferredEnd
+        }
+
+        // preferredStart からの区間が他アプリ区間と一切重複しない場合はそのまま採用
+        val overlapsPreferred = mergedExternal.any { (extStart, extEnd) ->
+            clampedPreferredStart.isBefore(extEnd) && extStart.isBefore(clampedPreferredEnd)
+        }
+        if (!overlapsPreferred) {
+            return clampedPreferredStart to clampedPreferredEnd
+        }
+
+        // 空き区間（ギャップ）を列挙
+        val freeGaps = mutableListOf<Pair<Instant, Instant>>()
+        var cursor = startOfDay
+        for ((extStart, extEnd) in mergedExternal) {
+            if (extStart.isAfter(cursor)) {
+                freeGaps.add(cursor to extStart)
+            }
+            if (extEnd.isAfter(cursor)) {
+                cursor = extEnd
+            }
+        }
+        if (dayBoundEnd.isAfter(cursor)) {
+            freeGaps.add(cursor to dayBoundEnd)
+        }
+
+        val candidateSlots = freeGaps.mapNotNull { (gapStart, gapEnd) ->
+            val available = gapEnd.epochSecond - gapStart.epochSecond
+            if (available < requiredSeconds) {
+                null
+            } else {
+                // gap 内で preferredStart に最も近い位置を選択
+                val slotStart = when {
+                    clampedPreferredStart.isBefore(gapStart) -> gapStart
+                    clampedPreferredStart.plusSeconds(requiredSeconds).isAfter(gapEnd) -> gapEnd.minusSeconds(requiredSeconds)
+                    else -> clampedPreferredStart
+                }
+                slotStart to slotStart.plusSeconds(requiredSeconds)
+            }
+        }
+
+        return candidateSlots.minWithOrNull(
+            compareBy<Pair<Instant, Instant>> { (slotStart, _) ->
+                if (!slotStart.isBefore(clampedPreferredStart)) 0 else 1
+            }.thenBy { (slotStart, _) ->
+                abs(slotStart.epochSecond - clampedPreferredStart.epochSecond)
+            }
+        )
     }
 
     /**

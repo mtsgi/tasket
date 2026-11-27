@@ -1,8 +1,9 @@
 /**
  * HealthDataForm コンポーネントのユニットテスト
- * - 未保存フォーム入力がある状態での Health Connect 取得確認ダイアログと編集値保護 (P2-5)
+ * - 未保存フォーム入力がある状態での Health Connect 取得確認ダイアログ、編集値保護、および未編集項目のフォームDOM反映 (P2-5, Review #1)
+ * - 書き込み処理中の非同期フォーム編集の保護 (Review #1)
  * - 未編集の睡眠セッションの秒以下精度保持 (P2-4)
- * - Health Connect 読み取り全失敗・権限不足時のエラー処理と lastSyncedAt 不更新 (P2-6)
+ * - Health Connect 読み取り・書き込み結果（allFailed, localOnlyFields, invalidFields, 部分成功）の通知と lastSyncedAt 整合性 (P2-6, Review #5)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
@@ -33,17 +34,28 @@ describe('HealthDataForm.vue', () => {
     window.confirm = vi.fn(() => true)
   })
 
-  it('未保存の手動入力がある状態で「Health Connectから取得」を押すとconfirmを表示し、承認時は編集中の値を保持したまま未編集項目のみ反映する', async () => {
+  function findNumberInputByLabel(wrapper: Awaited<ReturnType<typeof mountSuspended>>, labelText: string) {
+    const groups = wrapper.findAll('.form-group')
+    const targetGroup = groups.find(g => g.find('label').exists() && g.find('label').text() === labelText)
+    if (!targetGroup) {
+      throw new Error(`Form group with label "${labelText}" not found`)
+    }
+    return targetGroup.find('input[type="number"]')
+  }
+
+  it('未保存の手動入力がある状態で「Health Connectから取得」を押すとconfirmを表示し、編集中のフォーム入力値を保持したまま未編集項目のフォーム入力値にも取得データを反映する', async () => {
     const initialRecord = createHealthData({
       id: 'hd-1',
       date: testDate,
       weight: 65.0,
       bodyFatPercentage: undefined,
       steps: 3000,
+      waterIntake: 800,
       healthMemo: '',
       healthConnectSync: {
         weight: 65.0,
         steps: 3000,
+        waterIntake: 800,
       },
     })
 
@@ -57,8 +69,9 @@ describe('HealthDataForm.vue', () => {
     vi.mocked(readHealthConnectDailyData).mockResolvedValue({
       date: testDate,
       weight: 68.5, // HC側では68.5だが、フォーム上で64.2に未保存編集中のため保護されるべき
-      steps: 10500, // フォーム上で未編集のため更新されるべき
-      readFields: ['weight', 'steps'],
+      steps: 10500, // フォーム上で未編集のためストアおよびフォーム入力(DOM)が10500に更新されるべき
+      waterIntake: 1500, // フォーム上で未編集のためストアおよびフォーム入力(DOM)が1500に更新されるべき
+      readFields: ['weight', 'steps', 'waterIntake'],
     })
 
     const settingsStore = useSettingsStore()
@@ -73,12 +86,16 @@ describe('HealthDataForm.vue', () => {
     await wrapper.find('.health-data-header').trigger('click')
     await flushPromises()
 
-    // 体重と体調メモをフォーム上で編集（まだ「保存」は押さない）
-    const numberInputs = wrapper.findAll('input[type="number"]')
-    expect(numberInputs.length).toBeGreaterThan(0)
-    await numberInputs[0]!.setValue('64.2')
-
+    const weightInput = findNumberInputByLabel(wrapper, '体重')
+    const stepsInput = findNumberInputByLabel(wrapper, '歩数')
+    const waterInput = findNumberInputByLabel(wrapper, '水分摂取量')
     const memoTextarea = wrapper.find('textarea')
+
+    expect((stepsInput.element as HTMLInputElement).value).toBe('3000')
+    expect((waterInput.element as HTMLInputElement).value).toBe('800')
+
+    // 体重と体調メモをフォーム上で編集（まだ「保存」は押さない）
+    await weightInput.setValue('64.2')
     await memoTextarea.setValue('未保存の体調メモ')
 
     // 1. confirm でキャンセルを選択した場合は取得を実行しない
@@ -98,11 +115,76 @@ describe('HealthDataForm.vue', () => {
 
     expect(readHealthConnectDailyData).toHaveBeenCalledWith(testDate)
     // フォーム上の未保存入力（体重 64.2、メモ '未保存の体調メモ'）が失われていないこと
-    expect((numberInputs[0]!.element as HTMLInputElement).value).toBe('64.2')
+    expect((weightInput.element as HTMLInputElement).value).toBe('64.2')
     expect((memoTextarea.element as HTMLTextAreaElement).value).toBe('未保存の体調メモ')
-    // 未編集だった歩数は Health Connect の 10500 に更新されていること
+
+    // 未編集だった歩数・水分摂取量はストアだけでなくフォームの実際の input 値にも反映されていること (Review #1)
+    expect((stepsInput.element as HTMLInputElement).value).toBe('10500')
+    expect((waterInput.element as HTMLInputElement).value).toBe('1500')
     const healthDataStore = useHealthDataStore()
     expect(healthDataStore.getHealthDataByDateString(testDate)?.steps).toBe(10500)
+    expect(healthDataStore.getHealthDataByDateString(testDate)?.waterIntake).toBe(1500)
+  })
+
+  it('Health Connectへの書き込み通信中にフォーム上で追加編集した内容は、完了後の再読み込みで上書きされず保持される', async () => {
+    const initialRecord = createHealthData({
+      id: 'hd-inflight-1',
+      date: testDate,
+      weight: 65.0,
+      bodyFatPercentage: undefined,
+      healthMemo: '初期メモ',
+      healthConnectSync: {
+        weight: 65.0,
+      },
+    })
+
+    let dbRecord = { ...initialRecord }
+    vi.mocked(getAllHealthData).mockImplementation(async () => [dbRecord])
+    vi.mocked(getHealthDataByDate).mockImplementation(async () => dbRecord)
+    vi.mocked(saveHealthData).mockImplementation(async (saved) => {
+      dbRecord = { ...saved }
+    })
+
+    let resolveWrite!: (res: Awaited<ReturnType<typeof writeHealthConnectDailyData>>) => void
+    vi.mocked(writeHealthConnectDailyData).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveWrite = resolve
+    }))
+
+    const settingsStore = useSettingsStore()
+    settingsStore.healthConnectSettings = { enabled: true, lastSyncedAt: null }
+
+    const wrapper = await mountSuspended(HealthDataForm, {
+      props: { date: testDate },
+    })
+    await flushPromises()
+
+    await wrapper.find('.health-data-header').trigger('click')
+    await flushPromises()
+
+    const weightInput = findNumberInputByLabel(wrapper, '体重')
+    const memoTextarea = wrapper.find('textarea')
+    await weightInput.setValue('64.0')
+
+    // 書き込みを開始（Promise未解決状態）
+    const hcButtons = wrapper.findAll('.hc-actions-buttons button')
+    const writeClickPromise = hcButtons[1]!.trigger('click')
+    await flushPromises()
+
+    // 書き込み通信中にユーザーが体調メモを編集
+    await memoTextarea.setValue('通信中に追記したメモ')
+
+    // 書き込み完了
+    resolveWrite({
+      writtenFields: ['weight'],
+      skippedPermissionFields: [],
+      clientRecordVersions: { weight: 2001 },
+    })
+    await writeClickPromise
+    await flushPromises()
+
+    // 通信中に編集した体調メモが初期メモで上書きされずフォーム上に残っていること
+    expect((memoTextarea.element as HTMLTextAreaElement).value).toBe('通信中に追記したメモ')
+    expect((weightInput.element as HTMLInputElement).value).toBe('64')
   })
 
   it('Health Connectから取得済みの未編集の睡眠セッションは、他項目を編集して書き込んでも秒以下のISO時刻精度を失わず再書き込みされない', async () => {
@@ -152,8 +234,8 @@ describe('HealthDataForm.vue', () => {
     await flushPromises()
 
     // 体重のみ 65.0 -> 64.5 に変更し、睡眠セッションには触れないまま「Health Connectへ書き込み」を押す
-    const numberInputs = wrapper.findAll('input[type="number"]')
-    await numberInputs[0]!.setValue('64.5')
+    const weightInput = findNumberInputByLabel(wrapper, '体重')
+    await weightInput.setValue('64.5')
 
     const hcButtons = wrapper.findAll('.hc-actions-buttons button')
     await hcButtons[1]!.trigger('click')
@@ -199,5 +281,89 @@ describe('HealthDataForm.vue', () => {
 
     expect(updateSettingsSpy).not.toHaveBeenCalled()
     expect(window.alert).toHaveBeenCalled()
+  })
+
+  it('書き込み時に localOnlyFields や invalidFields が発生した場合に、ローカル保存のみ・無効値スキップ・部分成功を適切に区別して通知する', async () => {
+    const initialRecord = createHealthData({
+      id: 'hd-notify-1',
+      date: testDate,
+      weight: 65.0,
+      bodyFatPercentage: undefined,
+      waterIntake: 1000,
+      healthConnectSync: {
+        weight: 65.0,
+        waterIntake: 1000,
+        externalValues: { waterIntake: 1000 },
+      },
+    })
+
+    let dbRecord = { ...initialRecord }
+    vi.mocked(getAllHealthData).mockImplementation(async () => [dbRecord])
+    vi.mocked(getHealthDataByDate).mockImplementation(async () => dbRecord)
+    vi.mocked(saveHealthData).mockImplementation(async (saved) => {
+      dbRecord = { ...saved }
+    })
+
+    const settingsStore = useSettingsStore()
+    settingsStore.healthConnectSettings = { enabled: true, lastSyncedAt: null }
+    const updateSettingsSpy = vi.spyOn(settingsStore, 'updateHealthConnectSettings')
+
+    const wrapper = await mountSuspended(HealthDataForm, {
+      props: { date: testDate },
+    })
+    await flushPromises()
+
+    await wrapper.find('.health-data-header').trigger('click')
+    await flushPromises()
+
+    const waterInput = findNumberInputByLabel(wrapper, '水分摂取量')
+    const weightInput = findNumberInputByLabel(wrapper, '体重')
+    const hcButtons = wrapper.findAll('.hc-actions-buttons button')
+
+    // 1. 読み取り権限不足等で localOnlyFields のみが返った場合 -> ローカル保存のみ通知し lastSyncedAt は更新しない
+    await waterInput.setValue('1200')
+    vi.mocked(writeHealthConnectDailyData).mockResolvedValueOnce({
+      writtenFields: [],
+      skippedPermissionFields: [],
+      localOnlyFields: ['waterIntake'],
+    })
+    await hcButtons[1]!.trigger('click')
+    await flushPromises()
+
+    expect(updateSettingsSpy).not.toHaveBeenCalled()
+    expect(window.alert).toHaveBeenLastCalledWith(
+      expect.stringContaining('他アプリ由来のデータとの重複を防ぐため、ローカル保存のみ行いました'),
+    )
+
+    // 2. invalidFields のみが返った場合 -> 無効値スキップを通知し lastSyncedAt は更新しない
+    await weightInput.setValue('600')
+    vi.mocked(writeHealthConnectDailyData).mockResolvedValueOnce({
+      writtenFields: [],
+      skippedPermissionFields: [],
+      invalidFields: ['weight'],
+    })
+    await hcButtons[1]!.trigger('click')
+    await flushPromises()
+
+    expect(updateSettingsSpy).not.toHaveBeenCalled()
+    expect(window.alert).toHaveBeenLastCalledWith(
+      expect.stringContaining('Health Connectへ書き込めない無効な値が含まれているため書き込みをスキップしました'),
+    )
+
+    // 3. weight は書き込み成功、waterIntake は localOnlyFields となった場合 -> 部分成功として通知し lastSyncedAt を更新する
+    await weightInput.setValue('64.5')
+    vi.mocked(writeHealthConnectDailyData).mockResolvedValueOnce({
+      writtenFields: ['weight'],
+      skippedPermissionFields: [],
+      localOnlyFields: ['waterIntake'],
+      clientRecordVersions: { weight: 3001 },
+    })
+    await hcButtons[1]!.trigger('click')
+    await flushPromises()
+
+    expect(updateSettingsSpy).toHaveBeenCalledOnce()
+    expect(window.alert).toHaveBeenLastCalledWith(
+      expect.stringContaining('一部の項目のみHealth Connectへ書き込みました'),
+    )
   })
 })

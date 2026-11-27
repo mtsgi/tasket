@@ -159,6 +159,7 @@ export interface HealthConnectWriteResult {
   writtenFields: HealthConnectMetricKey[]
   skippedPermissionFields: HealthConnectMetricKey[]
   invalidFields?: HealthConnectMetricKey[]
+  localOnlyFields?: HealthConnectMetricKey[]
   failedFields?: HealthConnectMetricKey[]
   fieldErrors?: Partial<Record<HealthConnectMetricKey, string>>
   externalValues?: HealthConnectMetricValueMap
@@ -758,6 +759,19 @@ export function applyWrittenFieldsToSyncMetadata(
           }
         }
       }
+    }
+  }
+
+  // 他アプリ由来合計より小さい値へ減少修正され Tasket レコード削除＋ローカル保護となった項目のメタデータ反映
+  // （読み取り権限不足で externalValues が確認できなかった場合は、後で権限付与時に再送できるよう同期済み扱いにはしない）
+  for (const field of writeResult?.localOnlyFields ?? []) {
+    if (failedSet.has(field) || field === 'sleep') {
+      continue
+    }
+    const verifiedExtVal = writeResult?.externalValues?.[field]
+    const val = writtenPayload[field]
+    if (verifiedExtVal !== undefined && val !== undefined) {
+      nextSync[field] = val
     }
   }
 

@@ -607,7 +607,7 @@ export const useHealthDataStore = defineStore('healthData', {
             failedFields: [],
             fieldErrors: {},
             localOnlyFields,
-            nothingToWrite: true,
+            nothingToWrite: localOnlyFields.length === 0,
           }
         }
 
@@ -615,9 +615,11 @@ export const useHealthDataStore = defineStore('healthData', {
         const invalidFields = writeResult.invalidFields ?? []
         const failedFields = writeResult.failedFields ?? []
         const fieldErrors = writeResult.fieldErrors ?? {}
+        const pluginLocalOnlyFields = writeResult.localOnlyFields ?? []
+        const combinedLocalOnlyFields = [...new Set<HealthConnectMetricKey>([...localOnlyFields, ...pluginLocalOnlyFields])]
         const hasPendingSleepDeletes = (writeResult.pendingDeleteSleepClientRecordIds?.length ?? 0) > 0
 
-        if (writeResult.writtenFields.length > 0 || hasPendingSleepDeletes) {
+        if (writeResult.writtenFields.length > 0 || hasPendingSleepDeletes || pluginLocalOnlyFields.length > 0) {
           const updatedSync = applyWrittenFieldsToSyncMetadata(
             { ...savedData, healthConnectSync: previousSync },
             writeResult.writtenFields,
@@ -635,7 +637,7 @@ export const useHealthDataStore = defineStore('healthData', {
             invalidFields,
             failedFields,
             fieldErrors,
-            localOnlyFields,
+            localOnlyFields: combinedLocalOnlyFields,
             nothingToWrite: false,
           }
         }
@@ -647,7 +649,7 @@ export const useHealthDataStore = defineStore('healthData', {
           invalidFields,
           failedFields,
           fieldErrors,
-          localOnlyFields,
+          localOnlyFields: combinedLocalOnlyFields,
           nothingToWrite: false,
         }
       }

@@ -284,40 +284,136 @@ function loadHealthData(options?: { preserveFields?: ReadonlySet<string> }) {
   if (!preserve?.has('healthMemo')) healthMemo.value = data?.healthMemo || ''
 }
 
+interface FormSnapshot {
+  numeric: Record<string, number | undefined>
+  sleepSessions: SleepSession[]
+  sleepDraftRaw: Array<{ startTime: string, endTime: string }>
+  hasIncompleteSleepDraftRow: boolean
+  effectiveSleepHours: number | undefined
+  menstrualCycle: HealthData['menstrualCycle']
+  medicationRecord: string
+  healthMemo: string
+}
+
+const SNAPSHOT_NUMERIC_KEYS = [
+  'weight',
+  'bodyFatPercentage',
+  'muscleMass',
+  'visceralFatLevel',
+  'basalMetabolicRate',
+  'bodyWaterPercentage',
+  'boneMass',
+  'proteinPercentage',
+  'systolicBloodPressure',
+  'diastolicBloodPressure',
+  'heartRate',
+  'bodyTemperature',
+  'spo2',
+  'steps',
+  'exerciseMinutes',
+  'caloriesBurned',
+  'waterIntake',
+] as const
+
+function createSnapshotFromStoredData(data: HealthData | undefined): FormSnapshot {
+  const numeric: Record<string, number | undefined> = {}
+  for (const key of SNAPSHOT_NUMERIC_KEYS) {
+    numeric[key] = normalizeOptionalNumber(data?.[key])
+  }
+  const normalizedSessions = normalizeSleepSessionsForDate(props.date, data?.sleepSessions)
+  const drafts = createSleepSessionDrafts(data?.sleepSessions)
+  const effectiveSleepHours = normalizedSessions.length > 0
+    ? calculateTotalSleepHours(normalizedSessions, props.date)
+    : normalizeOptionalNumber(data?.sleepHours)
+
+  return {
+    numeric,
+    sleepSessions: normalizedSessions,
+    sleepDraftRaw: drafts.map(s => ({ startTime: s.startTime.trim(), endTime: s.endTime.trim() })),
+    hasIncompleteSleepDraftRow: false,
+    effectiveSleepHours,
+    menstrualCycle: data?.menstrualCycle || null,
+    medicationRecord: data?.medicationRecord || '',
+    healthMemo: data?.healthMemo || '',
+  }
+}
+
+function takeCurrentFormSnapshot(): FormSnapshot {
+  const rawMap: Record<string, unknown> = {
+    weight: weight.value,
+    bodyFatPercentage: bodyFatPercentage.value,
+    muscleMass: muscleMass.value,
+    visceralFatLevel: visceralFatLevel.value,
+    basalMetabolicRate: basalMetabolicRate.value,
+    bodyWaterPercentage: bodyWaterPercentage.value,
+    boneMass: boneMass.value,
+    proteinPercentage: proteinPercentage.value,
+    systolicBloodPressure: systolicBloodPressure.value,
+    diastolicBloodPressure: diastolicBloodPressure.value,
+    heartRate: heartRate.value,
+    bodyTemperature: bodyTemperature.value,
+    spo2: spo2.value,
+    steps: steps.value,
+    exerciseMinutes: exerciseMinutes.value,
+    caloriesBurned: caloriesBurned.value,
+    waterIntake: waterIntake.value,
+  }
+
+  const numeric: Record<string, number | undefined> = {}
+  for (const key of SNAPSHOT_NUMERIC_KEYS) {
+    numeric[key] = normalizeOptionalNumber(rawMap[key])
+  }
+
+  const normalizedSessions = normalizeSleepSessionsForDate(props.date, sleepSessionsDraft.value)
+  const hasIncompleteSleepDraftRow = sleepSessionsDraft.value.some((s) => {
+    const hasAnyInput = s.startTime.trim() !== '' || s.endTime.trim() !== ''
+    return hasAnyInput && normalizeSleepSessionsForDate(props.date, [s]).length === 0
+  })
+  const effectiveSleepHours = normalizedSessions.length > 0
+    ? calculateTotalSleepHours(normalizedSessions, props.date)
+    : normalizeOptionalNumber(sleepHours.value)
+
+  return {
+    numeric,
+    sleepSessions: normalizedSessions,
+    sleepDraftRaw: sleepSessionsDraft.value.map(s => ({ startTime: s.startTime.trim(), endTime: s.endTime.trim() })),
+    hasIncompleteSleepDraftRow,
+    effectiveSleepHours,
+    menstrualCycle: menstrualCycle.value || null,
+    medicationRecord: medicationRecord.value || '',
+    healthMemo: healthMemo.value || '',
+  }
+}
+
+function areSleepDraftRawsEqual(
+  a: Array<{ startTime: string, endTime: string }>,
+  b: Array<{ startTime: string, endTime: string }>,
+): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i]?.startTime !== b[i]?.startTime || a[i]?.endTime !== b[i]?.endTime) {
+      return false
+    }
+  }
+  return true
+}
+
 /**
- * フォーム内の未保存の編集項目（dirty state）を検出
+ * 2つのフォームスナップショット間の差分フィールドを検出
  */
-function getDirtyFormState(): {
+function diffFormSnapshots(
+  base: FormSnapshot,
+  current: FormSnapshot,
+): {
   dirtyFields: Set<string>
   dirtyHcMetrics: Set<HealthConnectMetricKey>
   hasUnsavedChanges: boolean
 } {
-  const data = healthDataStore.getHealthDataByDateString(props.date)
   const dirtyFields = new Set<string>()
   const dirtyHcMetrics = new Set<HealthConnectMetricKey>()
 
-  const numericEntries: Array<[string, unknown, number | undefined]> = [
-    ['weight', weight.value, data?.weight],
-    ['bodyFatPercentage', bodyFatPercentage.value, data?.bodyFatPercentage],
-    ['muscleMass', muscleMass.value, data?.muscleMass],
-    ['visceralFatLevel', visceralFatLevel.value, data?.visceralFatLevel],
-    ['basalMetabolicRate', basalMetabolicRate.value, data?.basalMetabolicRate],
-    ['bodyWaterPercentage', bodyWaterPercentage.value, data?.bodyWaterPercentage],
-    ['boneMass', boneMass.value, data?.boneMass],
-    ['proteinPercentage', proteinPercentage.value, data?.proteinPercentage],
-    ['systolicBloodPressure', systolicBloodPressure.value, data?.systolicBloodPressure],
-    ['diastolicBloodPressure', diastolicBloodPressure.value, data?.diastolicBloodPressure],
-    ['heartRate', heartRate.value, data?.heartRate],
-    ['bodyTemperature', bodyTemperature.value, data?.bodyTemperature],
-    ['spo2', spo2.value, data?.spo2],
-    ['steps', steps.value, data?.steps],
-    ['exerciseMinutes', exerciseMinutes.value, data?.exerciseMinutes],
-    ['caloriesBurned', caloriesBurned.value, data?.caloriesBurned],
-    ['waterIntake', waterIntake.value, data?.waterIntake],
-  ]
-
-  for (const [key, currentRaw, storedVal] of numericEntries) {
-    if (normalizeOptionalNumber(currentRaw) !== normalizeOptionalNumber(storedVal)) {
+  for (const key of SNAPSHOT_NUMERIC_KEYS) {
+    if (current.numeric[key] !== base.numeric[key]) {
       dirtyFields.add(key)
       if ((HEALTH_CONNECT_SCALAR_METRICS as readonly string[]).includes(key)) {
         dirtyHcMetrics.add(key as HealthConnectMetricKey)
@@ -325,34 +421,23 @@ function getDirtyFormState(): {
     }
   }
 
-  // 睡眠（sleepSessions / sleepHours）の未保存変更チェック
-  const currentSessions = normalizeSleepSessionsForDate(props.date, sleepSessionsDraft.value)
-  const storedSessions = normalizeSleepSessionsForDate(props.date, data?.sleepSessions)
-  const hasIncompleteDraftRow = sleepSessionsDraft.value.some((s) => {
-    const hasAnyInput = s.startTime.trim() !== '' || s.endTime.trim() !== ''
-    return hasAnyInput && normalizeSleepSessionsForDate(props.date, [s]).length === 0
-  })
-  const currentEffectiveSleepHours = currentSessions.length > 0
-    ? calculateTotalSleepHours(currentSessions, props.date)
-    : normalizeOptionalNumber(sleepHours.value)
-  const storedSleepHours = normalizeOptionalNumber(data?.sleepHours)
-
   if (
-    hasIncompleteDraftRow
-    || !areSleepSessionsEqual(currentSessions, storedSessions)
-    || currentEffectiveSleepHours !== storedSleepHours
+    current.hasIncompleteSleepDraftRow !== base.hasIncompleteSleepDraftRow
+    || !areSleepSessionsEqual(current.sleepSessions, base.sleepSessions)
+    || !areSleepDraftRawsEqual(current.sleepDraftRaw, base.sleepDraftRaw)
+    || current.effectiveSleepHours !== base.effectiveSleepHours
   ) {
     dirtyFields.add('sleep')
     dirtyHcMetrics.add('sleep')
   }
 
-  if ((menstrualCycle.value || null) !== (data?.menstrualCycle || null)) {
+  if ((current.menstrualCycle || null) !== (base.menstrualCycle || null)) {
     dirtyFields.add('menstrualCycle')
   }
-  if ((medicationRecord.value || '') !== (data?.medicationRecord || '')) {
+  if ((current.medicationRecord || '') !== (base.medicationRecord || '')) {
     dirtyFields.add('medicationRecord')
   }
-  if ((healthMemo.value || '') !== (data?.healthMemo || '')) {
+  if ((current.healthMemo || '') !== (base.healthMemo || '')) {
     dirtyFields.add('healthMemo')
   }
 
@@ -404,10 +489,16 @@ async function saveHealthData() {
   if (isSaving.value || isSyncingFromHC.value || isWritingToHC.value) {
     return
   }
+  const targetDate = props.date
+  const snapshotAtStart = takeCurrentFormSnapshot()
+  const payload = buildFormPayload()
   isSaving.value = true
   try {
-    await healthDataStore.saveHealthDataItem(buildFormPayload())
-    loadHealthData()
+    await healthDataStore.saveHealthDataItem(payload)
+    if (props.date === targetDate) {
+      const editedDuringSave = diffFormSnapshots(snapshotAtStart, takeCurrentFormSnapshot())
+      loadHealthData({ preserveFields: editedDuringSave.dirtyFields })
+    }
     alert($t('健康データを保存しました'))
   }
   catch (error) {
@@ -421,14 +512,22 @@ async function saveHealthData() {
 
 /**
  * Health Connectから当日の健康データを取得してIndexedDBへ即時保存＋フォーム反映
- * 未保存の手動入力がある場合は確認ダイアログを表示し、承認時は編集中の項目を保護したままマージ反映する
+ * - 同期開始時のフォームスナップショットと保存済みデータを比較して未保存入力（initialDirty）を検出
+ * - 同期完了後は「同期開始時のフォームスナップショット」と「完了時点のフォームスナップショット」の差分のみを追加保護することで、
+ *   ストア更新済みの未編集項目が誤ってdirty判定されることを防ぎ、取得データのフォーム反映と未保存入力の保持を両立する
  */
 async function handleReadFromHealthConnect() {
   if (isSaving.value || isSyncingFromHC.value || isWritingToHC.value) {
     return
   }
 
-  const initialDirty = getDirtyFormState()
+  const snapshotAtSyncStart = takeCurrentFormSnapshot()
+  const preSyncStoredData = healthDataStore.getHealthDataByDateString(props.date)
+  const initialDirty = diffFormSnapshots(
+    createSnapshotFromStoredData(preSyncStoredData),
+    snapshotAtSyncStart,
+  )
+
   if (initialDirty.hasUnsavedChanges) {
     const confirmed = window.confirm(
       $t('未保存の入力内容があります。編集中の項目を保持したまま、未編集の項目のみHealth Connectから取得して反映しますか？'),
@@ -460,10 +559,11 @@ async function handleReadFromHealthConnect() {
     })
 
     if (props.date === targetDate) {
-      const currentDirty = getDirtyFormState()
+      // 同期開始時のフォームスナップショットからの変更分（非同期通信中にユーザーが編集した項目）のみを追加保護
+      const editedDuringSync = diffFormSnapshots(snapshotAtSyncStart, takeCurrentFormSnapshot())
       const preservedFields = new Set<string>([
         ...initialDirty.dirtyFields,
-        ...currentDirty.dirtyFields,
+        ...editedDuringSync.dirtyFields,
       ])
       loadHealthData({ preserveFields: preservedFields })
     }
@@ -489,6 +589,8 @@ async function handleReadFromHealthConnect() {
 
 /**
  * 現在のフォーム入力値をIndexedDBへ保存した上で、新規・変更項目をHealth Connectへ書き込む
+ * - 書き込み処理中にフォーム上で編集された項目があればスナップショット差分で保護する
+ * - 成功・部分成功・権限不足・無効値・ローカル保存のみ（他アプリデータとの二重計上防止）を区別して通知する
  */
 async function handleWriteToHealthConnect() {
   if (isSaving.value || isSyncingFromHC.value || isWritingToHC.value) {
@@ -496,11 +598,14 @@ async function handleWriteToHealthConnect() {
   }
 
   const targetDate = props.date
+  const snapshotAtWriteStart = takeCurrentFormSnapshot()
+  const payload = buildFormPayload()
   isWritingToHC.value = true
   try {
-    const result = await healthDataStore.writeDateToHealthConnect(buildFormPayload())
+    const result = await healthDataStore.writeDateToHealthConnect(payload)
     if (props.date === targetDate) {
-      loadHealthData()
+      const editedDuringWrite = diffFormSnapshots(snapshotAtWriteStart, takeCurrentFormSnapshot())
+      loadHealthData({ preserveFields: editedDuringWrite.dirtyFields })
     }
 
     if (result.nothingToWrite) {
@@ -513,7 +618,13 @@ async function handleWriteToHealthConnect() {
         lastSyncedAt: new Date().toISOString(),
       })
 
-      if (result.failedFields.length > 0 || result.skippedPermissionFields.length > 0) {
+      const hasUnwrittenTargets
+        = result.failedFields.length > 0
+          || result.skippedPermissionFields.length > 0
+          || result.invalidFields.length > 0
+          || result.localOnlyFields.length > 0
+
+      if (hasUnwrittenTargets) {
         alert($t('一部の項目のみHealth Connectへ書き込みました'))
       }
       else {
@@ -525,8 +636,14 @@ async function handleWriteToHealthConnect() {
     if (result.failedFields.length > 0) {
       alert($t('Health Connectへの書き込みに失敗しました'))
     }
+    else if (result.invalidFields.length > 0) {
+      alert($t('ローカル保存は完了しましたが、Health Connectへ書き込めない無効な値が含まれているため書き込みをスキップしました'))
+    }
     else if (result.skippedPermissionFields.length > 0) {
       alert($t('ローカル保存は完了しましたが、Health Connectの書き込み権限が許可されていないため書き込みをスキップしました'))
+    }
+    else if (result.localOnlyFields.length > 0) {
+      alert($t('他アプリ由来のデータとの重複を防ぐため、ローカル保存のみ行いました（Health Connectへの書き込みはスキップしました）'))
     }
     else {
       alert($t('ローカル保存が完了しました（Health Connectへ書き込む新規・変更データはありません）'))

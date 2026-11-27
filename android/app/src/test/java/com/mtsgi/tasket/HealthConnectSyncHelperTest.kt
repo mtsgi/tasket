@@ -3,14 +3,16 @@ package com.mtsgi.tasket
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import java.time.Instant
 
 /**
  * HealthConnectSyncHelper のユニットテスト
- * P1-1〜P1-3, P2-4, P2-7 の Kotlin 側同期ロジックを検証
+ * P1-1〜P1-3, P2-4, P2-7 および最終レビュー指摘（ページネーション不完全時の例外処理・非重複時間帯探索）を検証
  */
 class HealthConnectSyncHelperTest {
 
@@ -42,8 +44,8 @@ class HealthConnectSyncHelperTest {
     }
 
     @Test
-    fun `readPaginatedRecords fetches all pages and stops on empty token or duplicate token or maxPages`() = runBlocking {
-        // 3ページの正常取得（最終ページの pageToken が空文字 "" のケース）
+    fun `readPaginatedRecords fetches all pages when complete and throws on maxPages or duplicate token`() = runBlocking {
+        // 1. 3ページの正常取得（最終ページの pageToken が空文字 "" のケース）
         val pages = mapOf(
             null to (listOf("rec-1", "rec-2") to "token-page-2"),
             "token-page-2" to (listOf("rec-3", "rec-4") to "token-page-3"),
@@ -55,14 +57,80 @@ class HealthConnectSyncHelperTest {
         }
         assertEquals(listOf("rec-1", "rec-2", "rec-3", "rec-4", "rec-5"), all)
 
-        // 同一 pageToken が返り続ける異常系でも無限ループせず打ち切る
-        var callCount = 0
-        val loopGuarded = HealthConnectSyncHelper.readPaginatedRecords(maxPages = 10) { _ ->
-            callCount++
-            listOf("item-$callCount") to "stuck-token"
+        // 2. 同一 pageToken が繰り返された場合は不完全取得として DUPLICATE_PAGE_TOKEN を返し、readPaginatedRecords は例外を送出する
+        var dupCallCount = 0
+        val dupStatus = HealthConnectSyncHelper.readPaginatedRecordsWithStatus(maxPages = 10) { _ ->
+            dupCallCount++
+            listOf("item-$dupCallCount") to "stuck-token"
         }
-        assertEquals(2, callCount)
-        assertEquals(listOf("item-1", "item-2"), loopGuarded)
+        assertFalse(dupStatus.isComplete)
+        assertEquals(HealthConnectSyncHelper.PaginationStopReason.DUPLICATE_PAGE_TOKEN, dupStatus.stopReason)
+        assertEquals(2, dupCallCount)
+
+        try {
+            HealthConnectSyncHelper.readPaginatedRecords(maxPages = 10) { _ ->
+                listOf("item") to "stuck-token"
+            }
+            fail("Expected IllegalStateException on duplicate pageToken")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("DUPLICATE_PAGE_TOKEN"))
+        }
+
+        // 3. maxPages 到達時にまだ次ページがある場合は MAX_PAGES_REACHED として例外を送出する（不完全な集計値を差分書き込みに使わせない）
+        var pageSeq = 0
+        val maxPageStatus = HealthConnectSyncHelper.readPaginatedRecordsWithStatus(maxPages = 3) { _ ->
+            pageSeq++
+            listOf("page-$pageSeq") to "next-token-$pageSeq"
+        }
+        assertFalse(maxPageStatus.isComplete)
+        assertEquals(HealthConnectSyncHelper.PaginationStopReason.MAX_PAGES_REACHED, maxPageStatus.stopReason)
+        assertEquals(3, maxPageStatus.pagesRead)
+
+        try {
+            var seq = 0
+            HealthConnectSyncHelper.readPaginatedRecords(maxPages = 3) { _ ->
+                seq++
+                listOf("page-$seq") to "next-token-$seq"
+            }
+            fail("Expected IllegalStateException when maxPages is reached before completion")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("MAX_PAGES_REACHED"))
+        }
+    }
+
+    @Test
+    fun `findNonOverlappingInterval finds non-overlapping time window or returns null if day is full`() {
+        val startOfDay = Instant.parse("2025-12-15T00:00:00Z")
+        val endOfDay = Instant.parse("2025-12-16T00:00:00Z")
+        val preferredStart = Instant.parse("2025-12-15T18:00:00Z")
+
+        // 1. 他アプリ記録が preferredStart (18:00〜18:30) と重なっている場合、直後の非重複時間帯 (18:30〜18:45) に配置する
+        val externalIntervals = listOf(
+            Instant.parse("2025-12-15T18:00:00Z") to Instant.parse("2025-12-15T18:30:00Z")
+        )
+        val slot = HealthConnectSyncHelper.findNonOverlappingInterval(
+            startOfDay = startOfDay,
+            endOfDay = endOfDay,
+            durationSeconds = 900L, // 15分
+            preferredStart = preferredStart,
+            externalIntervals = externalIntervals
+        )
+        assertNotNull(slot)
+        assertEquals(Instant.parse("2025-12-15T18:30:00Z"), slot!!.first)
+        assertEquals(Instant.parse("2025-12-15T18:45:00Z"), slot.second)
+
+        // 2. 他アプリ記録が1日全体を覆っており空き時間がない場合は null を返す
+        val fullDayExternal = listOf(
+            startOfDay to endOfDay
+        )
+        val noSlot = HealthConnectSyncHelper.findNonOverlappingInterval(
+            startOfDay = startOfDay,
+            endOfDay = endOfDay,
+            durationSeconds = 60L,
+            preferredStart = preferredStart,
+            externalIntervals = fullDayExternal
+        )
+        assertNull(noSlot)
     }
 
     @Test
