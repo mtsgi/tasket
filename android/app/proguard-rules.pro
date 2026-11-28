@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep ML Kit GenAI Structured Output (@Generable) data classes and KSP-generated GenerableProvider classes
+-keep @com.google.mlkit.genai.schema.annotations.Generable class * { *; }
+-keep class * implements com.google.mlkit.genai.schema.guided.GenerableProvider { *; }
+

@@ -21,6 +21,12 @@ import {
   type HealthConnectMetricKey,
   type HealthConnectPermissionsMap,
 } from '~/utils/healthConnect'
+import {
+  checkMealAiAvailability,
+  downloadMealAiModel,
+  type MealAiAvailabilityResult,
+  type MealAiDownloadProgressEvent,
+} from '~/utils/mealAi'
 
 const settingsStore = useSettingsStore()
 const lockStore = useLockStore()
@@ -40,6 +46,81 @@ const hcAnyReadGranted = ref(false)
 const hcAnyWriteGranted = ref(false)
 const isCheckingHC = ref(false)
 const isSyncingRecentHC = ref(false)
+
+// オンデバイスAI（Gemini Nano）食事写真解析 関連状態
+const mealAiAvailability = ref<MealAiAvailabilityResult>({
+  available: false,
+  status: 'unavailable',
+  platform: 'web',
+})
+const isCheckingMealAi = ref(false)
+const isDownloadingMealAi = ref(false)
+const mealAiDownloadProgress = ref<MealAiDownloadProgressEvent | null>(null)
+const mealAiStatusMessage = ref('')
+
+const mealAiDownloadPercent = computed(() => {
+  const prog = mealAiDownloadProgress.value
+  if (!prog || prog.bytesToDownload <= 0) {
+    return null
+  }
+  const pct = Math.round((prog.totalBytesDownloaded / prog.bytesToDownload) * 100)
+  return Math.max(0, Math.min(100, pct))
+})
+
+const mealAiStatusBadgeText = computed(() => {
+  switch (mealAiAvailability.value.status) {
+    case 'available':
+      return t('準備完了（オフライン推論可能）')
+    case 'downloadable':
+      return t('初回モデルダウンロードが必要')
+    case 'downloading':
+      return t('モデルダウンロード中')
+    default:
+      return t('利用不可（非対応端末）')
+  }
+})
+
+async function refreshMealAiStatus() {
+  if (!isAndroidApp.value || isCheckingMealAi.value) {
+    return
+  }
+  isCheckingMealAi.value = true
+  mealAiStatusMessage.value = ''
+  try {
+    mealAiAvailability.value = await checkMealAiAvailability()
+  }
+  finally {
+    isCheckingMealAi.value = false
+  }
+}
+
+async function handleDownloadMealAiModel() {
+  if (!isAndroidApp.value || isDownloadingMealAi.value) {
+    return
+  }
+  isDownloadingMealAi.value = true
+  mealAiDownloadProgress.value = null
+  mealAiStatusMessage.value = ''
+  try {
+    await downloadMealAiModel((event) => {
+      mealAiDownloadProgress.value = event
+    })
+    mealAiAvailability.value = {
+      available: true,
+      status: 'available',
+      platform: 'android',
+    }
+    mealAiStatusMessage.value = t('オンデバイスAIモデルの準備が完了しました（オフラインでも利用可能です）')
+  }
+  catch {
+    mealAiStatusMessage.value = t('オンデバイスAIモデルのダウンロードに失敗しました。ネットワーク接続と空き容量を確認してください')
+    await refreshMealAiStatus()
+  }
+  finally {
+    isDownloadingMealAi.value = false
+    mealAiDownloadProgress.value = null
+  }
+}
 
 const healthConnectMetricLabels = computed<Array<{ key: HealthConnectMetricKey, label: string }>>(() => [
   { key: 'steps', label: t('歩数') },
@@ -456,7 +537,10 @@ onMounted(async () => {
   if (settingsStore.language) {
     await setLocale(settingsStore.language)
   }
-  await refreshHealthConnectStatus()
+  await Promise.all([
+    refreshHealthConnectStatus(),
+    refreshMealAiStatus(),
+  ])
 })
 
 function goBack() {
@@ -739,6 +823,94 @@ function goBack() {
             >
               <Icon name="mdi:cloud-download-outline" />
               {{ isSyncingRecentHC ? $t('同期中') + '...' : $t('直近30日分をHealth Connectから一括取得') }}
+            </UiButton>
+          </div>
+        </div>
+      </div>
+
+      <!-- オンデバイスAI食事写真解析（Gemini Nano）設定 -->
+      <div class="health-connect-settings-block meal-ai-settings-block">
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>
+              <Icon name="mdi:creation" />
+              {{ $t('オンデバイスAI食事写真解析（Gemini Nano）') }}
+            </h3>
+            <p>
+              {{ $t('食事写真を端末内のGemini Nano（ML Kit GenAI Prompt API）で解析し、写真を外部サーバーへ送信せずにカロリー・PFCを推定します') }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Web/PWA版での案内表示 -->
+        <div
+          v-if="!isAndroidApp"
+          class="hc-info-banner"
+        >
+          <Icon name="mdi:cellphone-information" />
+          <span>
+            {{ $t('Androidアプリ版（Gemini Nano対応端末）でのみ利用可能です（Web/PWA版では手動での食事ログ記録を引き続きご利用いただけます）') }}
+          </span>
+        </div>
+
+        <!-- Android版: モデルステータスと事前ダウンロード操作 -->
+        <div
+          v-else
+          class="hc-android-controls"
+        >
+          <div class="hc-permissions-grid">
+            <div class="hc-permission-item">
+              <span class="metric-name">{{ $t('モデル状態') }}</span>
+              <div class="permission-badges">
+                <span
+                  class="perm-badge"
+                  :class="{ granted: mealAiAvailability.status === 'available' }"
+                >
+                  {{ mealAiStatusBadgeText }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="isDownloadingMealAi && mealAiDownloadPercent !== null"
+            class="hc-info-banner"
+          >
+            <Icon name="mdi:cloud-download-outline" />
+            <span>
+              {{ $t('オンデバイスAIモデルをダウンロード中...') }} ({{ mealAiDownloadPercent }}%)
+            </span>
+          </div>
+
+          <div
+            v-if="mealAiStatusMessage"
+            class="hc-info-banner"
+            :class="{ warning: mealAiAvailability.status !== 'available' }"
+          >
+            <Icon :name="mealAiAvailability.status === 'available' ? 'mdi:check-circle-outline' : 'mdi:alert-circle-outline'" />
+            <span>{{ mealAiStatusMessage }}</span>
+          </div>
+
+          <div class="hc-control-buttons">
+            <UiButton
+              v-if="mealAiAvailability.status === 'downloadable'"
+              variant="primary"
+              block
+              :disabled="isCheckingMealAi || isDownloadingMealAi"
+              @click="handleDownloadMealAiModel"
+            >
+              <Icon name="mdi:cloud-download-outline" />
+              {{ isDownloadingMealAi ? $t('オンデバイスAIモデルをダウンロード中...') : $t('AIモデルを事前にダウンロード') }}
+            </UiButton>
+
+            <UiButton
+              variant="secondary"
+              block
+              :disabled="isCheckingMealAi || isDownloadingMealAi"
+              @click="refreshMealAiStatus"
+            >
+              <Icon name="mdi:refresh" />
+              {{ $t('モデル状態を再確認') }}
             </UiButton>
           </div>
         </div>

@@ -8,13 +8,14 @@ import com.getcapacitor.BridgeActivity;
 
 /**
  * TasketのAndroidメインアクティビティ。
- * HealthConnectPluginの登録およびEdge-to-Edge表示を有効化する。
+ * HealthConnectPlugin・MealAiPluginの登録およびEdge-to-Edge表示を有効化する。
  */
 public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(HealthConnectPlugin.class);
+        registerPlugin(MealAiPlugin.class);
         super.onCreate(savedInstanceState);
 
         // NoActionBarテーマ適用後にEdge-to-Edge表示を有効化する

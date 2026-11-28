@@ -4,7 +4,9 @@
  * 新規アイテム（TODO、支出、収入）を作成するためのフォームを提供
  */
 import type { ItemType } from '~/types/item'
+import MealAiEstimator from '~/components/shared/MealAiEstimator.vue'
 import { clearMealLogRefs } from '~/utils/mealLog'
+import { applyMealAiEstimationToRefs, type MealAiNutritionEstimation } from '~/utils/mealAi'
 import { ALBUM_MAX_PHOTOS } from '~/utils/constants'
 
 const props = defineProps<{
@@ -31,6 +33,8 @@ const mealCarbs = ref<number | undefined>()
 const mealFat = ref<number | undefined>()
 const mealPhoto = ref<string | undefined>()
 const mealMemo = ref('')
+const isMealAiBusy = ref(false)
+const mealAiEstimatorRef = ref<InstanceType<typeof MealAiEstimator> | null>(null)
 
 // アルバム機能の状態（TODO用の写真）
 const albumPhotos = ref<string[]>([])
@@ -104,6 +108,8 @@ function toggleMealLog() {
  * 食事ログを削除
  */
 function deleteMealLog() {
+  mealAiEstimatorRef.value?.reset()
+  isMealAiBusy.value = false
   clearMealLogRefs({
     showMealLog,
     mealCalories,
@@ -119,6 +125,7 @@ function deleteMealLog() {
  * 画像ファイルを選択（食事ログ用）
  */
 function handlePhotoUpload(event: Event) {
+  if (isMealAiBusy.value) return
   const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
     const file = input.files[0]
@@ -127,6 +134,38 @@ function handlePhotoUpload(event: Event) {
       mealPhoto.value = e.target?.result as string
     }
     reader.readAsDataURL(file)
+  }
+}
+
+/**
+ * AIによる栄養素推定結果を入力欄へ一括反映
+ */
+function handleApplyMealAiEstimation(estimation: MealAiNutritionEstimation) {
+  applyMealAiEstimationToRefs(estimation, {
+    mealCalories,
+    mealProtein,
+    mealFat,
+    mealCarbs,
+  })
+}
+
+/**
+ * AIが認識した料理名をアイテムの「タイトル」へ反映
+ */
+function handleApplyMealAiTitle(dishName: string) {
+  title.value = dishName
+}
+
+/**
+ * AIが認識した料理・食品を「食事メモ」へ追記
+ */
+function handleAppendMealAiMemo(memoText: string) {
+  const current = mealMemo.value.trim()
+  if (!current) {
+    mealMemo.value = memoText
+  }
+  else if (!current.includes(memoText)) {
+    mealMemo.value = `${current}\n${memoText}`
   }
 }
 
@@ -160,7 +199,7 @@ function applyCalculatedAmount(value: number) {
  * 日付変更線を考慮して、0時〜日付変更線までの時刻の場合は翌日の日付を使用
  */
 async function handleSubmit() {
-  if (!title.value.trim()) return
+  if (!title.value.trim() || isMealAiBusy.value) return
 
   isSubmitting.value = true
   try {
@@ -208,6 +247,8 @@ async function handleSubmit() {
     notes.value = ''
     isImportant.value = false
     // 食事ログもリセット
+    mealAiEstimatorRef.value?.reset()
+    isMealAiBusy.value = false
     mealCalories.value = undefined
     mealProtein.value = undefined
     mealCarbs.value = undefined
@@ -367,6 +408,7 @@ async function handleSubmit() {
           <button
             type="button"
             class="meal-log-toggle"
+            :disabled="isMealAiBusy"
             @click="toggleMealLog"
           >
             <Icon :name="showMealLog ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
@@ -376,6 +418,7 @@ async function handleSubmit() {
             v-if="showMealLog"
             variant="danger"
             icon
+            :disabled="isMealAiBusy"
             :aria-label="$t('食事ログを削除')"
             @click="deleteMealLog"
           >
@@ -393,6 +436,7 @@ async function handleSubmit() {
               <UiInput
                 v-model.number="mealCalories"
                 type="number"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}kcal', { value: '0' })"
               />
             </div>
@@ -405,6 +449,7 @@ async function handleSubmit() {
                 v-model.number="mealProtein"
                 type="number"
                 step="0.1"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}g', { value: '0' })"
               />
             </div>
@@ -414,6 +459,7 @@ async function handleSubmit() {
                 v-model.number="mealCarbs"
                 type="number"
                 step="0.1"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}g', { value: '0' })"
               />
             </div>
@@ -423,6 +469,7 @@ async function handleSubmit() {
                 v-model.number="mealFat"
                 type="number"
                 step="0.1"
+                :disabled="isMealAiBusy"
                 :placeholder="$t('{value}g', { value: '0' })"
               />
             </div>
@@ -434,6 +481,7 @@ async function handleSubmit() {
               <input
                 type="file"
                 accept="image/*"
+                :disabled="isMealAiBusy"
                 @change="handlePhotoUpload"
               >
               <div
@@ -448,12 +496,24 @@ async function handleSubmit() {
                   variant="danger"
                   icon
                   class="delete-photo-btn"
+                  :disabled="isMealAiBusy"
                   :aria-label="$t('写真を削除')"
                   @click="mealPhoto = undefined"
                 >
                   <Icon name="mdi:delete" />
                 </UiButton>
               </div>
+              <MealAiEstimator
+                ref="mealAiEstimatorRef"
+                :photo="mealPhoto"
+                :title="title"
+                :meal-memo="mealMemo"
+                :disabled="isSubmitting"
+                @apply-estimation="handleApplyMealAiEstimation"
+                @apply-title="handleApplyMealAiTitle"
+                @append-memo="handleAppendMealAiMemo"
+                @busy-change="isMealAiBusy = $event"
+              />
             </div>
           </div>
 
@@ -461,6 +521,7 @@ async function handleSubmit() {
             <label>{{ $t('食事メモ') }}</label>
             <textarea
               v-model="mealMemo"
+              :disabled="isMealAiBusy"
               :placeholder="$t('食事メモ')"
               rows="2"
             />
@@ -543,7 +604,7 @@ async function handleSubmit() {
         type="submit"
         variant="primary"
         block
-        :disabled="isSubmitting || !title.trim()"
+        :disabled="isSubmitting || isMealAiBusy || !title.trim()"
       >
         <Icon name="mdi:plus" />
         {{ $t('追加') }}

@@ -726,4 +726,57 @@ export default {
     'Saved locally, but skipped writing to Health Connect because invalid values were included',
   '他アプリ由来のデータとの重複を防ぐため、ローカル保存のみ行いました（Health Connectへの書き込みはスキップしました）':
     'Saved locally only to prevent duplicate counting with data from other apps (skipped writing to Health Connect)',
+
+  // On-Device AI (Gemini Nano) Meal Photo Analysis & Nutrition Estimation
+  'AIで栄養素を推定（Gemini Nano）': 'Estimate Nutrition with AI (Gemini Nano)',
+  'オンデバイスAIで解析中...': 'Analyzing with On-Device AI...',
+  'オンデバイスAIモデル（Gemini Nano）の初回ダウンロードが必要です':
+    'Initial download of the on-device AI model (Gemini Nano) is required',
+  'オンデバイスAIモデルの初回ダウンロードが必要です': 'Initial download of the on-device AI model is required',
+  'AIモデルをダウンロードして推定': 'Download AI Model & Estimate',
+  'オンデバイスAIモデルをダウンロード中...': 'Downloading On-Device AI Model...',
+  'オンデバイスAIモデルをダウンロード中です。完了後に再度お試しください':
+    'Downloading the on-device AI model. Please try again after completion',
+  'オンデバイスAI（Gemini Nano）の準備状態を確認できませんでした':
+    'Could not check on-device AI (Gemini Nano) readiness status',
+  'この端末ではGemini Nano（オンデバイスAI）を利用できません。手動で入力してください':
+    'Gemini Nano (On-Device AI) is not available on this device. Please enter nutrition data manually',
+  '端末の空き容量が不足しているため、AIモデルを利用できません':
+    'Not enough device storage available to use the AI model',
+  'オンデバイスAIが混雑または一時制限中です。しばらく待ってから再度お試しください':
+    'On-device AI is busy or temporarily rate-limited. Please wait and try again',
+  '食事写真の読み込みに失敗しました。別の写真を選択するか手動で入力してください':
+    'Failed to read meal photo. Please select another photo or enter data manually',
+  'AIによる解析がタイムアウトしました。再度お試しいただくか手動で入力してください':
+    'AI analysis timed out. Please try again or enter data manually',
+  'AIの推定結果が不正な形式だったため反映を中止しました。再度お試しいただくか手動で入力してください':
+    'Aborted applying AI estimation due to invalid output format. Please try again or enter data manually',
+  'AIによる栄養素の推定に失敗しました。手動で入力してください':
+    'Failed to estimate nutrition with AI. Please enter data manually',
+  '写真から食事・食品を認識できませんでした。手動で入力してください':
+    'Could not recognize food or meal from the photo. Please enter data manually',
+  'オンデバイスAIモデルのダウンロードに失敗しました。ネットワーク接続と空き容量を確認してください':
+    'Failed to download on-device AI model. Please check your network connection and available storage',
+  '状態を再確認': 'Recheck Status',
+  'Gemini NanoによるAI推定結果（オンデバイス）': 'AI Estimation by Gemini Nano (On-Device)',
+  '認識した料理': 'Recognized Meal',
+  '内訳': 'Items',
+  'AIによる推定値です。上の入力欄で内容を確認・修正してから保存してください。':
+    'These are AI-estimated values. Please review and adjust the fields above before saving.',
+  'タイトルに反映': 'Apply to Title',
+  '食事メモに追記': 'Append to Meal Memo',
+  'オンデバイスAI食事写真解析（Gemini Nano）': 'On-Device AI Meal Photo Analysis (Gemini Nano)',
+  '食事写真を端末内のGemini Nano（ML Kit GenAI Prompt API）で解析し、写真を外部サーバーへ送信せずにカロリー・PFCを推定します':
+    'Analyze meal photos on-device with Gemini Nano (ML Kit GenAI Prompt API) to estimate calories and macros without sending photos to external servers',
+  'Androidアプリ版（Gemini Nano対応端末）でのみ利用可能です（Web/PWA版では手動での食事ログ記録を引き続きご利用いただけます）':
+    'Available only in the Android app on Gemini Nano-compatible devices (manual meal logging remains available in the Web/PWA version)',
+  'モデル状態': 'Model Status',
+  '準備完了（オフライン推論可能）': 'Ready (Offline Inference Available)',
+  '初回モデルダウンロードが必要': 'Initial Model Download Required',
+  'モデルダウンロード中': 'Downloading Model',
+  '利用不可（非対応端末）': 'Unavailable (Unsupported Device)',
+  'AIモデルを事前にダウンロード': 'Pre-download AI Model',
+  'モデル状態を再確認': 'Recheck Model Status',
+  'オンデバイスAIモデルの準備が完了しました（オフラインでも利用可能です）':
+    'On-device AI model is ready (also available offline)',
 }
